@@ -1,6 +1,7 @@
 import { memo, useCallback, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { Footer } from '@/shared/ui/Footer'
+import { brand } from '@/config/brand'
 
 const navItems = [
   { to: '/', label: 'Inicio' },
@@ -24,8 +25,8 @@ const PublicNavbar = memo(function PublicNavbar({
         <NavLink to="/" className="nlogo">
           <div className="nlogo-icon" aria-hidden="true" />
           <div>
-            <div className="nlogo-name">RankPadel</div>
-            <div className="nlogo-sub">Santiago del Estero</div>
+            <div className="nlogo-name">{brand.name}</div>
+            <div className="nlogo-sub">{brand.location}</div>
           </div>
         </NavLink>
 

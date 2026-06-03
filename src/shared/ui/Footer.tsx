@@ -2,6 +2,8 @@ import { Camera, Mail, MapPin, MessageCircle, Phone, Send } from 'lucide-react'
 import { memo } from 'react'
 import { NavLink } from 'react-router-dom'
 
+import { brand } from '@/config/brand'
+
 const CURRENT_YEAR = new Date().getFullYear()
 
 export const Footer = memo(function Footer() {
@@ -12,8 +14,8 @@ export const Footer = memo(function Footer() {
           <div className="footer-logo-row">
             <span className="footer-logo-icon" aria-hidden="true" />
             <div>
-              <div className="footer-logo-text">RankPadel</div>
-              <div className="footer-logo-sub">Santiago del Estero</div>
+              <div className="footer-logo-text">{brand.name}</div>
+              <div className="footer-logo-sub">{brand.location}</div>
             </div>
           </div>
 
@@ -52,21 +54,26 @@ export const Footer = memo(function Footer() {
           <h4>Contacto</h4>
           <div className="footer-contact-item">
             <Mail size={16} />
-            <span>info@rankpadel.com</span>
+            <span>{brand.email}</span>
           </div>
           <div className="footer-contact-item">
             <MapPin size={16} />
-            <span>Santiago del Estero, Argentina</span>
+            <span>{brand.location}, {brand.country}</span>
           </div>
           <div className="footer-contact-item">
             <Phone size={16} />
-            <span>+54 9 385 123-4567</span>
+            <span>{brand.phone}</span>
+          </div>
+          <div className="footer-legal-links mt-3 flex flex-wrap gap-x-3 gap-y-1 text-xs">
+            <NavLink to="/contacto">Contacto</NavLink>
+            <NavLink to="/terminos">Términos</NavLink>
+            <NavLink to="/privacidad">Privacidad</NavLink>
           </div>
         </div>
       </div>
 
       <div className="footer-bottom">
-        &copy; {CURRENT_YEAR} RankPadel - Todos los derechos reservados.
+        &copy; {CURRENT_YEAR} {brand.name} - Todos los derechos reservados.
       </div>
     </footer>
   )

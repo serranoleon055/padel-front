@@ -12,6 +12,9 @@ const RankingPage = lazy(() => import('@/pages/public/RankingPage'))
 const PlayerProfilePage = lazy(() => import('@/pages/public/PlayerProfilePage'))
 const TournamentDetailPage = lazy(() => import('@/pages/public/TournamentDetailPage'))
 const TournamentsPage = lazy(() => import('@/pages/public/TournamentsPage'))
+const ContactoPage = lazy(() => import('@/pages/public/legal/ContactoPage'))
+const TerminosPage = lazy(() => import('@/pages/public/legal/TerminosPage'))
+const PrivacidadPage = lazy(() => import('@/pages/public/legal/PrivacidadPage'))
 const PlayersPage = lazy(() => import('@/pages/admin/PlayersPage'))
 const CategoriesPage = lazy(() => import('@/pages/admin/CategoriesPage'))
 const PlacesPage = lazy(() => import('@/pages/admin/PlacesPage'))
@@ -44,6 +47,9 @@ export function AppRouter() {
           <Route path="torneos/:torneoId" element={<TournamentDetailPage />} />
           <Route path="ranking" element={<RankingPage />} />
           <Route path="jugadores/:jugadorId" element={<PlayerProfilePage />} />
+          <Route path="contacto" element={<ContactoPage />} />
+          <Route path="terminos" element={<TerminosPage />} />
+          <Route path="privacidad" element={<PrivacidadPage />} />
           <Route path="login" element={<LoginPage />} />
         </Route>
 

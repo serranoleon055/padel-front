@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 
+import { brand } from '@/config/brand'
 import { tournamentsApi } from '@/features/tournaments/tournamentsApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
 import { formatearFecha, formatearEnum } from '@/shared/lib/formatters'
@@ -168,7 +169,7 @@ export default function TournamentsPage() {
         <div>
           <div className="tournaments-eyebrow">
             <Trophy size={13} />
-            CIRCUITO RANKPADEL
+            CIRCUITO {brand.name.toUpperCase()}
           </div>
 
           <h1>Torneos</h1>
