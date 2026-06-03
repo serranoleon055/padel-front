@@ -1,6 +1,5 @@
-import { ArrowLeft, CalendarDays, ChevronDown, Clock, MapPin, Play, Plus, Shuffle, Trash2, Trophy, Users } from 'lucide-react'
-import { memo, useCallback, useEffect, useMemo, useState } from 'react'
-import type { ReactNode } from 'react'
+import { ArrowLeft, CalendarDays, MapPin, Shuffle, Trophy, Users } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { NavLink, useParams } from 'react-router-dom'
 
 import { categoriesApi } from '@/features/catalog/catalogApi'
@@ -8,7 +7,7 @@ import { playersApi } from '@/features/players/playersApi'
 import { tournamentsApi } from '@/features/tournaments/tournamentsApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
 import { useToast } from '@/shared/ui/Toast'
-import { formatearFecha, formatearFechaHora, formatearEnum, formatearEstadoPartido, formatearFechaPartido, formatearEtapaPartido, formatearPareja } from '@/shared/lib/formatters'
+import { formatearFecha, formatearFechaHora, formatearEnum, formatearEtapaPartido, formatearPareja } from '@/shared/lib/formatters'
 import { obtenerPartidoCampeon, obtenerNombreSubcampeon } from '@/shared/lib/tournamentView'
 import type {
     CategoriaResponse,
@@ -27,6 +26,12 @@ import { Modal } from '@/shared/ui/Modal'
 import { Select } from '@/shared/ui/Select'
 import { StatusBadge } from '@/shared/ui/StatusBadge'
 import { StatusMessage } from '@/shared/ui/StatusMessage'
+
+import { BuscadorJugador } from './tournament-detail/BuscadorJugador'
+import { GruposTab } from './tournament-detail/GruposTab'
+import { ParejasTab } from './tournament-detail/ParejasTab'
+import { PartidosTab } from './tournament-detail/PartidosTab'
+import { TarjetaDato } from './tournament-detail/TarjetaDato'
 
 const PAREJA_VACIA: ParejaRequest = { jugador1Id: 0, jugador2Id: 0, categoriaId: 0, esCabezaDeSerie: false }
 
@@ -245,16 +250,6 @@ export default function TournamentAdminDetailPage() {
         return info
     }, [mostrarSorteo, categoriasTorneo, parejas, torneo])
 
-    const partidosPorCategoria = useMemo(() => {
-        const mapa = new Map<string, PartidoResponse[]>()
-        for (const partido of partidosSeleccionados) {
-            const clave = partido.categoriaNombre ?? 'Sin categoría'
-            if (!mapa.has(clave)) mapa.set(clave, [])
-            mapa.get(clave)!.push(partido)
-        }
-        return mapa
-    }, [partidosSeleccionados])
-
     const jugadoresPorGenero = useMemo(
         () => obtenerJugadoresPorGenero(categoriaSeleccionada?.genero ?? null),
         [jugadores, categoriaSeleccionada]
@@ -352,183 +347,34 @@ export default function TournamentAdminDetailPage() {
             </div>
 
             {pestana === 'parejas' && (
-                <div className="mt-4">
-                {puedeInscribir && (
-                    <div className="mb-4 flex justify-end">
-                    <Button size="sm" onClick={() => { setFormularioPareja(PAREJA_VACIA); setErrorPareja(null); setParejaAbierta(true) }}>
-                        <Plus size={16} />Inscribir pareja
-                    </Button>
-                    </div>
-                )}
-                {parejasSeleccionadas.length === 0 ? (
-                    <StatusMessage type="empty" title="No hay parejas" description={puedeInscribir ? 'Inscribí parejas con el botón.' : 'Requiere estado INSCRIPCION.'} />
-                ) : (
-                    <div className="grid gap-3 sm:grid-cols-2">
-                    {parejasSeleccionadas.map((pareja) => (
-                        <article key={pareja.id} className="rounded-lg border border-rp-border bg-rp-surface/82 p-5">
-                        <div className="flex items-start justify-between gap-3">
-                            <div>
-                            <p className="text-sm font-black text-rp-text">{pareja.jugador1Nombre} / {pareja.jugador2Nombre}</p>
-                            <p className="mt-1 text-xs text-rp-muted">{pareja.categoriaNombre}</p>
-                            {pareja.esCabezaDeSerie && <span className="mt-1 block text-xs font-bold text-rp-accent">Cabeza de serie</span>}
-                            </div>
-                            <div className="flex items-center gap-2">
-                            <StatusBadge tone={pareja.estado === 'CAMPEON' ? 'success' : pareja.estado === 'ELIMINADA' ? 'neutral' : 'warning'}>
-                                {formatearEnum(pareja.estado)}
-                            </StatusBadge>
-                            {puedeInscribir && (
-                                <button onClick={() => setParejaAEliminar({ id: pareja.id, name: `${pareja.jugador1Nombre} / ${pareja.jugador2Nombre}` })} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger" title="Eliminar pareja">
-                                <Trash2 size={14} />
-                                </button>
-                            )}
-                            {(torneo?.estado === 'EN_CURSO' || torneo?.estado === 'SORTEADO') && (
-                                <button onClick={() => setParejaARetirar({ id: pareja.id, name: `${pareja.jugador1Nombre} / ${pareja.jugador2Nombre}` })} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger" title="Retirar pareja del torneo (genera W.O.)">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                                </button>
-                            )}
-                            </div>
-                        </div>
-                        </article>
-                    ))}
-                    </div>
-                )}
-                </div>
+                <ParejasTab
+                    parejas={parejasSeleccionadas}
+                    puedeInscribir={puedeInscribir}
+                    estadoTorneo={torneo?.estado}
+                    onOpenInscribir={() => { setFormularioPareja(PAREJA_VACIA); setErrorPareja(null); setParejaAbierta(true) }}
+                    onEliminar={(pareja) => setParejaAEliminar(pareja)}
+                    onRetirar={(pareja) => setParejaARetirar(pareja)}
+                />
             )}
 
             {pestana === 'partidos' && (
                 <div className="mt-4">
-                {partidosSeleccionados.length === 0 ? (
-                    <StatusMessage type="empty" title="No hay partidos" description={mostrarSorteo ? 'Generá el sorteo desde el encabezado.' : 'Los partidos se generan al sortear (estado INSCRIPCION).'} />
-                ) : (
-                    <div className="space-y-6">
-                    {Array.from(partidosPorCategoria.entries()).map(([nombreCat, partidosCat]) => {
-                        const partidosGruposFase = partidosCat.filter((partido) => partido.fase === 'GRUPOS')
-                        const eliminacion = partidosCat.filter((partido) => partido.fase === 'ELIMINACION')
-
-                        // Agrupar partidos de grupo por nombre de grupo, pendientes primero
-                        const porGrupo = partidosGruposFase.reduce<Record<string, PartidoResponse[]>>((acum, partido) => {
-                            const clave = partido.grupoNombre ?? 'Sin grupo'
-                            if (!acum[clave]) acum[clave] = []
-                            acum[clave].push(partido)
-                            return acum
-                        }, {})
-                        const ordenarPorEstado = (lista: PartidoResponse[]) =>
-                            [...lista].sort((a, b) => {
-                                const orden: Record<string, number> = { PENDIENTE: 0, EN_CURSO: 1, BYE: 2, FINALIZADO: 3, WALKOVER: 3, RETIRO: 3 }
-                                return (orden[a.estado] ?? 2) - (orden[b.estado] ?? 2)
-                            })
-
-                        // Agrupar eliminatorias por ronda, pendientes primero
-                        const porRonda = eliminacion.reduce<Record<string, PartidoResponse[]>>((acum, partido) => {
-                            const clave = partido.ronda ?? 'Eliminación'
-                            if (!acum[clave]) acum[clave] = []
-                            acum[clave].push(partido)
-                            return acum
-                        }, {})
-
-                        return (
-                        <div key={nombreCat}>
-                            <h3 className="mb-3 text-sm font-black uppercase tracking-[0.12em] text-rp-accent">{nombreCat}</h3>
-
-                            {Object.keys(porGrupo).length > 0 && (
-                            <div className="mb-4">
-                                <h4 className="mb-2 text-xs font-bold uppercase tracking-[0.1em] text-rp-muted">Fase de grupos</h4>
-                                <div className="space-y-3">
-                                {Object.entries(porGrupo).map(([grupoNombre, partidosGrupo]) => (
-                                    <GrupoPartidosColapsable key={grupoNombre} title={grupoNombre} count={partidosGrupo.length}>
-                                        {ordenarPorEstado(partidosGrupo).map((partido) => (
-                                        <FilaPartido key={partido.id} partido={partido} showResults={mostrarResultados} canSchedule={puedeProgramar} onStartMatch={manejarIniciarPartido} onLoadResult={manejarCargarResultado} onSchedule={manejarProgramarPartido} onDeclareWo={manejarDeclararWo} />
-                                        ))}
-                                    </GrupoPartidosColapsable>
-                                ))}
-                                </div>
-                            </div>
-                            )}
-
-                            {Object.keys(porRonda).length > 0 && (
-                            <div>
-                                <h4 className="mb-2 text-xs font-bold uppercase tracking-[0.1em] text-rp-muted">Eliminatorias</h4>
-                                <div className="space-y-3">
-                                {Object.entries(porRonda).map(([rondaNombre, partidosRonda]) => (
-                                    <GrupoPartidosColapsable key={rondaNombre} title={rondaNombre} count={partidosRonda.length}>
-                                        {ordenarPorEstado(partidosRonda).map((partido) => (
-                                        <FilaPartido key={partido.id} partido={partido} showResults={mostrarResultados} canSchedule={puedeProgramar} onStartMatch={manejarIniciarPartido} onLoadResult={manejarCargarResultado} onSchedule={manejarProgramarPartido} onDeclareWo={manejarDeclararWo} />
-                                        ))}
-                                    </GrupoPartidosColapsable>
-                                ))}
-                                </div>
-                            </div>
-                            )}
-                        </div>
-                        )
-                    })}
-                    </div>
-                )}
+                    <PartidosTab
+                        partidos={partidosSeleccionados}
+                        mostrarSorteo={mostrarSorteo}
+                        showResults={mostrarResultados}
+                        canSchedule={puedeProgramar}
+                        onStartMatch={manejarIniciarPartido}
+                        onLoadResult={manejarCargarResultado}
+                        onSchedule={manejarProgramarPartido}
+                        onDeclareWo={manejarDeclararWo}
+                    />
                 </div>
             )}
 
             {pestana === 'grupos' && (
                 <div className="mt-4">
-                {gruposSeleccionados.length === 0 ? (
-                    <StatusMessage type="empty" title="No hay grupos" description="Los grupos se crean al generar el sorteo." />
-                ) : (
-                    <div className="space-y-4">
-                    {Object.entries(
-                        gruposSeleccionados.reduce((acum: Record<string, GrupoResponse[]>, grupo) => {
-                        const clave = grupo.categoriaNombre
-                        if (!acum[clave]) acum[clave] = []
-                        acum[clave].push(grupo)
-                        return acum
-                        }, {})
-                    ).map(([nombreCat, gruposCat]) => (
-                        <div key={nombreCat}>
-                        <h3 className="mb-3 text-sm font-black uppercase tracking-[0.12em] text-rp-accent">{nombreCat}</h3>
-                        <div className="grid gap-3">
-                            {gruposCat.map((grupo) => (
-                            <div key={grupo.id} className="rounded-lg border border-rp-border bg-rp-surface/82">
-                                <button onClick={() => alternarGrupoExpandido(grupo.id)} className="flex w-full items-center justify-between p-4">
-                                <span className="font-bold text-rp-text">{grupo.nombre}</span>
-                                <ChevronDown size={16} className={`text-rp-muted transition-transform ${gruposExpandidos.has(grupo.id) ? 'rotate-180' : ''}`} />
-                                </button>
-                                {gruposExpandidos.has(grupo.id) && (
-                                <div className="border-t border-rp-border px-4 py-3">
-                                    <table className="w-full text-xs">
-                                    <thead>
-                                        <tr className="text-left text-rp-muted">
-                                        <th className="pb-2 pr-2 font-bold">#</th>
-                                        <th className="pb-2 pr-2 font-bold">Pareja</th>
-                                        <th className="pb-2 pr-2 font-bold text-center">PJ</th>
-                                        <th className="pb-2 pr-2 font-bold text-center">PG</th>
-                                        <th className="pb-2 pr-2 font-bold text-center">PP</th>
-                                        <th className="pb-2 pr-2 font-bold text-center">Sets</th>
-                                        <th className="pb-2 pr-2 font-bold text-center">Juegos</th>
-                                        <th className="pb-2 font-bold text-center">Pts</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {grupo.posiciones.map((pos) => (
-                                        <tr key={pos.id} className="border-t border-rp-border/50">
-                                            <td className="py-2 pr-2 font-bold text-rp-muted">{pos.posicion}</td>
-                                            <td className="py-2 pr-2 text-rp-text">{pos.parejaNombre}</td>
-                                            <td className="py-2 pr-2 text-center text-rp-muted">{pos.pj}</td>
-                                            <td className="py-2 pr-2 text-center text-rp-muted">{pos.pg}</td>
-                                            <td className="py-2 pr-2 text-center text-rp-muted">{pos.pp}</td>
-                                            <td className="py-2 pr-2 text-center text-rp-muted">{pos.setsGanados}-{pos.setsPerdidos}</td>
-                                            <td className="py-2 pr-2 text-center text-rp-muted">{pos.juegosGanados}-{pos.juegosPerdidos}</td>
-                                            <td className="py-2 text-center font-bold text-rp-accent">{pos.puntos}</td>
-                                        </tr>
-                                        ))}
-                                    </tbody>
-                                    </table>
-                                </div>
-                                )}
-                            </div>
-                            ))}
-                        </div>
-                        </div>
-                    ))}
-                    </div>
-                )}
+                    <GruposTab grupos={gruposSeleccionados} expandidos={gruposExpandidos} onToggle={alternarGrupoExpandido} />
                 </div>
             )}
 
@@ -670,171 +516,3 @@ export default function TournamentAdminDetailPage() {
         </section>
     )
 }
-
-function BuscadorJugador({ label, onChange, jugadores, value }: {
-    label: string
-    jugadores: JugadorResponse[]
-    value: number
-    onChange: (id: number) => void
-}) {
-    const [consulta, setConsulta] = useState('')
-    const [abierto, setAbierto] = useState(false)
-
-    const seleccionado = jugadores.find((jugador) => jugador.id === value)
-    const filtrados = jugadores
-        .filter((jugador) => !consulta || `${jugador.nombre} ${jugador.apellido}`.toLowerCase().includes(consulta.toLowerCase()))
-        .slice(0, 8)
-
-    return (
-        <div>
-            <label className="mb-1 block text-xs font-bold text-rp-muted">{label}</label>
-            {seleccionado && !abierto && (
-                <button
-                    type="button"
-                    className="mb-1 flex w-full items-center justify-between rounded-lg border border-rp-accent/40 bg-rp-accent/10 px-3 py-2 text-sm"
-                    onClick={() => { setConsulta(''); setAbierto(true) }}
-                >
-                    <span>
-                        <span className="font-bold text-rp-text">{seleccionado.nombre} {seleccionado.apellido}</span>
-                        {seleccionado.categoriaNombre && <span className="ml-2 text-xs text-rp-muted">{seleccionado.categoriaNombre}</span>}
-                    </span>
-                    <span className="text-xs text-rp-muted">Cambiar</span>
-                </button>
-            )}
-            {(!seleccionado || abierto) && (
-                <>
-                    <input
-                        className="h-10 w-full rounded-lg border border-rp-border bg-rp-surface/82 px-3 text-sm text-rp-text placeholder:text-rp-muted focus:border-rp-accent focus:outline-none"
-                        placeholder="Buscar jugador por nombre..."
-                        value={consulta}
-                        autoFocus={abierto}
-                        onChange={(e) => { setConsulta(e.target.value); setAbierto(true) }}
-                        onFocus={() => setAbierto(true)}
-                        onBlur={() => setTimeout(() => setAbierto(false), 160)}
-                    />
-                    {/* Dropdown INLINE (no absolute) para no quedar cortado por el modal */}
-                    {abierto && (
-                        <div className="mt-1 overflow-hidden rounded-lg border border-rp-border bg-rp-surface">
-                            {filtrados.length === 0 ? (
-                                <p className="px-3 py-2 text-xs text-rp-muted">
-                                    {consulta ? `Sin resultados para "${consulta}"` : 'Escribí para buscar...'}
-                                </p>
-                            ) : (
-                                <div className="max-h-36 overflow-y-auto">
-                                    {filtrados.map((jugador) => (
-                                        <button
-                                            key={jugador.id}
-                                            type="button"
-                                            className={`w-full px-3 py-2 text-left hover:bg-rp-surface-2 ${jugador.id === value ? 'bg-rp-accent/10' : ''}`}
-                                            onMouseDown={(e) => { e.preventDefault(); onChange(jugador.id); setConsulta(''); setAbierto(false) }}
-                                        >
-                                            <div className="text-sm font-bold text-rp-text">{jugador.nombre} {jugador.apellido}</div>
-                                            {jugador.categoriaNombre && <div className="text-xs text-rp-muted">{jugador.categoriaNombre}</div>}
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </>
-            )}
-        </div>
-    )
-}
-
-const TarjetaDato = memo(function TarjetaDato({ label, value }: { label: string; value: number }) {
-    return (
-        <div className="rounded-lg border border-rp-border bg-rp-surface/82 p-5 text-center">
-            <strong className="block text-2xl font-black text-rp-accent">{value}</strong>
-            <span className="mt-2 block text-xs font-bold text-rp-muted">{label}</span>
-        </div>
-    )
-})
-
-function GrupoPartidosColapsable({ title, count, children }: { title: string; count: number; children: ReactNode }) {
-    const [abierto, setAbierto] = useState(false)
-    return (
-        <div>
-            <button type="button" onClick={() => setAbierto((v) => !v)} className="mb-1 flex w-full items-center gap-2 text-xs font-bold text-rp-accent/80 hover:text-rp-accent">
-                <ChevronDown size={13} className={`transition-transform ${abierto ? '' : '-rotate-90'}`} />
-                {title}
-                <span className="font-normal text-rp-muted">({count})</span>
-            </button>
-            {abierto && <div className="grid gap-2">{children}</div>}
-        </div>
-    )
-}
-
-const FilaPartido = memo(function FilaPartido({ partido, showResults, canSchedule, onStartMatch, onLoadResult, onSchedule, onDeclareWo }: {
-    partido: PartidoResponse
-    showResults: boolean
-    canSchedule: boolean
-    onStartMatch: (id: number) => void
-    onLoadResult: (p: PartidoResponse) => void
-    onSchedule: (p: PartidoResponse) => void
-    onDeclareWo: (p: PartidoResponse) => void
-}) {
-    const [expandido, setExpandido] = useState(false)
-    const esPendiente = partido.estado === 'PENDIENTE'
-    const esEnCurso = partido.estado === 'EN_CURSO'
-    const esTerminal = ['FINALIZADO', 'BYE', 'WALKOVER', 'RETIRO'].includes(partido.estado)
-    const tonoBadge = esEnCurso ? 'live' : partido.estado === 'FINALIZADO' ? 'success' : partido.estado === 'BYE' || partido.estado === 'WALKOVER' || partido.estado === 'RETIRO' ? 'neutral' : 'neutral'
-    return (
-        <article className="rounded-lg border border-rp-border bg-rp-surface/82">
-            <div className="flex items-center justify-between gap-4 p-5">
-                <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                    <StatusBadge tone={tonoBadge}>
-                    {formatearEstadoPartido(partido.estado)}
-                    </StatusBadge>
-                    <span className="text-xs text-rp-muted">{formatearEtapaPartido(partido)}</span>
-                    <span className="text-xs text-rp-muted">{partido.categoriaNombre}</span>
-                </div>
-                <p className="mt-3 truncate text-sm font-bold text-rp-text">{formatearPareja(partido, 'local')} vs {formatearPareja(partido, 'visitante')}</p>
-                {partido.marcador && <p className="mt-2 text-sm font-black text-rp-accent">{partido.marcador}</p>}
-                {!partido.marcador && (partido.fechaHoraProgramada || partido.fechaHora) && (
-                    <p className="mt-1 flex items-center gap-1 text-xs text-rp-muted">
-                    <Clock size={11} />{formatearFechaPartido(partido)}
-                    {partido.canchaNombre && <span>· {partido.canchaNombre}</span>}
-                    </p>
-                )}
-                </div>
-                <div className="flex shrink-0 flex-wrap items-center gap-2">
-                {esPendiente && showResults && (
-                    <button onClick={() => onStartMatch(partido.id)} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent" title="Iniciar partido">
-                    <Play size={15} />
-                    </button>
-                )}
-                {!esTerminal && canSchedule && (
-                    <button onClick={() => onSchedule(partido)} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent" title="Programar fecha y hora">
-                    <CalendarDays size={15} />
-                    </button>
-                )}
-                {(esPendiente || esEnCurso) && showResults && (
-                    <>
-                    <Button size="sm" variant="subtle" onClick={() => onLoadResult(partido)}>
-                    Resultado
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => onDeclareWo(partido)}>
-                    W.O.
-                    </Button>
-                    </>
-                )}
-                <button onClick={() => setExpandido(!expandido)} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2">
-                    <ChevronDown size={15} className={`transition-transform ${expandido ? 'rotate-180' : ''}`} />
-                </button>
-                </div>
-            </div>
-            {expandido && (
-                <div className="grid gap-2 border-t border-rp-border px-5 py-4 text-xs text-rp-muted sm:grid-cols-2">
-                <span>Lugar: {partido.lugarNombre ?? '—'}</span>
-                {partido.canchaNombre && <span>Cancha: {partido.canchaNombre}</span>}
-                <span>Programado: {formatearFechaHora(partido.fechaHoraProgramada)}</span>
-                <span>Jugado: {formatearFechaHora(partido.fechaHora)}</span>
-                <span>Fase: {formatearEnum(partido.fase)}</span>
-                {partido.ganadorNombre && <span className="font-bold text-rp-text">Ganador: {partido.ganadorNombre}</span>}
-                </div>
-            )}
-        </article>
-    )
-})
