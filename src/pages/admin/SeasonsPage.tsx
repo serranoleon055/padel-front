@@ -74,7 +74,9 @@ export default function SeasonsPage() {
         if (!formulario.nombre.trim() || !formulario.fechaInicio) { setErrorFormulario('Nombre y fecha de inicio son obligatorios.'); return }
         setGuardando(true); setErrorFormulario(null)
         try {
-        objetivoEdicion ? await seasonsApi.update(objetivoEdicion.id, formulario) : await seasonsApi.create(formulario); avisoExito(objetivoEdicion ? 'Temporada actualizada' : 'Temporada creada')
+        if (objetivoEdicion) await seasonsApi.update(objetivoEdicion.id, formulario)
+        else await seasonsApi.create(formulario)
+        avisoExito(objetivoEdicion ? 'Temporada actualizada' : 'Temporada creada')
         cerrarModal(); cargar()
         } catch (e: unknown) { setErrorFormulario(obtenerMensajeErrorApi(e)) }
         finally { setGuardando(false) }

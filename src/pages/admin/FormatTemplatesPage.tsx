@@ -136,7 +136,8 @@ export default function FormatTemplatesPage() {
     setGuardando(true)
     setErrorFormulario(null)
     try {
-      objetivoEdicion ? await formatTemplatesApi.update(objetivoEdicion.id, datos) : await formatTemplatesApi.create(datos)
+      if (objetivoEdicion) await formatTemplatesApi.update(objetivoEdicion.id, datos)
+      else await formatTemplatesApi.create(datos)
       cerrarModal(); cargar(); avisoExito(objetivoEdicion ? 'Plantilla actualizada' : 'Plantilla creada')
     } catch (e: unknown) {
       setErrorFormulario(obtenerMensajeErrorApi(e))

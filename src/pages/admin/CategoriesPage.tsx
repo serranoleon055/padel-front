@@ -77,7 +77,8 @@ export default function CategoriesPage() {
         if (nivel < 1 || nivel > 8) { setErrorFormulario('El nivel debe estar entre 1 y 8.'); return }
         setGuardando(true); setErrorFormulario(null)
         try {
-        objetivoEdicion ? await categoriesApi.update(objetivoEdicion.id, { ...formulario, nivel }) : await categoriesApi.create({ ...formulario, nivel })
+        if (objetivoEdicion) await categoriesApi.update(objetivoEdicion.id, { ...formulario, nivel })
+        else await categoriesApi.create({ ...formulario, nivel })
         cerrarModal(); cargar(); avisoExito(objetivoEdicion ? 'Categoría actualizada' : 'Categoría creada')
         } catch (e: unknown) { setErrorFormulario(obtenerMensajeErrorApi(e)) }
         finally { setGuardando(false) }
