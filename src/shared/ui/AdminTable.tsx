@@ -1,0 +1,62 @@
+import { memo } from 'react'
+import type { ReactNode } from 'react'
+import { StatusMessage } from '@/shared/ui/StatusMessage'
+
+export type Column<T> = {
+    key: string
+    label: string
+    render: (item: T) => ReactNode
+    className?: string
+}
+
+type AdminTableProps<T> = {
+    columns: Column<T>[]
+    rows: T[]
+    getRowKey: (item: T) => string | number
+    isLoading?: boolean
+    error?: string | null
+    emptyTitle?: string
+    emptyDescription?: string
+    actions?: (item: T) => ReactNode
+    selectedIds?: Set<number>
+    onToggleSelect?: (id: number) => void
+    onSelectAll?: () => void
+}
+
+function AdminTableInner<T extends { id: number }>({ columns, rows, getRowKey, isLoading = false, error = null, emptyTitle = 'No hay registros', emptyDescription, actions, selectedIds, onToggleSelect, onSelectAll }: AdminTableProps<T>) {
+    const showCheckbox = selectedIds !== undefined && onToggleSelect !== undefined
+    const colTemplate = `${showCheckbox ? '40px ' : ''}${columns.map(() => '1fr').join(' ')}${actions ? ' 100px' : ''}`
+
+    return (
+        <div className="overflow-hidden rounded-lg border border-rp-border bg-rp-surface/82">
+            <div className="hidden border-b border-rp-border bg-rp-surface px-4 py-2.5 text-xs font-black uppercase tracking-[0.14em] text-rp-muted md:grid md:items-center" style={{ gridTemplateColumns: colTemplate }}>
+                {showCheckbox && (
+                    <input type="checkbox" checked={selectedIds.size === rows.length && rows.length > 0} onChange={onSelectAll} className="size-4 accent-rp-accent" />
+                )}
+                {columns.map((col) => <span key={col.key} className={col.className}>{col.label}</span>)}
+                {actions ? <span className="text-right">Acciones</span> : null}
+            </div>
+            <div className="divide-y divide-rp-border">
+                {isLoading ? (
+                    <div className="p-4"><StatusMessage type="loading" title="Cargando datos..." /></div>
+                ) : error ? (
+                    <div className="p-4"><StatusMessage type="error" title="Error al cargar" description={error} /></div>
+                ) : rows.length === 0 ? (
+                    <div className="p-4"><StatusMessage type="empty" title={emptyTitle} description={emptyDescription} /></div>
+                ) : (
+                    rows.map((item) => (
+                    <div key={getRowKey(item)} className="grid items-center gap-3 px-4 py-3" style={{ gridTemplateColumns: colTemplate }}>
+                        {showCheckbox && (
+                            <input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => onToggleSelect(item.id)} className="size-4 accent-rp-accent" />
+                        )}
+                        {columns.map((col) => <div key={col.key} className={col.className}>{col.render(item)}</div>)}
+                        {actions ? <div className="flex justify-end gap-1">{actions(item)}</div> : null}
+                    </div>
+                    ))
+                )}
+            </div>
+        </div>
+    )
+}
+
+export const AdminTable = memo(AdminTableInner) as typeof AdminTableInner

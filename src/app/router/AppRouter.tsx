@@ -1,0 +1,69 @@
+import { lazy, Suspense } from 'react'
+import { Navigate, Route, Routes } from 'react-router-dom'
+
+import { AdminLayout } from '@/app/layouts/AdminLayout'
+import { PublicLayout } from '@/app/layouts/PublicLayout'
+import { ProtectedRoute } from '@/app/router/ProtectedRoute'
+
+const AdminDashboardPage = lazy(() => import('@/pages/admin/AdminDashboardPage'))
+const HomePage = lazy(() => import('@/pages/public/HomePage'))
+const LoginPage = lazy(() => import('@/pages/public/LoginPage'))
+const RankingPage = lazy(() => import('@/pages/public/RankingPage'))
+const PlayerProfilePage = lazy(() => import('@/pages/public/PlayerProfilePage'))
+const TournamentDetailPage = lazy(() => import('@/pages/public/TournamentDetailPage'))
+const TournamentsPage = lazy(() => import('@/pages/public/TournamentsPage'))
+const PlayersPage = lazy(() => import('@/pages/admin/PlayersPage'))
+const CategoriesPage = lazy(() => import('@/pages/admin/CategoriesPage'))
+const PlacesPage = lazy(() => import('@/pages/admin/PlacesPage'))
+const SeasonsPage = lazy(() => import('@/pages/admin/SeasonsPage'))
+const TournamentsAdminPage = lazy(() => import('@/pages/admin/TournamentsAdminPage'))
+const TournamentFormPage = lazy(() => import('@/pages/admin/TournamentFormPage'))
+const TournamentAdminDetailPage = lazy(() => import('@/pages/admin/TournamentAdminDetailPage'))
+const AdminUsersPage = lazy(() => import('@/pages/admin/AdminUsersPage'))
+const FormatTemplatesPage = lazy(() => import('@/pages/admin/FormatTemplatesPage'))
+const PointTemplatesPage = lazy(() => import('@/pages/admin/PointTemplatesPage'))
+
+function PageFallback() {
+  return (
+    <div className="flex min-h-[60svh] items-center justify-center">
+      <div className="flex flex-col items-center gap-4">
+        <div className="size-8 animate-spin rounded-full border-2 border-rp-accent border-t-transparent" />
+        <p className="text-sm text-rp-muted">Cargando...</p>
+      </div>
+    </div>
+  )
+}
+
+export function AppRouter() {
+  return (
+    <Suspense fallback={<PageFallback />}>
+      <Routes>
+        <Route element={<PublicLayout />}>
+          <Route index element={<HomePage />} />
+          <Route path="torneos" element={<TournamentsPage />} />
+          <Route path="torneos/:torneoId" element={<TournamentDetailPage />} />
+          <Route path="ranking" element={<RankingPage />} />
+          <Route path="jugadores/:jugadorId" element={<PlayerProfilePage />} />
+          <Route path="login" element={<LoginPage />} />
+        </Route>
+
+        <Route path="admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
+          <Route index element={<AdminDashboardPage />} />
+          <Route path="jugadores" element={<PlayersPage />} />
+          <Route path="categorias" element={<CategoriesPage />} />
+          <Route path="lugares" element={<PlacesPage />} />
+          <Route path="temporadas" element={<SeasonsPage />} />
+          <Route path="torneos" element={<TournamentsAdminPage />} />
+          <Route path="torneos/nuevo" element={<TournamentFormPage />} />
+          <Route path="torneos/:torneoId/editar" element={<TournamentFormPage />} />
+          <Route path="torneos/:torneoId" element={<TournamentAdminDetailPage />} />
+          <Route path="plantillas-formato" element={<FormatTemplatesPage />} />
+          <Route path="plantillas-puntos" element={<PointTemplatesPage />} />
+          <Route path="usuarios-admin" element={<AdminUsersPage />} />
+        </Route>
+
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Suspense>
+  )
+}
