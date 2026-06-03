@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 
 import { useAuth } from '@/app/providers/AuthContext'
+import { brand } from '@/config/brand'
 import { homeApi } from '@/features/home/homeApi'
 import { cn } from '@/shared/lib/utils'
 import type { TemporadaResponse } from '@/shared/types/api'
@@ -47,7 +48,7 @@ export function AdminLayout() {
           </span>
           <span>
             <span className="block text-sm font-black text-rp-text">Panel Admin</span>
-            <span className="block text-xs text-rp-muted">RankPadel</span>
+            <span className="block text-xs text-rp-muted">{brand.name}</span>
           </span>
         </div>
 

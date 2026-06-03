@@ -3,6 +3,7 @@ import { ArrowRight, CalendarDays, Check, ChevronLeft, ChevronRight, Grid2X2, Ma
 import { useEffect, useMemo, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 
+import { brand } from '@/config/brand'
 import { homeApi } from '@/features/home/homeApi'
 import { resolveApiAssetUrl } from '@/shared/api/apiClient'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
@@ -105,9 +106,9 @@ export default function HomePage() {
               TEMPORADA 2026
             </div>
             <h1 className="hero-title">
-              RankPadel
+              {brand.name}
               <br />
-              <em>Santiago del Estero</em>
+              <em>{brand.location}</em>
             </h1>
           </div>
         </div>

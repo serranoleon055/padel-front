@@ -2,6 +2,7 @@ import './RankingPage.css'
 import { Search, Trophy, Users } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
+import { brand } from '@/config/brand'
 import { categoriesApi } from '@/features/catalog/catalogApi'
 import { rankingApi } from '@/features/ranking/rankingApi'
 import { resolveApiAssetUrl } from '@/shared/api/apiClient'
@@ -164,7 +165,7 @@ export default function RankingPage() {
             <Trophy size={13} />
             TEMPORADA 2026
           </div>
-          <h1 className="rank-title">Ranking oficial <span>RankPadel</span></h1>
+          <h1 className="rank-title">Ranking oficial <span>{brand.name}</span></h1>
           <p className="rank-lead">
             Posiciones actualizadas por categoría, rendimiento y participación en torneos del circuito provincial.
           </p>
@@ -235,7 +236,7 @@ export default function RankingPage() {
                             <AvatarJugador entrada={entrada} />
                             <div>
                               <a href={`/jugadores/${entrada.jugadorId}`} className="player-name hover:text-rp-accent">{entrada.jugadorNombre}</a>
-                              <div className="player-sub"><Users size={13} />Circuito RankPadel</div>
+                              <div className="player-sub"><Users size={13} />Circuito {brand.name}</div>
                             </div>
                           </div>
                         </td>
