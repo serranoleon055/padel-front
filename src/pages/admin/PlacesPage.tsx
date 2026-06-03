@@ -69,7 +69,9 @@ export default function PlacesPage() {
         if (!formulario.nombre.trim() || !formulario.direccion.trim()) { setErrorFormulario('Nombre y dirección son obligatorios.'); return }
         setGuardando(true); setErrorFormulario(null)
         try {
-        objetivoEdicion ? await placesApi.update(objetivoEdicion.id, formulario) : await placesApi.create(formulario); avisoExito(objetivoEdicion ? 'Lugar actualizado' : 'Lugar creado')
+        if (objetivoEdicion) await placesApi.update(objetivoEdicion.id, formulario)
+        else await placesApi.create(formulario)
+        avisoExito(objetivoEdicion ? 'Lugar actualizado' : 'Lugar creado')
         cerrarModal(); cargar()
         } catch (e: unknown) { setErrorFormulario(obtenerMensajeErrorApi(e)) }
         finally { setGuardando(false) }

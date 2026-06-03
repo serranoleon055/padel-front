@@ -89,7 +89,8 @@ export default function PointTemplatesPage() {
     setGuardando(true); setErrorFormulario(null)
     try {
       const datos = { ...formulario, rondas: formulario.rondas.map((r, i) => ({ ...r, puntosGanador: Number.isNaN(r.puntosGanador) ? 0 : r.puntosGanador, puntosPerdedor: Number.isNaN(r.puntosPerdedor) ? 0 : r.puntosPerdedor, orden: i + 1 })) }
-      objetivoEdicion ? await pointTemplatesApi.update(objetivoEdicion.id, datos) : await pointTemplatesApi.create(datos)
+      if (objetivoEdicion) await pointTemplatesApi.update(objetivoEdicion.id, datos)
+      else await pointTemplatesApi.create(datos)
       cerrarModal(); cargar(); avisoExito(objetivoEdicion ? 'Plantilla actualizada' : 'Plantilla creada')
     } catch (e: unknown) { setErrorFormulario(obtenerMensajeErrorApi(e)) }
     finally { setGuardando(false) }
