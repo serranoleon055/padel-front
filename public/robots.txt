@@ -3,5 +3,4 @@ Allow: /
 Disallow: /admin
 Disallow: /login
 
-# Reemplazar el dominio por el real en producción
-Sitemap: https://rankpadel.vercel.app/sitemap.xml
+Sitemap: https://padel-front-five.vercel.app/sitemap.xml
