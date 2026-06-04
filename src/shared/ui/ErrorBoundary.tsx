@@ -23,7 +23,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 <section className="mx-auto flex min-h-[50svh] max-w-md items-center px-4 py-10">
                     <div className="w-full rounded-lg border border-rp-border bg-rp-surface/82 p-6 text-center">
                         <h1 className="text-2xl font-black text-rp-text">Algo salió mal</h1>
-                        <p className="mt-3 text-sm text-rp-muted">{this.state.error?.message ?? 'Error inesperado'}</p>
+                        <p className="mt-3 text-sm text-rp-muted">Ocurrió un error inesperado. Probá recargar la página o volver al inicio.</p>
                         <Button className="mt-6" onClick={() => { this.setState({ hasError: false, error: null }); window.location.href = '/' }}>
                             Volver al inicio
                         </Button>
