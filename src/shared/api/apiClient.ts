@@ -1,6 +1,18 @@
 import axios from 'axios'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
+// Normaliza VITE_API_BASE_URL para tolerar errores comunes de configuracion:
+// - si falta el esquema (p. ej. "backend-xxx.up.railway.app"), antepone https://
+//   (sin esto el navegador lo trata como ruta relativa y las llamadas caen en el
+//    propio dominio del frontend, devolviendo el index.html en vez de JSON)
+// - recorta espacios y la barra final
+function normalizeApiBaseUrl(raw?: string): string {
+  const value = (raw ?? '').trim()
+  if (!value) return ''
+  const withScheme = /^https?:\/\//i.test(value) ? value : `https://${value}`
+  return withScheme.replace(/\/+$/, '')
+}
+
+const API_BASE_URL = normalizeApiBaseUrl(import.meta.env.VITE_API_BASE_URL)
 
 export const AUTH_TOKEN_KEY = 'rankpadel_token'
 
