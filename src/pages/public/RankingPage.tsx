@@ -1,6 +1,7 @@
 import './RankingPage.css'
 import { Search, Trophy, Users } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 
 import { brand } from '@/config/brand'
 import { categoriesApi } from '@/features/catalog/catalogApi'
@@ -37,6 +38,7 @@ function AvatarJugador({ entrada }: { entrada: RankingResponse }) {
 }
 
 export default function RankingPage() {
+  const navigate = useNavigate()
   const [ranking, setRanking] = useState<RankingResponse[]>([])
   const [rankingGeneral, setRankingGeneral] = useState<RankingResponse[]>([])
   const [categorias, setCategorias] = useState<CategoriaResponse[]>([])
@@ -229,13 +231,13 @@ export default function RankingPage() {
                     <tr><td colSpan={8}><StatusMessage title="Error" description={error} type="error" /></td></tr>
                   ) : rankingFiltrado.length > 0 ? (
                     rankingPaginado.map((entrada) => (
-                      <tr key={`${entrada.categoriaId}-${entrada.jugadorId}`} style={{ cursor: 'pointer' }} onClick={() => { window.location.href = `/jugadores/${entrada.jugadorId}` }}>
+                      <tr key={`${entrada.categoriaId}-${entrada.jugadorId}`} style={{ cursor: 'pointer' }} onClick={() => navigate(`/jugadores/${entrada.jugadorId}`)}>
                         <td><span className="rank-position">{entrada.posicion}</span></td>
                         <td>
                           <div className="player-cell">
                             <AvatarJugador entrada={entrada} />
                             <div>
-                              <a href={`/jugadores/${entrada.jugadorId}`} className="player-name hover:text-rp-accent">{entrada.jugadorNombre}</a>
+                              <Link to={`/jugadores/${entrada.jugadorId}`} className="player-name hover:text-rp-accent" onClick={(event) => event.stopPropagation()}>{entrada.jugadorNombre}</Link>
                               <div className="player-sub"><Users size={13} />Circuito {brand.name}</div>
                             </div>
                           </div>
@@ -263,7 +265,20 @@ export default function RankingPage() {
             <div className="rank-cards-mobile">
               {cargando ? <StatusMessage title="Cargando..." type="loading" /> : null}
               {!cargando && rankingPaginado.map((entrada) => (
-                <article key={`${entrada.categoriaId}-${entrada.jugadorId}`} className="rank-card rp-card-hover">
+                <article
+                  key={`${entrada.categoriaId}-${entrada.jugadorId}`}
+                  className="rank-card rp-card-hover"
+                  role="link"
+                  tabIndex={0}
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => navigate(`/jugadores/${entrada.jugadorId}`)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault()
+                      navigate(`/jugadores/${entrada.jugadorId}`)
+                    }
+                  }}
+                >
                   <div className="rank-card-head">
                     <span className="rank-position">{entrada.posicion}</span>
                     <AvatarJugador entrada={entrada} />
