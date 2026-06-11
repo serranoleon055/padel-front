@@ -9,6 +9,7 @@ import { formatearFecha, formatearEnum } from '@/shared/lib/formatters'
 import { coincidePrefijoNombre } from '@/shared/lib/tournamentView'
 import type { TorneoResponse } from '@/shared/types/api'
 import { ETIQUETA_SIGUIENTE, ESTADO_SIGUIENTE, tono } from '@/shared/lib/tournamentState'
+import { AdminPageHeader } from '@/shared/ui/AdminPageHeader'
 import { Button } from '@/shared/ui/Button'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
 import { Input } from '@/shared/ui/Input'
@@ -73,13 +74,7 @@ export default function TournamentsAdminPage() {
 
     return (
         <section>
-            <div className="flex items-end justify-between gap-4">
-                <div>
-                <p className="text-xs font-black uppercase tracking-[0.22em] text-rp-accent">Admin</p>
-                <h1 className="mt-2 text-3xl font-black text-rp-text">Torneos</h1>
-                </div>
-                <Button size="sm" asChild><NavLink to="/admin/torneos/nuevo"><Plus size={16} />Nuevo torneo</NavLink></Button>
-            </div>
+            <AdminPageHeader title="Torneos" action={<Button size="sm" asChild><NavLink to="/admin/torneos/nuevo"><Plus size={16} />Nuevo torneo</NavLink></Button>} />
 
             <div className="rp-toolbar">
                 <Input placeholder="Buscar por nombre..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />

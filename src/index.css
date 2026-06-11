@@ -98,7 +98,13 @@ body {
 }
 
 .rp-toolbar > * {
-  min-width: 220px;
+  flex: 1 1 220px;
+}
+
+@media (min-width: 640px) {
+  .rp-toolbar > * {
+    max-width: 320px;
+  }
 }
 
 .rp-pagination {

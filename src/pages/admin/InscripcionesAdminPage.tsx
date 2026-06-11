@@ -179,10 +179,10 @@ export default function InscripcionesAdminPage() {
         <NavLink to={`/admin/torneos/${idTorneo}`}><ArrowLeft size={16} />Volver a la gestión del torneo</NavLink>
       </Button>
       <p className="mt-4 text-xs font-black uppercase tracking-[0.22em] text-rp-accent">Admin</p>
-      <h1 className="mt-2 text-3xl font-black text-rp-text">Inscripciones del torneo</h1>
+      <h1 className="mt-2 text-2xl font-black text-rp-text sm:text-3xl">Inscripciones del torneo</h1>
       <p className="mt-1 text-sm text-rp-muted">Aprobá o rechazá las solicitudes. Si alguien se cargó como nuevo pero ya existe un jugador con ese nombre, vas a tener que resolver el duplicado antes de aprobar.</p>
 
-      <div className="mt-4 w-64">
+      <div className="mt-4 w-full sm:w-64">
         <Select value={filtroCategoria} onChange={(e) => setFiltroCategoria(e.target.value)} placeholder="Todas las categorías">
           {ordenarCategorias(categorias).map((categoria) => <option key={categoria.id} value={categoria.id}>{categoria.nombre}</option>)}
         </Select>

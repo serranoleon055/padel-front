@@ -217,7 +217,7 @@ export default function TournamentFormPage() {
 
       <div className="mt-5">
         <p className="text-xs font-black uppercase tracking-[0.22em] text-rp-accent">Admin</p>
-        <h1 className="mt-2 text-3xl font-black text-rp-text">{estaEditando ? 'Editar torneo' : 'Nuevo torneo'}</h1>
+        <h1 className="mt-2 text-2xl font-black text-rp-text sm:text-3xl">{estaEditando ? 'Editar torneo' : 'Nuevo torneo'}</h1>
       </div>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_360px]">
@@ -323,14 +323,14 @@ export default function TournamentFormPage() {
               ) : categoriasVisibles.map((categoria) => {
                 const seleccionada = formulario.categoriaIds.includes(categoria.id)
                 return (
-                  <div key={categoria.id} className="flex items-center gap-3 rounded-md border border-rp-border p-4 transition hover:border-rp-accent/50">
-                    <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-3">
-                      <input type="checkbox" checked={seleccionada} onChange={() => alternarCategoria(categoria.id)} className="size-4 accent-rp-accent" />
+                  <div key={categoria.id} className="flex flex-wrap items-center gap-3 rounded-md border border-rp-border p-4 transition hover:border-rp-accent/50">
+                    <label className="flex min-w-0 flex-1 cursor-pointer flex-wrap items-center gap-x-3 gap-y-1">
+                      <input type="checkbox" checked={seleccionada} onChange={() => alternarCategoria(categoria.id)} className="size-4 shrink-0 accent-rp-accent" />
                       <span className="text-sm font-bold text-rp-text">{categoria.nombre}</span>
                       <span className="whitespace-nowrap text-xs text-rp-muted">Nivel {categoria.nivel} · {categoria.genero === 'MASCULINO' ? 'Masc.' : 'Fem.'}</span>
                     </label>
                     {seleccionada && (
-                      <Input type="number" min={2} placeholder="Cupo" className="w-24" value={formulario.cuposPorCategoria?.[categoria.id]?.toString() ?? ''} onChange={(e) => establecerCupoCategoria(categoria.id, e.target.value ? Number(e.target.value) : null)} />
+                      <Input type="number" min={2} placeholder="Cupo" className="w-24 shrink-0" value={formulario.cuposPorCategoria?.[categoria.id]?.toString() ?? ''} onChange={(e) => establecerCupoCategoria(categoria.id, e.target.value ? Number(e.target.value) : null)} />
                     )}
                   </div>
                 )

@@ -33,16 +33,16 @@ export const Modal = memo(function Modal({ children, isOpen, onClose, title, siz
     if (!isOpen) return null
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="modal-title">
             <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
-            <div className={cn('relative w-full rounded-xl border border-rp-border bg-rp-surface shadow-2xl', sizeClass[size])}>
-                <div className="flex items-center justify-between border-b border-rp-border px-5 py-4">
+            <div className={cn('relative flex max-h-[92svh] w-full flex-col rounded-t-2xl border border-rp-border bg-rp-surface shadow-2xl sm:max-h-[calc(100svh-2rem)] sm:rounded-xl', sizeClass[size])}>
+                <div className="flex items-center justify-between border-b border-rp-border px-4 py-3.5 sm:px-5 sm:py-4">
                 <h2 id="modal-title" className="text-base font-black text-rp-text">{title}</h2>
-                <button onClick={onClose} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-text" aria-label="Cerrar">
+                <button onClick={onClose} className="flex size-8 shrink-0 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-text" aria-label="Cerrar">
                     <X size={18} />
                 </button>
                 </div>
-                <div className="max-h-[calc(100svh-200px)] overflow-y-auto px-5 py-5">{children}</div>
+                <div className="overflow-y-auto px-4 py-4 sm:px-5 sm:py-5">{children}</div>
             </div>
         </div>
     )

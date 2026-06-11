@@ -7,6 +7,7 @@ import { useToast } from '@/shared/ui/Toast'
 import { formatearFecha } from '@/shared/lib/formatters'
 import { coincidePrefijoNombre } from '@/shared/lib/tournamentView'
 import type { TemporadaRequest, TemporadaResponse } from '@/shared/types/api'
+import { AdminPageHeader } from '@/shared/ui/AdminPageHeader'
 import { AdminTable, type Column } from '@/shared/ui/AdminTable'
 import { Button } from '@/shared/ui/Button'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
@@ -119,25 +120,19 @@ export default function SeasonsPage() {
 
     return (
         <section>
-            <div className="flex items-end justify-between gap-4">
-                <div>
-                <p className="text-xs font-black uppercase tracking-[0.22em] text-rp-accent">Admin</p>
-                <h1 className="mt-2 text-3xl font-black text-rp-text">Temporadas</h1>
-                </div>
-                <Button size="sm" onClick={abrirCrear}><Plus size={16} />Nueva temporada</Button>
-            </div>
+            <AdminPageHeader title="Temporadas" action={<Button size="sm" onClick={abrirCrear}><Plus size={16} />Nueva temporada</Button>} />
 
             <div className="mt-4 flex flex-wrap items-center gap-3">
-                <div className="w-64">
+                <div className="w-full sm:w-64">
                     <Input placeholder="Buscar por nombre..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
                 </div>
-                <select value={filtroActiva} onChange={(e) => setFiltroActiva(e.target.value)} className="w-40 rounded-md border border-rp-border bg-rp-surface px-3 py-2 text-sm text-rp-muted">
+                <select value={filtroActiva} onChange={(e) => setFiltroActiva(e.target.value)} className="h-11 w-full rounded-md border border-rp-border bg-rp-surface px-3 text-sm text-rp-muted sm:w-40">
                     <option value="">Todas</option>
                     <option value="true">Activas</option>
                     <option value="false">Inactivas</option>
                 </select>
                 {idsSeleccionados.size > 0 && (
-                    <Button size="sm" variant="subtle" onClick={() => setEliminarLoteAbierto(true)}>
+                    <Button size="sm" variant="subtle" className="w-full sm:w-auto" onClick={() => setEliminarLoteAbierto(true)}>
                         <Trash2 size={15} />Eliminar seleccionados ({idsSeleccionados.size})
                     </Button>
                 )}

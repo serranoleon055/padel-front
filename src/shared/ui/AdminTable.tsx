@@ -1,5 +1,6 @@
 import { memo } from 'react'
 import type { ReactNode } from 'react'
+import { cn } from '@/shared/lib/utils'
 import { StatusMessage } from '@/shared/ui/StatusMessage'
 
 export type Column<T> = {
@@ -45,12 +46,20 @@ function AdminTableInner<T extends { id: number }>({ columns, rows, getRowKey, i
                     <div className="p-4"><StatusMessage type="empty" title={emptyTitle} description={emptyDescription} /></div>
                 ) : (
                     rows.map((item) => (
-                    <div key={getRowKey(item)} className="grid items-center gap-3 px-4 py-3" style={{ gridTemplateColumns: colTemplate }}>
+                    <div key={getRowKey(item)} className="flex flex-col gap-2.5 px-4 py-3.5 md:grid md:items-center md:gap-3 md:py-3" style={{ gridTemplateColumns: colTemplate }}>
                         {showCheckbox && (
-                            <input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => onToggleSelect(item.id)} className="size-4 accent-rp-accent" />
+                            <label className="flex items-center gap-2 text-xs font-bold text-rp-muted md:contents">
+                                <input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => onToggleSelect(item.id)} className="size-4 accent-rp-accent" />
+                                <span className="md:hidden">Seleccionar</span>
+                            </label>
                         )}
-                        {columns.map((col) => <div key={col.key} className={col.className}>{col.render(item)}</div>)}
-                        {actions ? <div className="flex justify-end gap-1">{actions(item)}</div> : null}
+                        {columns.map((col) => (
+                            <div key={col.key} className={cn('flex items-start justify-between gap-4 md:block', col.className)}>
+                                <span className="shrink-0 text-[11px] font-black uppercase tracking-[0.08em] text-rp-muted md:hidden">{col.label}</span>
+                                <div className="min-w-0 text-right md:text-left">{col.render(item)}</div>
+                            </div>
+                        ))}
+                        {actions ? <div className="flex flex-wrap justify-end gap-1 border-t border-rp-border pt-2.5 md:border-0 md:pt-0">{actions(item)}</div> : null}
                     </div>
                     ))
                 )}
