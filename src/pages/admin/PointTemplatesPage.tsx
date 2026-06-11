@@ -6,6 +6,7 @@ import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
 import { useToast } from '@/shared/ui/Toast'
 import { coincidePrefijoNombre } from '@/shared/lib/tournamentView'
 import type { PlantillaPuntosRequest, PlantillaPuntosResponse, PlantillaPuntosRondaRequest } from '@/shared/types/api'
+import { AdminPageHeader } from '@/shared/ui/AdminPageHeader'
 import { AdminTable, type Column } from '@/shared/ui/AdminTable'
 import { Button } from '@/shared/ui/Button'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
@@ -113,15 +114,9 @@ export default function PointTemplatesPage() {
 
   return (
     <section>
-      <div className="flex items-end justify-between gap-4">
-        <div>
-          <p className="text-xs font-black uppercase tracking-[0.22em] text-rp-accent">Admin</p>
-          <h1 className="mt-2 text-3xl font-black text-rp-text">Plantillas de puntos</h1>
-        </div>
-        <Button size="sm" onClick={abrirCrear}><Plus size={16} />Nueva plantilla</Button>
-      </div>
+      <AdminPageHeader title="Plantillas de puntos" action={<Button size="sm" onClick={abrirCrear}><Plus size={16} />Nueva plantilla</Button>} />
 
-      <div className="mt-4 w-64 max-w-full">
+      <div className="mt-4 w-full sm:w-64">
         <Input placeholder="Buscar por nombre..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
       </div>
 

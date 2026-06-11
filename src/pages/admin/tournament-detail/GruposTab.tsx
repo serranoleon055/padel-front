@@ -32,8 +32,8 @@ export function GruposTab({ grupos, expandidos, onToggle }: {
                     <ChevronDown size={16} className={`text-rp-muted transition-transform ${expandidos.has(grupo.id) ? 'rotate-180' : ''}`} />
                     </button>
                     {expandidos.has(grupo.id) && (
-                    <div className="border-t border-rp-border px-4 py-3">
-                        <table className="w-full text-xs">
+                    <div className="overflow-x-auto border-t border-rp-border px-4 py-3">
+                        <table className="w-full min-w-[28rem] text-xs">
                         <thead>
                             <tr className="text-left text-rp-muted">
                             <th className="pb-2 pr-2 font-bold">#</th>

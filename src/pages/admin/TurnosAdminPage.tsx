@@ -5,6 +5,7 @@ import { canchasApi, placesApi } from '@/features/catalog/catalogApi'
 import { horariosCanchaApi, reservasApi, type HorarioCanchaRequest, type ReservaResponse } from '@/features/reservas/reservasApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
 import type { CanchaResponse, LugarResponse } from '@/shared/types/api'
+import { AdminPageHeader } from '@/shared/ui/AdminPageHeader'
 import { AdminTable, type Column } from '@/shared/ui/AdminTable'
 import { Button } from '@/shared/ui/Button'
 import { Input } from '@/shared/ui/Input'
@@ -153,13 +154,7 @@ export default function TurnosAdminPage() {
 
   return (
     <section>
-      <div className="flex items-end justify-between gap-4">
-        <div>
-          <p className="text-xs font-black uppercase tracking-[0.22em] text-rp-accent">Admin</p>
-          <h1 className="mt-2 flex items-center gap-2 text-3xl font-black text-rp-text"><CalendarClock size={26} />Turnos</h1>
-        </div>
-        <Button size="sm" variant="subtle" onClick={abrirHorario}><Settings size={16} />Configurar horario</Button>
-      </div>
+      <AdminPageHeader title={<><CalendarClock size={26} />Turnos</>} action={<Button size="sm" variant="subtle" onClick={abrirHorario}><Settings size={16} />Configurar horario</Button>} />
 
       <div className="mt-4 grid gap-3 sm:max-w-md sm:grid-cols-2">
         <Select label="Sucursal" value={lugarId ?? ''} onChange={(e) => elegirLugar(e.target.value ? Number(e.target.value) : null)}>

@@ -22,7 +22,7 @@ export const FilaPartido = memo(function FilaPartido({ partido, showResults, can
     const tonoBadge = esEnCurso ? 'live' : partido.estado === 'FINALIZADO' ? 'success' : partido.estado === 'BYE' || partido.estado === 'WALKOVER' || partido.estado === 'RETIRO' ? 'neutral' : 'neutral'
     return (
         <article className="rounded-lg border border-rp-border bg-rp-surface/82">
-            <div className="flex items-center justify-between gap-4 p-5">
+            <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:p-5">
                 <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                     <StatusBadge tone={tonoBadge}>

@@ -6,6 +6,7 @@ import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
 import { useToast } from '@/shared/ui/Toast'
 import { coincidePrefijoNombre } from '@/shared/lib/tournamentView'
 import type { LugarRequest, LugarResponse } from '@/shared/types/api'
+import { AdminPageHeader } from '@/shared/ui/AdminPageHeader'
 import { AdminTable, type Column } from '@/shared/ui/AdminTable'
 import { Button } from '@/shared/ui/Button'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
@@ -116,20 +117,14 @@ export default function PlacesPage() {
 
     return (
         <section>
-            <div className="flex items-end justify-between gap-4">
-                <div>
-                <p className="text-xs font-black uppercase tracking-[0.22em] text-rp-accent">Admin</p>
-                <h1 className="mt-2 text-3xl font-black text-rp-text">Lugares</h1>
-                </div>
-                <Button size="sm" onClick={abrirCrear}><Plus size={16} />Nuevo lugar</Button>
-            </div>
+            <AdminPageHeader title="Lugares" action={<Button size="sm" onClick={abrirCrear}><Plus size={16} />Nuevo lugar</Button>} />
 
             <div className="mt-4 flex flex-wrap items-center gap-3">
-                <div className="w-64">
+                <div className="w-full sm:w-64">
                     <Input placeholder="Buscar por nombre..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
                 </div>
                 {idsSeleccionados.size > 0 && (
-                    <Button size="sm" variant="subtle" onClick={() => setEliminarLoteAbierto(true)}>
+                    <Button size="sm" variant="subtle" className="w-full sm:w-auto" onClick={() => setEliminarLoteAbierto(true)}>
                         <Trash2 size={15} />Archivar seleccionados ({idsSeleccionados.size})
                     </Button>
                 )}

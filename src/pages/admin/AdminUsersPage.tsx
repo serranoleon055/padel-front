@@ -5,6 +5,7 @@ import { adminUsersApi } from '@/features/admin/adminUsersApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
 import { coincidePrefijoNombre } from '@/shared/lib/tournamentView'
 import type { AdminUserRequest, AdminUserResponse } from '@/shared/types/api'
+import { AdminPageHeader } from '@/shared/ui/AdminPageHeader'
 import { AdminTable, type Column } from '@/shared/ui/AdminTable'
 import { Button } from '@/shared/ui/Button'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
@@ -140,13 +141,7 @@ export default function AdminUsersPage() {
 
   return (
     <section>
-      <div className="flex items-end justify-between gap-4">
-        <div>
-          <p className="text-xs font-black uppercase tracking-[0.22em] text-rp-accent">Admin</p>
-          <h1 className="mt-2 text-3xl font-black text-rp-text">Usuarios admin</h1>
-        </div>
-        <Button size="sm" onClick={abrirCrear}><Plus size={16} />Nuevo admin</Button>
-      </div>
+      <AdminPageHeader title="Usuarios admin" action={<Button size="sm" onClick={abrirCrear}><Plus size={16} />Nuevo admin</Button>} />
 
       <div className="rp-toolbar">
         <Input placeholder="Buscar por usuario..." value={busqueda} onChange={(event) => setBusqueda(event.target.value)} />

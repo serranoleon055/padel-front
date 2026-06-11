@@ -9,6 +9,7 @@ import { formatearFecha, formatearEnum } from '@/shared/lib/formatters'
 import { nombreCompletoEmpiezaCon } from '@/shared/lib/tournamentView'
 import { ordenarCategorias } from '@/shared/lib/categorias'
 import type { CategoriaResponse, Genero, JugadorRequest, JugadorResponse } from '@/shared/types/api'
+import { AdminPageHeader } from '@/shared/ui/AdminPageHeader'
 import { AdminTable, type Column } from '@/shared/ui/AdminTable'
 import { Button } from '@/shared/ui/Button'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
@@ -212,13 +213,7 @@ export default function PlayersPage() {
 
   return (
     <section>
-      <div className="flex items-end justify-between gap-4">
-        <div>
-          <p className="text-xs font-black uppercase tracking-[0.22em] text-rp-accent">Admin</p>
-          <h1 className="mt-2 text-3xl font-black text-rp-text">Jugadores</h1>
-        </div>
-        <Button size="sm" onClick={abrirCrear}><Plus size={16} />Nuevo jugador</Button>
-      </div>
+      <AdminPageHeader title="Jugadores" action={<Button size="sm" onClick={abrirCrear}><Plus size={16} />Nuevo jugador</Button>} />
 
       <div className="rp-toolbar">
         <Input placeholder="Buscar por nombre..." value={busqueda} onChange={(event) => setBusqueda(event.target.value)} />
