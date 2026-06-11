@@ -139,6 +139,10 @@ export default function RankingPage() {
     return rankingFiltrado.slice(inicio, inicio + TAMANO_PAGINA)
   }, [rankingFiltrado, pagina])
 
+  // Solo mostramos el placeholder completo en la primera carga (sin datos aún).
+  // En los cambios de categoría posteriores mantenemos las filas y solo las atenuamos.
+  const cargaInicial = cargando && ranking.length === 0
+
   const categoriasOrdenadas = useMemo(() => [...categorias].sort((a, b) => {
     if (a.genero !== b.genero) return a.genero === 'MASCULINO' ? -1 : 1
     return a.nivel - b.nivel || a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' })
@@ -215,7 +219,10 @@ export default function RankingPage() {
               </label>
             </div>
 
-            <div className="rank-table-desktop">
+            <div
+              className="rank-table-desktop"
+              style={{ transition: 'opacity .15s ease', opacity: cargando && !cargaInicial ? 0.45 : 1, pointerEvents: cargando ? 'none' : undefined }}
+            >
               <table className="ranking-table">
                 <thead>
                   <tr>
@@ -225,7 +232,7 @@ export default function RankingPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {cargando ? (
+                  {cargaInicial ? (
                     <tr><td colSpan={8}><StatusMessage title="Cargando ranking..." type="loading" /></td></tr>
                   ) : error ? (
                     <tr><td colSpan={8}><StatusMessage title="Error" description={error} type="error" /></td></tr>
@@ -262,9 +269,12 @@ export default function RankingPage() {
               </table>
             </div>
 
-            <div className="rank-cards-mobile">
-              {cargando ? <StatusMessage title="Cargando..." type="loading" /> : null}
-              {!cargando && rankingPaginado.map((entrada) => (
+            <div
+              className="rank-cards-mobile"
+              style={{ transition: 'opacity .15s ease', opacity: cargando && !cargaInicial ? 0.45 : 1, pointerEvents: cargando ? 'none' : undefined }}
+            >
+              {cargaInicial ? <StatusMessage title="Cargando..." type="loading" /> : null}
+              {!cargaInicial && rankingPaginado.map((entrada) => (
                 <article
                   key={`${entrada.categoriaId}-${entrada.jugadorId}`}
                   className="rank-card rp-card-hover"

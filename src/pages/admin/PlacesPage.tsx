@@ -1,4 +1,4 @@
-import { MapPin, Pencil, Plus, Trash2 } from 'lucide-react'
+import { LayoutGrid, MapPin, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { placesApi } from '@/features/catalog/catalogApi'
@@ -12,6 +12,8 @@ import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
 import { Input } from '@/shared/ui/Input'
 import { Modal } from '@/shared/ui/Modal'
 import { Pagination } from '@/shared/ui/Pagination'
+
+import { CanchasLugarModal } from './CanchasLugarModal'
 
 const TAMANO_PAGINA = 8
 const VACIO: LugarRequest = { nombre: '', direccion: '' }
@@ -35,6 +37,7 @@ export default function PlacesPage() {
 
     const [busqueda, setBusqueda] = useState('')
     const [pagina, setPagina] = useState(1)
+    const [lugarCanchas, setLugarCanchas] = useState<LugarResponse | null>(null)
 
     const refScrollY = useRef(0)
 
@@ -80,7 +83,7 @@ export default function PlacesPage() {
     async function manejarEliminar() {
         if (!objetivoEliminar) return
         setEliminando(true)
-        try { await placesApi.remove(objetivoEliminar.id); setObjetivoEliminar(null); cargar(); avisoExito('Lugar eliminado') }
+        try { await placesApi.remove(objetivoEliminar.id); setObjetivoEliminar(null); cargar(); avisoExito('Lugar archivado') }
         catch (e: unknown) { setError(obtenerMensajeErrorApi(e)); setObjetivoEliminar(null) }
         finally { setEliminando(false) }
     }
@@ -127,7 +130,7 @@ export default function PlacesPage() {
                 </div>
                 {idsSeleccionados.size > 0 && (
                     <Button size="sm" variant="subtle" onClick={() => setEliminarLoteAbierto(true)}>
-                        <Trash2 size={15} />Eliminar seleccionados ({idsSeleccionados.size})
+                        <Trash2 size={15} />Archivar seleccionados ({idsSeleccionados.size})
                     </Button>
                 )}
             </div>
@@ -136,6 +139,7 @@ export default function PlacesPage() {
                 <AdminTable columns={columnas} rows={paginados} getRowKey={(lugar) => lugar.id} isLoading={cargando} error={error} emptyTitle="No hay lugares"
                     selectedIds={idsSeleccionados} onToggleSelect={alternarSeleccion} onSelectAll={seleccionarTodo}
                 actions={(lugar) => (<>
+                    <button onClick={() => setLugarCanchas(lugar)} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent" aria-label="Canchas"><LayoutGrid size={15} /></button>
                     <button onClick={() => abrirEditar(lugar)} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent"><Pencil size={15} /></button>
                     <button onClick={() => setObjetivoEliminar(lugar)} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger"><Trash2 size={15} /></button>
                 </>)}
@@ -154,9 +158,10 @@ export default function PlacesPage() {
                 </div>
             </Modal>
             <ConfirmDialog isOpen={Boolean(objetivoEliminar)} onClose={() => setObjetivoEliminar(null)} onConfirm={manejarEliminar}
-                title="Eliminar lugar" description={`¿Eliminás el lugar "${objetivoEliminar?.nombre}"?`} isLoading={eliminando} />
+                title="Archivar lugar" description={`¿Archivás el lugar "${objetivoEliminar?.nombre}"? No se borra: queda fuera de las listas y los torneos asociados quedan intactos.`} isLoading={eliminando} />
             <ConfirmDialog isOpen={eliminarLoteAbierto} onClose={() => setEliminarLoteAbierto(false)} onConfirm={manejarEliminarLote}
-                title="Eliminar seleccionados" description={`¿Eliminás ${idsSeleccionados.size} lugar(es)?`} isLoading={eliminandoLote} />
+                title="Archivar seleccionados" description={`¿Archivás ${idsSeleccionados.size} lugar(es)?`} isLoading={eliminandoLote} />
+            <CanchasLugarModal lugar={lugarCanchas} onClose={() => setLugarCanchas(null)} />
         </section>
     )
 }

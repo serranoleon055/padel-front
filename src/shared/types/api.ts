@@ -79,6 +79,14 @@ export type JugadorRequest = {
   genero: Genero
   fotoUrl?: string | null
   categoriaId?: number | null
+  telefono?: string | null
+  fechaNacimiento?: string | null
+}
+
+export type JugadorFichaResponse = {
+  id: number
+  fechaNacimiento: string | null
+  telefono: string | null
 }
 
 export type JugadorHistorialTorneoItem = {
@@ -192,6 +200,7 @@ export type TorneoRequest = {
   avanzanPorGrupo?: number | null
   incluyeFaseGrupos: boolean
   incluyeEliminacion: boolean
+  mejorDeSets?: number
   tipoSorteo: TipoSorteo
   temporadaId?: number | null
   lugarId?: number | null
@@ -221,6 +230,7 @@ export type TorneoResponse = {
   imagenUrl?: string | null
   cupoMaximoParejas?: number | null
   cuposPorCategoria?: Record<number, number>
+  parejasPorCategoria?: Record<number, number>
   formato: FormatoTorneo
   estado: EstadoTorneo
   fechaInicio: string | null
@@ -237,6 +247,7 @@ export type TorneoResponse = {
   avanzanPorGrupo: number | null
   incluyeFaseGrupos: boolean
   incluyeEliminacion: boolean
+  mejorDeSets?: number | null
   tipoSorteo: TipoSorteo
   temporadaId: number | null
   temporadaNombre: string | null

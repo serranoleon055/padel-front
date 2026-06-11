@@ -30,7 +30,7 @@
   align-items: center;
   gap: 8px;
   margin-bottom: 18px;
-  border: 1px solid rgba(110, 207, 142, .22);
+  border: 1px solid rgba(185, 154, 88, .28);
   border-radius: 6px;
   padding: 7px 14px;
   background: rgba(8, 20, 10, .68);
@@ -209,7 +209,7 @@ select.filter-field {
   contain: content;
   content-visibility: auto;
   contain-intrinsic-size: 278px;
-  border: 1px solid rgba(110, 207, 142, .18);
+  border: 1px solid rgba(185, 154, 88, .2);
   border-radius: var(--rp-radius-lg);
   padding: 20px;
   background: linear-gradient(160deg, rgba(11, 36, 20, .96), rgba(7, 17, 10, .98));

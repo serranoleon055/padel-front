@@ -1,4 +1,4 @@
-import { CalendarDays, Layers, LayoutDashboard, LogOut, MapPin, Menu, ShieldCheck, Sigma, Tag, Trophy, UserCog, Users, X } from 'lucide-react'
+import { CalendarClock, CalendarDays, Layers, LayoutDashboard, LogOut, MapPin, Menu, ShieldCheck, Sigma, Tag, Trophy, UserCog, Users, X } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 
@@ -13,6 +13,7 @@ const NAV = [
   { to: '/admin/jugadores', label: 'Jugadores', icon: Users, end: false },
   { to: '/admin/categorias', label: 'Categorías', icon: Tag, end: false },
   { to: '/admin/lugares', label: 'Lugares', icon: MapPin, end: false },
+  { to: '/admin/turnos', label: 'Turnos', icon: CalendarClock, end: false },
   { to: '/admin/temporadas', label: 'Temporadas', icon: CalendarDays, end: false },
   { to: '/admin/torneos', label: 'Torneos', icon: Trophy, end: false },
   { to: '/admin/plantillas-formato', label: 'Plantillas formato', icon: Layers, end: false },
@@ -41,14 +42,14 @@ export function AdminLayout() {
     <div className="grid min-h-svh bg-rp-bg text-rp-text lg:grid-cols-[260px_1fr]">
       {open && <div className="fixed inset-0 z-30 bg-black/60 lg:hidden" onClick={() => setOpen(false)} />}
 
-      <aside className={cn('fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-rp-border bg-rp-surface transition-transform lg:static lg:translate-x-0', open ? 'translate-x-0' : '-translate-x-full')}>
-        <div className="flex items-center gap-3 border-b border-rp-border px-4 py-4">
-          <span className="flex size-10 items-center justify-center rounded-lg bg-rp-accent text-rp-bg">
+      <aside className={cn('admin-sidebar fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r transition-transform lg:sticky lg:top-0 lg:h-svh lg:translate-x-0', open ? 'translate-x-0' : '-translate-x-full')}>
+        <div className="admin-sidebar-separador flex items-center gap-3 border-b px-4 py-4">
+          <span className="admin-sidebar-logo flex size-10 items-center justify-center rounded-lg">
             <ShieldCheck size={20} />
           </span>
           <span>
-            <span className="block text-sm font-black text-rp-text">Panel Admin</span>
-            <span className="block text-xs text-rp-muted">{brand.name}</span>
+            <span className="admin-sidebar-marca block text-sm font-black">Panel Admin</span>
+            <span className="admin-sidebar-submarca block text-xs">{brand.name}</span>
           </span>
         </div>
 
@@ -61,8 +62,8 @@ export function AdminLayout() {
                   end={item.end}
                   onClick={() => setOpen(false)}
                   className={({ isActive }) => cn(
-                    'flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-semibold transition',
-                    isActive ? 'bg-rp-accent/15 text-rp-accent' : 'text-rp-muted hover:bg-rp-surface-2 hover:text-rp-text',
+                    'admin-sidebar-enlace flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-semibold transition',
+                    isActive && 'activo',
                   )}
                 >
                   <item.icon size={17} />
@@ -74,14 +75,14 @@ export function AdminLayout() {
         </nav>
 
         {activeSeason && (
-          <div className="mx-3 mb-2 rounded-md border border-rp-accent/30 bg-rp-accent/10 px-3 py-2">
-            <p className="text-[10px] font-black uppercase tracking-[0.12em] text-rp-accent">Temporada activa</p>
-            <p className="mt-0.5 text-xs font-bold text-rp-text">{activeSeason.nombre}</p>
+          <div className="admin-sidebar-temporada mx-3 mb-2 rounded-md border px-3 py-2">
+            <p className="admin-sidebar-temporada-titulo text-[10px] font-black uppercase tracking-[0.12em]">Temporada activa</p>
+            <p className="admin-sidebar-temporada-valor mt-0.5 text-xs font-bold">{activeSeason.nombre}</p>
           </div>
         )}
 
-        <div className="border-t border-rp-border px-3 py-4">
-          <button onClick={handleLogout} className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm font-semibold text-rp-muted transition hover:bg-rp-surface-2 hover:text-rp-danger">
+        <div className="admin-sidebar-separador border-t px-3 py-4">
+          <button onClick={handleLogout} className="admin-sidebar-salir flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm font-semibold transition">
             <LogOut size={17} />
             Cerrar sesión
           </button>
@@ -89,13 +90,13 @@ export function AdminLayout() {
       </aside>
 
       <div className="flex min-w-0 flex-col">
-        <header className="flex h-14 items-center justify-between border-b border-rp-border bg-rp-surface px-4 lg:hidden">
-          <span className="text-sm font-black text-rp-text">Panel Admin</span>
+        <header className="admin-topbar flex h-14 items-center justify-between border-b px-4 lg:hidden">
+          <span className="admin-topbar-titulo text-sm font-black">Panel Admin</span>
           <div className="flex items-center gap-2">
-            <button onClick={handleLogout} className="flex size-9 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger" aria-label="Cerrar sesión">
+            <button onClick={handleLogout} className="admin-topbar-boton admin-topbar-boton-salir flex size-9 items-center justify-center rounded-md" aria-label="Cerrar sesión">
               <LogOut size={18} />
             </button>
-            <button onClick={() => setOpen(!open)} className="flex size-9 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2" aria-label="Abrir menú">
+            <button onClick={() => setOpen(!open)} className="admin-topbar-boton flex size-9 items-center justify-center rounded-md" aria-label="Abrir menú">
               {open ? <X size={20} /> : <Menu size={20} />}
             </button>
           </div>

@@ -42,6 +42,7 @@ const POR_DEFECTO: TorneoRequest = {
   avanzanPorGrupo: null,
   incluyeFaseGrupos: true,
   incluyeEliminacion: true,
+  mejorDeSets: 3,
   tipoSorteo: 'ALEATORIO',
   temporadaId: null,
   lugarId: null,
@@ -114,6 +115,7 @@ export default function TournamentFormPage() {
             avanzanPorGrupo: torneo.avanzanPorGrupo ?? null,
             incluyeFaseGrupos: torneo.incluyeFaseGrupos,
             incluyeEliminacion: torneo.incluyeEliminacion,
+            mejorDeSets: torneo.mejorDeSets ?? 3,
             tipoSorteo: torneo.tipoSorteo,
             temporadaId: torneo.temporadaId ?? null,
             lugarId: torneo.lugarId ?? null,
@@ -284,6 +286,12 @@ export default function TournamentFormPage() {
 
           <fieldset className="rounded-lg border border-rp-border bg-rp-surface/82 p-5">
             <legend className="px-1 text-xs font-black uppercase tracking-[0.14em] text-rp-accent">Opciones mínimas</legend>
+            <div className="mt-4">
+              <Select label="Formato de sets" value={String(formulario.mejorDeSets ?? 3)} onChange={(e) => setFormulario((f) => ({ ...f, mejorDeSets: Number(e.target.value) }))}>
+                <option value="3">Mejor de 3 sets (2 sets para ganar)</option>
+                <option value="1">A 1 set (minitorneo / partido rápido)</option>
+              </Select>
+            </div>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <label className="flex cursor-pointer items-center gap-3 text-sm font-bold text-rp-muted">
                 <input type="checkbox" checked={formulario.sumaPuntosRanking} onChange={(e) => setFormulario((f) => ({ ...f, sumaPuntosRanking: e.target.checked, plantillaPuntosId: e.target.checked ? f.plantillaPuntosId : null }))} className="size-4 accent-rp-accent" />

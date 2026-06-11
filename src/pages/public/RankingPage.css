@@ -32,7 +32,7 @@
   align-items: center;
   gap: 8px;
   margin-bottom: 20px;
-  border: 1px solid rgba(110, 207, 142, .24);
+  border: 1px solid rgba(185, 154, 88, .28);
   border-radius: 6px;
   padding: 7px 14px;
   background: rgba(8, 20, 10, .62);
@@ -146,7 +146,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  border: 1px solid rgba(110, 207, 142, .22);
+  border: 1px solid rgba(185, 154, 88, .26);
   border-radius: 9px;
   padding: 10px 13px;
   background: rgba(8, 20, 10, .58);
@@ -465,7 +465,7 @@
   position: relative;
   overflow: hidden;
   min-height: 142px;
-  border: 1px solid rgba(110, 207, 142, .16);
+  border: 1px solid rgba(185, 154, 88, .2);
   border-radius: 12px;
   padding: 20px;
   background: linear-gradient(135deg, #0c2e18, #113d22);
