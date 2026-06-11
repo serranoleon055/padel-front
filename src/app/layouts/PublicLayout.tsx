@@ -7,6 +7,7 @@ const navItems = [
   { to: '/', label: 'Inicio' },
   { to: '/torneos', label: 'Torneos' },
   { to: '/ranking', label: 'Ranking' },
+  { to: '/reservar', label: 'Reservar' },
   { to: '/login', label: 'Admin' },
 ]
 
@@ -31,7 +32,7 @@ const PublicNavbar = memo(function PublicNavbar({
         </NavLink>
 
         <div className="nlinks">
-          {navItems.slice(0, 3).map((item) => (
+          {navItems.slice(0, 4).map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -81,14 +82,14 @@ export function PublicLayout() {
   const closeMobile = useCallback(() => setMobileOpen(false), [])
 
   return (
-    <div className="min-h-screen">
+    <div className="flex min-h-screen flex-col">
       <PublicNavbar
         mobileOpen={mobileOpen}
         onToggleMobile={toggleMobile}
         onCloseMobile={closeMobile}
       />
 
-      <main className="pt-[62px]">
+      <main className="flex-1 pt-[62px]">
         <Outlet />
       </main>
       <Footer />

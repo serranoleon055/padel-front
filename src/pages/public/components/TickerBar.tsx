@@ -23,9 +23,6 @@ function BarraTickerInterna({ items, label = 'NOVEDADES', variant = 'default' }:
   const [duracion, setDuracion] = useState(44)
 
   const elementosBase = useMemo(() => {
-    // Sin items, items.length === 0 haria 8/0 = Infinity -> Array.from lanza
-    // "Invalid array length". El guard de render (items.length === 0 -> null)
-    // esta despues, asi que hay que cortar aca tambien.
     if (items.length === 0) return []
     return Array.from({ length: Math.max(2, Math.ceil(MIN_ELEMENTOS / items.length)) }).flatMap(() => items)
   }, [items])

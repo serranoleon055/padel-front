@@ -4,16 +4,16 @@
   --font-sans: 'Montserrat', Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: 'DM Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
-  --color-rp-bg: #06100b;
-  --color-rp-surface: #0d1b14;
-  --color-rp-surface-2: #13261c;
-  --color-rp-border: #244033;
-  --color-rp-text: #f2f7f3;
-  --color-rp-muted: #9fb2a5;
-  --color-rp-accent: #6ecf8e;
-  --color-rp-cyan: #55c7ff;
-  --color-rp-amber: #f5bd4f;
-  --color-rp-danger: #ff6b6b;
+  --color-rp-bg: #e3e8e1;
+  --color-rp-surface: #ffffff;
+  --color-rp-surface-2: #dce3d7;
+  --color-rp-border: #ccd5c8;
+  --color-rp-text: #16221a;
+  --color-rp-muted: #56685c;
+  --color-rp-accent: #2f6840;
+  --color-rp-cyan: #2f6840;
+  --color-rp-amber: #9a7d3f;
+  --color-rp-danger: #c0392b;
 }
 
 :root {
@@ -520,4 +520,83 @@ img {
   .footer-bottom {
     padding: 16px 20px;
   }
+}
+
+.admin-sidebar {
+  background: var(--rp-green-900);
+  border-color: rgba(185, 154, 88, .16);
+}
+
+.admin-sidebar-separador {
+  border-color: rgba(255, 255, 255, .08);
+}
+
+.admin-sidebar-logo {
+  background: var(--rp-green-700);
+  color: #fff;
+}
+
+.admin-sidebar-marca {
+  color: #fff;
+}
+
+.admin-sidebar-submarca {
+  color: var(--rp-pale);
+}
+
+.admin-sidebar-enlace {
+  color: rgba(255, 255, 255, .72);
+}
+
+.admin-sidebar-enlace:hover {
+  background: rgba(255, 255, 255, .07);
+  color: #fff;
+}
+
+.admin-sidebar-enlace.activo {
+  background: var(--rp-green-700);
+  color: #fff;
+}
+
+.admin-sidebar-temporada {
+  border-color: rgba(185, 154, 88, .32);
+  background: rgba(185, 154, 88, .12);
+}
+
+.admin-sidebar-temporada-titulo {
+  color: var(--rp-gold);
+}
+
+.admin-sidebar-temporada-valor {
+  color: #fff;
+}
+
+.admin-sidebar-salir {
+  color: rgba(255, 255, 255, .72);
+}
+
+.admin-sidebar-salir:hover {
+  background: rgba(255, 255, 255, .07);
+  color: #ff8a8a;
+}
+
+.admin-topbar {
+  background: var(--rp-green-900);
+  border-color: rgba(255, 255, 255, .08);
+}
+
+.admin-topbar-titulo {
+  color: #fff;
+}
+
+.admin-topbar-boton {
+  color: rgba(255, 255, 255, .78);
+}
+
+.admin-topbar-boton:hover {
+  background: rgba(255, 255, 255, .1);
+}
+
+.admin-topbar-boton-salir:hover {
+  color: #ff8a8a;
 }

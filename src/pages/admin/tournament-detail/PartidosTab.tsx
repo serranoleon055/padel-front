@@ -36,7 +36,6 @@ export function PartidosTab({ partidos, mostrarSorteo, showResults, canSchedule,
             const partidosGruposFase = partidosCat.filter((partido) => partido.fase === 'GRUPOS')
             const eliminacion = partidosCat.filter((partido) => partido.fase === 'ELIMINACION')
 
-            // Agrupar partidos de grupo por nombre de grupo, pendientes primero
             const porGrupo = partidosGruposFase.reduce<Record<string, PartidoResponse[]>>((acum, partido) => {
                 const clave = partido.grupoNombre ?? 'Sin grupo'
                 if (!acum[clave]) acum[clave] = []
@@ -49,7 +48,6 @@ export function PartidosTab({ partidos, mostrarSorteo, showResults, canSchedule,
                     return (orden[a.estado] ?? 2) - (orden[b.estado] ?? 2)
                 })
 
-            // Agrupar eliminatorias por ronda, pendientes primero
             const porRonda = eliminacion.reduce<Record<string, PartidoResponse[]>>((acum, partido) => {
                 const clave = partido.ronda ?? 'Eliminación'
                 if (!acum[clave]) acum[clave] = []

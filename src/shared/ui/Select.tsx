@@ -17,7 +17,7 @@ export const Select = memo(function Select({ label, error, children, placeholder
             <select
                 id={selectId}
                 className={cn(
-                'h-11 w-full rounded-md border bg-rp-bg px-3 text-sm text-rp-text outline-none transition',
+                'h-11 w-full rounded-md border bg-rp-surface px-3 text-sm text-rp-text outline-none transition',
                 error ? 'border-rp-danger' : 'border-rp-border focus:border-rp-accent',
                 className,
                 )}

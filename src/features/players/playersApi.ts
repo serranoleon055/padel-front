@@ -1,7 +1,7 @@
 import { apiClient } from '@/shared/api/apiClient'
 import { CacheSimple } from '@/shared/lib/cache'
 
-import type { JugadorHistorialResponse, JugadorRequest, JugadorResponse } from '@/shared/types/api'
+import type { JugadorFichaResponse, JugadorHistorialResponse, JugadorRequest, JugadorResponse } from '@/shared/types/api'
 
 const _cache = new CacheSimple<JugadorResponse[]>()
 
@@ -21,6 +21,11 @@ export const playersApi = {
 
   async getHistorial(id: number) {
     const { data } = await apiClient.get<JugadorHistorialResponse>(`/api/jugadores/${id}/historial`)
+    return data
+  },
+
+  async getFicha(id: number) {
+    const { data } = await apiClient.get<JugadorFichaResponse>(`/api/jugadores/${id}/ficha`)
     return data
   },
 

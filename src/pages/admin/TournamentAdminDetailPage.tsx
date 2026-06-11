@@ -1,4 +1,4 @@
-import { ArrowLeft, CalendarDays, MapPin, Shuffle, Trophy, Users } from 'lucide-react'
+import { ArrowLeft, CalendarDays, ClipboardList, MapPin, Shuffle, Trophy, Users } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { NavLink, useParams } from 'react-router-dom'
 
@@ -300,6 +300,9 @@ export default function TournamentAdminDetailPage() {
                         <Shuffle size={15} />Generar sorteo
                     </Button>
                     )}
+                    <Button size="sm" variant="ghost" asChild>
+                        <NavLink to={`/admin/torneos/${torneoId}/inscripciones`}><ClipboardList size={15} />Inscripciones</NavLink>
+                    </Button>
                 </div>
                 </div>
                 {errorAccion && <p className="mt-4 rounded-md border border-rp-danger/40 bg-rp-danger/10 px-3 py-2 text-sm font-bold text-rp-danger">{errorAccion}</p>}

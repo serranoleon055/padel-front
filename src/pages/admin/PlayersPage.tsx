@@ -7,6 +7,7 @@ import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
 import { useToast } from '@/shared/ui/Toast'
 import { formatearFecha, formatearEnum } from '@/shared/lib/formatters'
 import { nombreCompletoEmpiezaCon } from '@/shared/lib/tournamentView'
+import { ordenarCategorias } from '@/shared/lib/categorias'
 import type { CategoriaResponse, Genero, JugadorRequest, JugadorResponse } from '@/shared/types/api'
 import { AdminTable, type Column } from '@/shared/ui/AdminTable'
 import { Button } from '@/shared/ui/Button'
@@ -17,7 +18,7 @@ import { Pagination } from '@/shared/ui/Pagination'
 import { Select } from '@/shared/ui/Select'
 
 const TAMANO_PAGINA = 8
-const VACIO: JugadorRequest = { nombre: '', apellido: '', genero: 'MASCULINO', fotoUrl: null, categoriaId: null }
+const VACIO: JugadorRequest = { nombre: '', apellido: '', genero: 'MASCULINO', fotoUrl: null, categoriaId: null, fechaNacimiento: '' }
 
 export default function PlayersPage() {
   const [jugadores, setJugadores] = useState<JugadorResponse[]>([])
@@ -58,12 +59,12 @@ export default function PlayersPage() {
   useEffect(cargar, [])
 
   const opcionesCategoria = useMemo(
-    () => categorias.filter((categoria) => categoria.genero === filtroGenero),
+    () => ordenarCategorias(categorias.filter((categoria) => categoria.genero === filtroGenero)),
     [categorias, filtroGenero],
   )
 
   const opcionesCategoriaFormulario = useMemo(
-    () => categorias.filter((categoria) => categoria.genero === formulario.genero),
+    () => ordenarCategorias(categorias.filter((categoria) => categoria.genero === formulario.genero)),
     [categorias, formulario.genero],
   )
 
@@ -103,11 +104,14 @@ export default function PlayersPage() {
 
   function abrirEditar(jugador: JugadorResponse) {
     setObjetivoEdicion(jugador)
-    setFormulario({ nombre: jugador.nombre, apellido: jugador.apellido, genero: jugador.genero, fotoUrl: jugador.fotoUrl ?? null, categoriaId: jugador.categoriaId ?? null })
+    setFormulario({ nombre: jugador.nombre, apellido: jugador.apellido, genero: jugador.genero, fotoUrl: jugador.fotoUrl ?? null, categoriaId: jugador.categoriaId ?? null, fechaNacimiento: '' })
     setArchivoFoto(null)
     setQuitarFotoAlGuardar(false)
     setErrorFormulario(null)
     setModalAbierto(true)
+    playersApi.getFicha(jugador.id)
+      .then((ficha) => setFormulario((actual) => ({ ...actual, fechaNacimiento: ficha.fechaNacimiento ?? '' })))
+      .catch(() => {})
   }
 
   function cerrarModal() {
@@ -126,12 +130,16 @@ export default function PlayersPage() {
     setGuardando(true)
     setErrorFormulario(null)
     try {
+      const datos: JugadorRequest = {
+        ...formulario,
+        fechaNacimiento: formulario.fechaNacimiento ? formulario.fechaNacimiento : null,
+      }
       if (objetivoEdicion) {
         if (quitarFotoAlGuardar) await playersApi.removePhoto(objetivoEdicion.id)
-        const guardado = await playersApi.update(objetivoEdicion.id, formulario)
+        const guardado = await playersApi.update(objetivoEdicion.id, datos)
         if (archivoFoto) await playersApi.uploadPhoto(guardado.id, archivoFoto)
       } else {
-        const guardado = await playersApi.create(formulario)
+        const guardado = await playersApi.create(datos)
         if (archivoFoto) await playersApi.uploadPhoto(guardado.id, archivoFoto)
       }
       cerrarModal()
@@ -151,7 +159,7 @@ export default function PlayersPage() {
       await playersApi.remove(objetivoEliminar.id)
       setObjetivoEliminar(null)
       cargar()
-      avisoExito('Jugador eliminado')
+      avisoExito('Jugador archivado')
     } catch (errorCapturado: unknown) {
       setError(obtenerMensajeErrorApi(errorCapturado))
       setObjetivoEliminar(null)
@@ -224,7 +232,7 @@ export default function PlayersPage() {
         </Select>
         {idsSeleccionados.size > 0 && (
           <Button size="sm" variant="subtle" onClick={() => setEliminarLoteAbierto(true)}>
-            <Trash2 size={15} />Eliminar seleccionados ({idsSeleccionados.size})
+            <Trash2 size={15} />Archivar seleccionados ({idsSeleccionados.size})
           </Button>
         )}
       </div>
@@ -251,24 +259,27 @@ export default function PlayersPage() {
         <Pagination page={pagina} pageSize={TAMANO_PAGINA} total={filtrados.length} onPageChange={setPagina} />
       </div>
 
-      <Modal isOpen={modalAbierto} onClose={cerrarModal} title={objetivoEdicion ? 'Editar jugador' : 'Nuevo jugador'} size="sm">
+      <Modal isOpen={modalAbierto} onClose={cerrarModal} title={objetivoEdicion ? 'Editar jugador' : 'Nuevo jugador'} size="lg">
         <div className="flex flex-col gap-4">
-          <Input label="Nombre" value={formulario.nombre} onChange={(event) => setFormulario((actual) => ({ ...actual, nombre: event.target.value }))} placeholder="Carlos" />
-          <Input label="Apellido" value={formulario.apellido} onChange={(event) => setFormulario((actual) => ({ ...actual, apellido: event.target.value }))} placeholder="García" />
-          <Select label="Género" value={formulario.genero} onChange={(event) => setFormulario((actual) => ({ ...actual, genero: event.target.value as Genero, categoriaId: null }))}>
-            <option value="MASCULINO">Masculino</option>
-            <option value="FEMENINO">Femenino</option>
-          </Select>
-          <Select label="Categoría" value={formulario.categoriaId?.toString() ?? ''} onChange={(event) => setFormulario((actual) => ({ ...actual, categoriaId: event.target.value ? Number(event.target.value) : null }))} placeholder="Sin categoría">
-            {opcionesCategoriaFormulario.map((categoria) => <option key={categoria.id} value={categoria.id}>{categoria.nombre}</option>)}
-          </Select>
-          <Input
-            label="URL de foto (opcional, alternativa)"
-            type="url"
-            value={formulario.fotoUrl?.startsWith('/uploads/') ? '' : formulario.fotoUrl ?? ''}
-            onChange={(event) => setFormulario((actual) => ({ ...actual, fotoUrl: event.target.value || null }))}
-            placeholder="https://..."
-          />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Input label="Nombre" value={formulario.nombre} onChange={(event) => setFormulario((actual) => ({ ...actual, nombre: event.target.value }))} placeholder="Carlos" />
+            <Input label="Apellido" value={formulario.apellido} onChange={(event) => setFormulario((actual) => ({ ...actual, apellido: event.target.value }))} placeholder="García" />
+            <Select label="Género" value={formulario.genero} onChange={(event) => setFormulario((actual) => ({ ...actual, genero: event.target.value as Genero, categoriaId: null }))}>
+              <option value="MASCULINO">Masculino</option>
+              <option value="FEMENINO">Femenino</option>
+            </Select>
+            <Select label="Categoría" value={formulario.categoriaId?.toString() ?? ''} onChange={(event) => setFormulario((actual) => ({ ...actual, categoriaId: event.target.value ? Number(event.target.value) : null }))} placeholder="Sin categoría">
+              {opcionesCategoriaFormulario.map((categoria) => <option key={categoria.id} value={categoria.id}>{categoria.nombre}</option>)}
+            </Select>
+            <Input label="Fecha de nacimiento (opcional)" type="date" value={formulario.fechaNacimiento ?? ''} onChange={(event) => setFormulario((actual) => ({ ...actual, fechaNacimiento: event.target.value }))} />
+            <Input
+              label="URL de foto (opcional)"
+              type="url"
+              value={formulario.fotoUrl?.startsWith('/uploads/') ? '' : formulario.fotoUrl ?? ''}
+              onChange={(event) => setFormulario((actual) => ({ ...actual, fotoUrl: event.target.value || null }))}
+              placeholder="https://..."
+            />
+          </div>
           <label className="flex flex-col gap-2 text-sm font-bold text-rp-text">
             Subir foto
             <input
@@ -294,10 +305,10 @@ export default function PlayersPage() {
       </Modal>
 
       <ConfirmDialog isOpen={Boolean(objetivoEliminar)} onClose={() => setObjetivoEliminar(null)} onConfirm={manejarEliminar}
-        title="Eliminar jugador" description={`¿Eliminás a ${objetivoEliminar?.nombre} ${objetivoEliminar?.apellido}?`} isLoading={eliminando} />
+        title="Archivar jugador" description={`¿Archivás a ${objetivoEliminar?.nombre} ${objetivoEliminar?.apellido}? Queda fuera de las listas; su historial se conserva.`} isLoading={eliminando} />
 
       <ConfirmDialog isOpen={eliminarLoteAbierto} onClose={() => setEliminarLoteAbierto(false)} onConfirm={manejarEliminarLote}
-        title="Eliminar seleccionados" description={`¿Eliminás ${idsSeleccionados.size} jugador(es)? Esta acción no se puede deshacer.`} isLoading={eliminandoLote} />
+        title="Archivar seleccionados" description={`¿Archivás ${idsSeleccionados.size} jugador(es)?`} isLoading={eliminandoLote} />
     </section>
   )
 }

@@ -90,6 +90,7 @@ export default function TournamentDetailPage() {
   const estaPublicado = torneo.estado === 'EN_CURSO' || torneo.estado === 'FINALIZADO'
   const enInscripcion = torneo.estado === 'INSCRIPCION'
   const esBorrador = torneo.estado === 'BORRADOR'
+  const mostrarInfo = !esBorrador
   const mostrarVistaCompetitiva = !esBorrador && !enInscripcion
   const campeonesPorCategoria = datosVista.categorias.map((categoria) => {
     const partidoCampeon = obtenerPartidoCampeon(partidosPorCategoria(detalle.partidos)[categoria] ?? [])
@@ -106,13 +107,24 @@ export default function TournamentDetailPage() {
           </NavLink>
         </Button>
 
-        {!estaPublicado ? (
+        {enInscripcion ? (
+          <div className="mt-4">
+            <Button asChild>
+              <NavLink to={`/torneos/${torneoId}/inscribirme`}>
+                <NotebookPen size={16} />
+                Inscribirme a este torneo
+              </NavLink>
+            </Button>
+          </div>
+        ) : null}
+
+        {esBorrador ? (
           <div className="mt-4">
             <StatusMessage title="Torneo no publicado" description="Este torneo todavía no está disponible para consulta pública." />
           </div>
         ) : null}
 
-        {estaPublicado ? <div className="td-hero rp-surface">
+        {mostrarInfo ? <div className="td-hero rp-surface">
           <div>
             <p className="td-eyebrow"><CircleDot size={14} />Detalle de torneo</p>
             <h1>{torneo.nombre}</h1>
@@ -146,7 +158,7 @@ export default function TournamentDetailPage() {
           </div>
         </div> : null}
 
-        {estaPublicado && torneo.estado === 'FINALIZADO' ? (
+        {torneo.estado === 'FINALIZADO' ? (
           <section className="td-champions rp-surface">
             <h2 className="td-title-with-icon"><Trophy size={22} />Campeones por categoría</h2>
             <div className="td-champion-grid">
@@ -189,9 +201,7 @@ export default function TournamentDetailPage() {
           </section>
         )}
 
-        {estaPublicado && esBorrador ? (
-          <StatusMessage title="Torneo en borrador" description="La información competitiva todavía no está publicada." />
-        ) : estaPublicado ? (
+        {mostrarInfo ? (
           <section className="td-content rp-surface">
             <div className="td-section-head">
               <div>
@@ -396,7 +406,6 @@ function construirRondasCuadro(partidos: PartidoResponse[], parejas: TorneoDetal
     partidosPorTamano.set(tamano, [...(partidosPorTamano.get(tamano) ?? []), partido])
   })
 
-  // Siempre mostrar todas las rondas del cuadro (las vacías muestran placeholder)
   return tamanosPosibles.map((tamano) => {
     const partidosRonda = [...(partidosPorTamano.get(tamano) ?? [])].sort((a, b) => a.id - b.id)
     const cantidadEsperada = tamano / 2
@@ -408,9 +417,7 @@ function construirRondasCuadro(partidos: PartidoResponse[], parejas: TorneoDetal
   })
 }
 
-// Altura base del slot de la primera ronda (px). Cada ronda siguiente dobla este valor.
 const UNIDAD_CUADRO = 104
-// Longitud de cada brazo del conector (mitad del gap de 48px entre columnas)
 const CONECTOR_CUADRO = 24
 
 function Cuadro({ partidos, parejas, torneo }: { partidos: PartidoResponse[]; parejas: TorneoDetalleResponse['parejas']; torneo: TorneoDetalleResponse['torneo'] }) {
@@ -421,9 +428,7 @@ function Cuadro({ partidos, parejas, torneo }: { partidos: PartidoResponse[]; pa
   return (
     <div className="td-bracket-v2">
       {rondas.map((ronda, indiceRonda) => {
-        // Cada ronda dobla la altura: ronda 0 = UNIT, ronda 1 = 2×UNIT, ronda 2 = 4×UNIT...
         const altoSlot = UNIDAD_CUADRO * Math.pow(2, indiceRonda)
-        // El brazo del conector es exactamente la mitad de la altura del slot
         const brazo = altoSlot / 2
         const tieneSaliente = indiceRonda < rondas.length - 1
         const tieneEntrante = indiceRonda > 0

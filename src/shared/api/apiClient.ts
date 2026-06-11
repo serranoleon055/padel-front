@@ -1,10 +1,5 @@
 import axios from 'axios'
 
-// Normaliza VITE_API_BASE_URL para tolerar errores comunes de configuracion:
-// - si falta el esquema (p. ej. "backend-xxx.up.railway.app"), antepone https://
-//   (sin esto el navegador lo trata como ruta relativa y las llamadas caen en el
-//    propio dominio del frontend, devolviendo el index.html en vez de JSON)
-// - recorta espacios y la barra final
 function normalizeApiBaseUrl(raw?: string): string {
   const value = (raw ?? '').trim()
   if (!value) return ''
@@ -50,8 +45,6 @@ apiClient.interceptors.response.use(
   (error) => {
     if (axios.isAxiosError(error) && error.response?.status === 401) {
       localStorage.removeItem(AUTH_TOKEN_KEY)
-      // Sesión expirada/no autenticado: llevar al login si estamos en una
-      // ruta protegida del admin, evitando bucles si ya estamos en el login.
       if (typeof window !== 'undefined'
         && window.location.pathname.startsWith('/admin')) {
         window.location.assign('/login')

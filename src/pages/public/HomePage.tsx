@@ -1,5 +1,5 @@
 import './HomePage.css'
-import { ArrowRight, CalendarDays, Check, ChevronLeft, ChevronRight, Grid2X2, MapPin, Medal, Trophy, Users } from 'lucide-react'
+import { ArrowRight, CalendarDays, Check, Grid2X2, MapPin, Medal, NotebookPen, Radio, Trophy, Users } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 
@@ -7,9 +7,10 @@ import { brand } from '@/config/brand'
 import { homeApi } from '@/features/home/homeApi'
 import { resolveApiAssetUrl } from '@/shared/api/apiClient'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
+import { ordenarCategorias } from '@/shared/lib/categorias'
 import { fechaCompacta, formatearFecha, formatearEnum, formatearEtapaPartido, formatearPareja } from '@/shared/lib/formatters'
 import { obtenerLadoGanador, parsearMarcador } from '@/shared/lib/score'
-import type { HomeResponse } from '@/shared/types/api'
+import type { HomeResponse, TorneoResponse } from '@/shared/types/api'
 import { StatusMessage } from '@/shared/ui/StatusMessage'
 import { ResultMatchCard } from '@/pages/public/components/ResultMatchCard'
 import { TickerBar } from '@/pages/public/components/TickerBar'
@@ -18,7 +19,6 @@ export default function HomePage() {
   const [datos, setDatos] = useState<HomeResponse | null>(null)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [indiceCarrusel, setIndiceCarrusel] = useState(0)
 
   useEffect(() => {
     let montado = true
@@ -63,17 +63,6 @@ export default function HomePage() {
     ].slice(0, 10)
   }, [datos])
 
-  const torneosCarrusel = useMemo(() => {
-    if (!datos) return []
-    const slides = []
-    if (datos.torneoDestacado) slides.push(datos.torneoDestacado)
-    const siguienteProximo = datos.proximosTorneos.find(
-      (t) => t.estado !== 'EN_CURSO' && t.id !== datos.torneoDestacado?.id,
-    )
-    if (siguienteProximo) slides.push(siguienteProximo)
-    return slides
-  }, [datos])
-
   if (cargando) {
     return <section className="hp-loading"><StatusMessage title="Cargando..." type="loading" /></section>
   }
@@ -86,10 +75,14 @@ export default function HomePage() {
     return <section className="hp-loading"><StatusMessage title="Sin datos" /></section>
   }
 
-  const torneo = torneosCarrusel[indiceCarrusel] ?? datos.torneoDestacado ?? null
-  const torneoCategorias = torneo?.categorias.length
+  const torneo = datos.torneoDestacado
+    ?? datos.proximosTorneos.find((t) => t.estado !== 'EN_CURSO')
+    ?? datos.proximosTorneos[0]
+    ?? null
+  const otrosTorneos = datos.proximosTorneos.filter((t) => t.id !== torneo?.id).slice(0, 5)
+  const torneoCategorias = ordenarCategorias(torneo?.categorias.length
     ? torneo.categorias
-    : datos.proximosTorneos.find((item) => item.categorias.length > 0)?.categorias ?? []
+    : datos.proximosTorneos.find((item) => item.categorias.length > 0)?.categorias ?? [])
 
   const resultadosVisibles = datos.ultimosResultados.slice(0, 6)
   const campeonesVisibles = datos.ultimosCampeones.slice(0, 5)
@@ -158,10 +151,12 @@ export default function HomePage() {
                   </span>
                 </div>
 
-                <div className="tp-carousel-slide" key={`slide-${indiceCarrusel}`}>
+                <div className="tp-carousel-slide" key={`slide-${torneo.id}`}>
                   <h2 className="tp-name">{torneo.nombre}</h2>
                   <p className="tp-desc">
-                    Torneo válido por el circuito oficial con puntos para el ranking provincial y seguimiento en vivo.
+                    {torneo.descripcion?.trim()
+                      ? torneo.descripcion
+                      : 'Torneo válido por el circuito oficial con puntos para el ranking provincial y seguimiento en vivo.'}
                   </p>
 
                   <div className="tp-fields">
@@ -178,52 +173,50 @@ export default function HomePage() {
                   </div>
 
                   <div className="tp-prog-wrap">
-                    <div className="tp-prog-row">
-                      <span>INSCRIPCIONES</span>
-                      <span className="tp-prog-count">{torneo.cantidadParejas}</span>
-                    </div>
-                    <div className="tp-prog-bar">
-                      <div className="tp-prog-fill" style={{ width: `${Math.min(100, torneo.cantidadParejas * 10)}%` }} />
-                    </div>
+                    {torneo.categorias.length === 0 ? (
+                      <div className="tp-prog-row">
+                        <span>INSCRIPCIONES</span>
+                        <span className="tp-prog-count">{torneo.cantidadParejas}</span>
+                      </div>
+                    ) : null}
+                    {ordenarCategorias(torneo.categorias).map((cat) => {
+                      const inscriptas = torneo.parejasPorCategoria?.[cat.id] ?? 0
+                      const cupo = torneo.cuposPorCategoria?.[cat.id] ?? null
+                      const lleno = cupo != null && cupo > 0 && inscriptas >= cupo
+                      const ancho = cupo != null && cupo > 0
+                        ? Math.min(100, (inscriptas / cupo) * 100)
+                        : Math.min(100, inscriptas * 10)
+                      return (
+                        <div key={cat.id} className="tp-prog-item">
+                          <div className="tp-prog-row">
+                            <span>{cat.nombre}</span>
+                            <span className={`tp-prog-count${lleno ? ' tp-prog-count--lleno' : ''}`}>
+                              {cupo != null && cupo > 0
+                                ? `${inscriptas}/${cupo}`
+                                : `${inscriptas} INSCRIPTAS`}
+                            </span>
+                          </div>
+                          <div className="tp-prog-bar">
+                            <div className="tp-prog-fill" style={{ width: `${ancho}%`, background: lleno ? '#c0392b' : undefined }} />
+                          </div>
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
 
                 <div className="tp-actions">
-                  <NavLink to={`/torneos/${torneo.id}`} className="btn-primary">
+                  {torneo.estado === 'INSCRIPCION' ? (
+                    <NavLink to={`/torneos/${torneo.id}/inscribirme`} className="btn-primary">
+                      <NotebookPen size={17} />
+                      Inscribirme
+                    </NavLink>
+                  ) : null}
+                  <NavLink to={`/torneos/${torneo.id}`} className={torneo.estado === 'INSCRIPCION' ? 'btn-ghost' : 'btn-primary'}>
                     <ArrowRight size={17} />
                     Ver detalle
                   </NavLink>
-                  <NavLink to="/torneos" className="btn-ghost">Todos los torneos</NavLink>
                 </div>
-
-                {torneosCarrusel.length > 1 && (
-                  <div className="tp-carousel-nav">
-                    <button
-                      className="tp-carousel-btn"
-                      onClick={() => setIndiceCarrusel((i) => (i - 1 + torneosCarrusel.length) % torneosCarrusel.length)}
-                      aria-label="Anterior"
-                    >
-                      <ChevronLeft size={18} />
-                    </button>
-                    <div className="tp-carousel-dots">
-                      {torneosCarrusel.map((_, i) => (
-                        <button
-                          key={i}
-                          className={`tp-carousel-dot${i === indiceCarrusel ? ' active' : ''}`}
-                          onClick={() => setIndiceCarrusel(i)}
-                          aria-label={`Diapositiva ${i + 1}`}
-                        />
-                      ))}
-                    </div>
-                    <button
-                      className="tp-carousel-btn"
-                      onClick={() => setIndiceCarrusel((i) => (i + 1) % torneosCarrusel.length)}
-                      aria-label="Siguiente"
-                    >
-                      <ChevronRight size={18} />
-                    </button>
-                  </div>
-                )}
               </>
             ) : (
               <StatusMessage title="No hay torneo destacado" />
@@ -231,7 +224,7 @@ export default function HomePage() {
           </div>
 
           <div className="tp-photo">
-            <img src={torneoFotoUrl ?? '/images/galan.jpg'} alt={torneo?.nombre ?? 'Próximo torneo'} loading="lazy" />
+            <img key={torneo?.id ?? 'sin-torneo'} src={torneoFotoUrl ?? '/images/galan.jpg'} alt={torneo?.nombre ?? 'Próximo torneo'} loading="lazy" />
             <div className="tp-photo-glass">
               <h2 className="tp-photo-title">{torneo?.nombre ?? 'Próximo torneo'}</h2>
               <div className="date-glass">
@@ -248,29 +241,50 @@ export default function HomePage() {
             </div>
           </div>
         </div>
+
+        {otrosTorneos.length > 0 && (
+          <div className="tp-row">
+            <div className="tp-row-head">
+              <div className="tp-row-eyebrow">PRÓXIMOS</div>
+              <h3 className="tp-row-title">Más torneos en camino</h3>
+            </div>
+            <NavLink to="/torneos" className="tp-row-all">
+              Ver todos
+              <ArrowRight size={15} />
+            </NavLink>
+            <div className="tp-cards">
+              {otrosTorneos.map((item) => (
+                <TorneoCard key={item.id} torneo={item} />
+              ))}
+            </div>
+          </div>
+        )}
       </section>
 
       <TickerBar items={elementosTicker} variant="results" />
 
       <section className="results-section">
         <div className="results-inner">
-          <div className="section-header">
-            <div className="sh-left">
-              <div className="section-title">Últimos resultados</div>
-              <div className="section-sub">TEMPORADA 2026</div>
+          <div className="results-block">
+            <div className="section-header">
+              <div className="sh-left">
+                <div className="section-title">Últimos resultados</div>
+                <div className="section-sub">TEMPORADA 2026</div>
+              </div>
+              <NavLink to="/torneos" className="see-all">
+                Ver todos los resultados
+                <ArrowRight size={15} />
+              </NavLink>
             </div>
-            <NavLink to="/torneos" className="see-all">
-              Ver todos los resultados
-              <ArrowRight size={15} />
-            </NavLink>
+
+            {resultadosVisibles.length === 0 ? <div className="home-empty-card">No hay resultados finalizados todavía.</div> : null}
+
+            <div className="match-grid">
+              {resultadosVisibles.map((item) => <ResultMatchCard key={item.id} elemento={item} />)}
+            </div>
           </div>
 
-          {resultadosVisibles.length === 0 ? <div className="home-empty-card">No hay resultados finalizados todavía.</div> : null}
-
-          <div className="match-grid">
-            {resultadosVisibles.map((item) => <ResultMatchCard key={item.id} elemento={item} />)}
-          </div>
-
+          <div className="champs-block">
           <div className="champs-wrap">
             <div className="champs-head">
               <div className="ch-left">
@@ -357,6 +371,7 @@ export default function HomePage() {
               </NavLink>
             </div>
           </div>
+          </div>
         </div>
       </section>
     </main>
@@ -372,6 +387,71 @@ function TarjetaDato({ icon: Icon, value, label }: { icon: typeof Users; value: 
         {label}
       </div>
     </div>
+  )
+}
+
+type Countdown = { dias: number; horas: number; minutos: number; segundos: number } | null
+
+function calcularCountdown(fecha: string | null): Countdown {
+  if (!fecha) return null
+  const objetivo = new Date(fecha.includes('T') ? fecha : `${fecha}T00:00:00`).getTime()
+  const restante = objetivo - Date.now()
+  if (Number.isNaN(objetivo) || restante <= 0) return null
+  const segundosTotales = Math.floor(restante / 1000)
+  return {
+    dias: Math.floor(segundosTotales / 86400),
+    horas: Math.floor((segundosTotales % 86400) / 3600),
+    minutos: Math.floor((segundosTotales % 3600) / 60),
+    segundos: segundosTotales % 60,
+  }
+}
+
+function useCountdown(fecha: string | null): Countdown {
+  const [valor, setValor] = useState<Countdown>(() => calcularCountdown(fecha))
+
+  useEffect(() => {
+    setValor(calcularCountdown(fecha))
+    const id = setInterval(() => setValor(calcularCountdown(fecha)), 1000)
+    return () => clearInterval(id)
+  }, [fecha])
+
+  return valor
+}
+
+function TorneoCard({ torneo }: { torneo: TorneoResponse }) {
+  const enVivo = torneo.estado === 'EN_CURSO'
+  const countdown = useCountdown(enVivo ? null : torneo.fechaInicio)
+  const fotoUrl = resolveApiAssetUrl(torneo.imagenUrl)
+  const dosDigitos = (n: number) => String(n).padStart(2, '0')
+
+  return (
+    <NavLink to={`/torneos/${torneo.id}`} className="tp-card">
+      <img src={fotoUrl ?? '/images/galan.jpg'} alt={torneo.nombre} loading="lazy" />
+      <div className="tp-card-top">
+        {enVivo ? (
+          <span className="tp-card-chip tp-card-chip--live">
+            <Radio size={12} />
+            EN VIVO
+          </span>
+        ) : countdown ? (
+          <span className="tp-card-chip">
+            EMPIEZA EN {countdown.dias > 0 ? `${countdown.dias}d ` : ''}
+            {dosDigitos(countdown.horas)}:{dosDigitos(countdown.minutos)}:{dosDigitos(countdown.segundos)}
+          </span>
+        ) : (
+          <span className="tp-card-chip">{formatearEnum(torneo.estado)}</span>
+        )}
+      </div>
+      <div className="tp-card-body">
+        <div className="tp-card-date">{fechaCompacta(torneo.fechaInicio)}</div>
+        <h4 className="tp-card-name">{torneo.nombre}</h4>
+        <div className="tp-card-meta">
+          <span>{torneo.cantidadCategorias} cat</span>
+          <span className="tp-card-sep" />
+          <span>{torneo.cantidadParejas} parejas</span>
+        </div>
+      </div>
+    </NavLink>
   )
 }
 

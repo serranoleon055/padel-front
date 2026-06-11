@@ -81,7 +81,6 @@ export function formatearEstadoPartido(estado: string | null | undefined): strin
   }
 }
 
-/** Devuelve la fecha más relevante para mostrar: programada si no hay resultado, real si ya se jugó. */
 export function formatearFechaPartido(partido: PartidoResponse): string {
   if (partido.fechaHora) return formatearFechaHora(partido.fechaHora)
   if (partido.fechaHoraProgramada) return `${formatearFechaHora(partido.fechaHoraProgramada)} (programado)`

@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react'
 import { useParams, NavLink } from 'react-router-dom'
-import { ArrowLeft, Trophy, Medal, TrendingUp } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Trophy, Medal, TrendingUp } from 'lucide-react'
 
 import { playersApi } from '@/features/players/playersApi'
 import { resolveApiAssetUrl } from '@/shared/api/apiClient'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
 import { formatearFecha, formatearEnum } from '@/shared/lib/formatters'
-import { obtenerLadoGanador } from '@/shared/lib/score'
 import type { JugadorHistorialResponse } from '@/shared/types/api'
 import { StatusMessage } from '@/shared/ui/StatusMessage'
+import { TarjetaPartidoJugador } from '@/pages/public/components/TarjetaPartidoJugador'
 
 export default function PlayerProfilePage() {
   const { jugadorId } = useParams()
@@ -153,34 +153,20 @@ export default function PlayerProfilePage() {
             <Medal size={16} /> Últimos partidos
           </h2>
           <div className="space-y-2">
-            {partidos.slice(0, 10).map((p) => {
-              const ladoGanador = obtenerLadoGanador(p)
-              const esGanador =
-                (ladoGanador === 'local' && (p.jugadorLocal1Id === id || p.jugadorLocal2Id === id)) ||
-                (ladoGanador === 'visitante' && (p.jugadorVisitante1Id === id || p.jugadorVisitante2Id === id))
-              return (
-                <div
-                  key={p.id}
-                  className="rounded-lg border px-4 py-3 transition-transform hover:-translate-y-0.5"
-                  style={{
-                    borderColor: esGanador ? 'var(--rp-green-600)' : 'var(--rp-border-light)',
-                    background: esGanador ? 'rgba(47,104,64,0.07)' : '#fff',
-                    borderLeft: `4px solid ${esGanador ? 'var(--rp-green-600)' : 'var(--rp-border-light)'}`,
-                  }}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="text-xs" style={{ color: 'var(--rp-muted-light)' }}>{p.torneoNombre} · {p.ronda ?? p.grupoNombre ?? formatearEnum(p.fase)} · {p.categoriaNombre}</div>
-                    <span className="text-xs font-black" style={{ color: esGanador ? 'var(--rp-green-600)' : '#c0392b' }}>{esGanador ? 'Victoria' : 'Derrota'}</span>
-                  </div>
-                  <div className="mt-2 grid grid-cols-3 items-center text-sm">
-                    <span className="text-left font-bold" style={{ color: 'var(--rp-green-800)' }}>{p.jugadorLocal1Nombre} / {p.jugadorLocal2Nombre}</span>
-                    <span className="text-center font-black" style={{ color: 'var(--rp-gold)' }}>{p.marcador ?? formatearEnum(p.estado)}</span>
-                    <span className="text-right font-bold" style={{ color: 'var(--rp-green-800)' }}>{p.jugadorVisitante1Nombre} / {p.jugadorVisitante2Nombre}</span>
-                  </div>
-                </div>
-              )
-            })}
+            {partidos.slice(0, 5).map((p) => (
+              <TarjetaPartidoJugador key={p.id} partido={p} jugadorId={id} />
+            ))}
           </div>
+          {partidos.length > 5 && (
+            <NavLink
+              to={`/jugadores/${id}/partidos`}
+              className="mt-4 flex items-center justify-center gap-2 rounded-lg border px-4 py-3 text-sm font-black uppercase tracking-wider transition-transform hover:-translate-y-0.5"
+              style={{ borderColor: 'var(--rp-green-600)', color: 'var(--rp-green-700)', background: '#fff' }}
+            >
+              Ver todos los partidos ({partidos.length})
+              <ArrowRight size={15} />
+            </NavLink>
+          )}
         </section>
       )}
 

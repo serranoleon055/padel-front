@@ -1,0 +1,349 @@
+import { ChevronLeft, ChevronRight, MapPin } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+
+import { brand } from '@/config/brand'
+import { canchasApi, placesApi } from '@/features/catalog/catalogApi'
+import { reservasApi, type ReservaResponse, type SlotDisponibilidad } from '@/features/reservas/reservasApi'
+import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
+import type { CanchaResponse, LugarResponse } from '@/shared/types/api'
+import { Button } from '@/shared/ui/Button'
+import { Input } from '@/shared/ui/Input'
+import { Modal } from '@/shared/ui/Modal'
+import { Select } from '@/shared/ui/Select'
+
+const NOMBRES_DIA = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
+
+function aISO(fecha: Date) {
+  const local = new Date(fecha.getTime() - fecha.getTimezoneOffset() * 60000)
+  return local.toISOString().slice(0, 10)
+}
+
+function hoyISO() {
+  return aISO(new Date())
+}
+
+function lunesDeLaSemana(base: Date) {
+  const dia = new Date(base)
+  const desplazamiento = (dia.getDay() + 6) % 7
+  dia.setDate(dia.getDate() - desplazamiento)
+  dia.setHours(0, 0, 0, 0)
+  return dia
+}
+
+function hhmm(hora: string) {
+  return hora.slice(0, 5)
+}
+
+function enlaceWhatsApp(reservas: ReservaResponse[]) {
+  const telefono = brand.phone.replace(/\D/g, '')
+  const primera = reservas[0]
+  const lineas = reservas.map((reserva) => `- ${reserva.fecha} ${hhmm(reserva.horaInicio)} hs (código ${reserva.codigo})`).join('\n')
+  const encabezado = reservas.length > 1 ? 'Quiero confirmar estos turnos' : 'Quiero confirmar mi turno'
+  const texto = `Hola! ${encabezado} en ${primera.canchaNombre} a nombre de ${primera.clienteNombre}:\n${lineas}`
+  return `https://wa.me/${telefono}?text=${encodeURIComponent(texto)}`
+}
+
+export default function ReservarPage() {
+  const [lugares, setLugares] = useState<LugarResponse[]>([])
+  const [canchas, setCanchas] = useState<CanchaResponse[]>([])
+  const [lugarId, setLugarId] = useState<number | null>(null)
+  const [canchaId, setCanchaId] = useState<number | null>(null)
+
+  const [inicioSemana, setInicioSemana] = useState(() => lunesDeLaSemana(new Date()))
+  const [fecha, setFecha] = useState(hoyISO())
+  const [slots, setSlots] = useState<SlotDisponibilidad[]>([])
+  const [cargando, setCargando] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const [horariosElegidos, setHorariosElegidos] = useState<string[]>([])
+  const [modalAbierto, setModalAbierto] = useState(false)
+  const [nombre, setNombre] = useState('')
+  const [telefono, setTelefono] = useState('')
+  const [enviando, setEnviando] = useState(false)
+  const [errorFormulario, setErrorFormulario] = useState<string | null>(null)
+  const [reservasCreadas, setReservasCreadas] = useState<ReservaResponse[]>([])
+
+  useEffect(() => {
+    Promise.all([placesApi.getAll(), canchasApi.getAll()])
+      .then(([lugaresData, canchasData]) => {
+        setLugares(lugaresData)
+        setCanchas(canchasData)
+        const primeraConCancha = lugaresData.find((lugar) => canchasData.some((cancha) => cancha.lugarId === lugar.id))
+        const lugarInicial = primeraConCancha?.id ?? lugaresData[0]?.id ?? null
+        setLugarId(lugarInicial)
+        const primeraCancha = canchasData.find((cancha) => cancha.lugarId === lugarInicial) ?? canchasData[0] ?? null
+        setCanchaId(primeraCancha?.id ?? null)
+      })
+      .catch((e: unknown) => setError(obtenerMensajeErrorApi(e)))
+  }, [])
+
+  const canchasDelLugar = useMemo(
+    () => canchas.filter((cancha) => cancha.lugarId === lugarId),
+    [canchas, lugarId],
+  )
+
+  function elegirLugar(nuevoLugarId: number | null) {
+    setLugarId(nuevoLugarId)
+    const primeraCancha = canchas.find((cancha) => cancha.lugarId === nuevoLugarId)
+    setCanchaId(primeraCancha?.id ?? null)
+  }
+
+  const dias = useMemo(() => {
+    return Array.from({ length: 7 }, (_, indice) => {
+      const dia = new Date(inicioSemana)
+      dia.setDate(dia.getDate() + indice)
+      return dia
+    })
+  }, [inicioSemana])
+
+  const hoy = hoyISO()
+
+  useEffect(() => {
+    if (canchaId == null) return
+    let activo = true
+    setHorariosElegidos([])
+    setCargando(true)
+    reservasApi.getDisponibilidad(canchaId, fecha)
+      .then((datos) => { if (activo) { setSlots(datos); setError(null) } })
+      .catch((e: unknown) => { if (activo) setError(obtenerMensajeErrorApi(e)) })
+      .finally(() => { if (activo) setCargando(false) })
+    return () => { activo = false }
+  }, [canchaId, fecha])
+
+  const canchaNombre = useMemo(
+    () => canchas.find((cancha) => cancha.id === canchaId)?.nombre ?? '',
+    [canchas, canchaId],
+  )
+  const lugarNombre = useMemo(
+    () => lugares.find((lugar) => lugar.id === lugarId)?.nombre ?? '',
+    [lugares, lugarId],
+  )
+
+  const semanaActual = lunesDeLaSemana(new Date()).getTime()
+  const puedeRetroceder = inicioSemana.getTime() > semanaActual
+  const puedeAvanzar = inicioSemana.getTime() < semanaActual + 7 * 24 * 60 * 60 * 1000
+
+  function cambiarSemana(deltaDias: number) {
+    setInicioSemana((actual) => {
+      const siguiente = new Date(actual)
+      siguiente.setDate(siguiente.getDate() + deltaDias)
+      return siguiente
+    })
+  }
+
+  function alternarHorario(slot: SlotDisponibilidad) {
+    setHorariosElegidos((actuales) =>
+      actuales.includes(slot.horaInicio)
+        ? actuales.filter((hora) => hora !== slot.horaInicio)
+        : [...actuales, slot.horaInicio],
+    )
+  }
+
+  const horariosOrdenados = useMemo(() => [...horariosElegidos].sort(), [horariosElegidos])
+
+  function abrirModal() {
+    if (horariosElegidos.length === 0) return
+    setNombre('')
+    setTelefono('')
+    setErrorFormulario(null)
+    setReservasCreadas([])
+    setModalAbierto(true)
+  }
+
+  function cerrarModal() {
+    setModalAbierto(false)
+    setErrorFormulario(null)
+  }
+
+  async function confirmarReserva() {
+    if (canchaId == null || horariosElegidos.length === 0) return
+    if (!nombre.trim() || !telefono.trim()) {
+      setErrorFormulario('Completá tu nombre y teléfono.')
+      return
+    }
+    setEnviando(true)
+    setErrorFormulario(null)
+    try {
+      const reservas = await reservasApi.solicitarLote({
+        canchaId,
+        fecha,
+        horarios: horariosElegidos,
+        clienteNombre: nombre.trim(),
+        clienteTelefono: telefono.trim(),
+      })
+      setReservasCreadas(reservas)
+      setHorariosElegidos([])
+      const datos = await reservasApi.getDisponibilidad(canchaId, fecha)
+      setSlots(datos)
+    } catch (e: unknown) {
+      setErrorFormulario(obtenerMensajeErrorApi(e))
+    } finally {
+      setEnviando(false)
+    }
+  }
+
+  return (
+    <section className="mx-auto max-w-3xl px-4 py-10">
+      <p className="text-xs font-black uppercase tracking-[0.22em] text-rp-accent">Turnos</p>
+      <h1 className="mt-2 text-3xl font-black text-rp-text">Reservar una cancha</h1>
+      <p className="mt-1 text-sm text-rp-muted">Elegí sucursal, cancha y día, marcá uno o varios horarios y pedilos todos juntos. Después los confirmás con el club por WhatsApp.</p>
+
+      <div className="mt-6 grid gap-4 sm:grid-cols-2">
+        <Select label="Sucursal" value={lugarId ?? ''} onChange={(e) => elegirLugar(e.target.value ? Number(e.target.value) : null)}>
+          {lugares.map((lugar) => (
+            <option key={lugar.id} value={lugar.id}>{lugar.nombre}</option>
+          ))}
+        </Select>
+        <Select label="Cancha" value={canchaId ?? ''} onChange={(e) => setCanchaId(e.target.value ? Number(e.target.value) : null)}>
+          {canchasDelLugar.length === 0 ? <option value="">Sin canchas</option> : null}
+          {canchasDelLugar.map((cancha) => (
+            <option key={cancha.id} value={cancha.id}>{cancha.nombre}</option>
+          ))}
+        </Select>
+      </div>
+
+      <div className="mt-6">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-black uppercase tracking-[0.14em] text-rp-muted">Elegí el día</span>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => cambiarSemana(-7)}
+              disabled={!puedeRetroceder}
+              className="flex size-8 items-center justify-center rounded-md border border-rp-border text-rp-muted disabled:opacity-40 hover:enabled:border-rp-accent hover:enabled:text-rp-accent"
+              aria-label="Semana anterior"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <button
+              onClick={() => cambiarSemana(7)}
+              disabled={!puedeAvanzar}
+              className="flex size-8 items-center justify-center rounded-md border border-rp-border text-rp-muted disabled:opacity-40 hover:enabled:border-rp-accent hover:enabled:text-rp-accent"
+              aria-label="Semana siguiente"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-2 grid grid-cols-7 gap-1.5">
+          {dias.map((dia, indice) => {
+            const iso = aISO(dia)
+            const esPasado = iso < hoy
+            const seleccionado = iso === fecha
+            return (
+              <button
+                key={iso}
+                disabled={esPasado}
+                onClick={() => setFecha(iso)}
+                className={
+                  seleccionado
+                    ? 'flex flex-col items-center gap-0.5 rounded-md border border-rp-accent bg-rp-accent px-1 py-2 text-white'
+                    : esPasado
+                      ? 'flex flex-col items-center gap-0.5 rounded-md border border-rp-border bg-rp-surface-2 px-1 py-2 text-rp-muted/55'
+                      : 'flex flex-col items-center gap-0.5 rounded-md border border-rp-border bg-rp-surface px-1 py-2 text-rp-text hover:border-rp-accent'
+                }
+              >
+                <span className="text-[10px] font-black uppercase tracking-wide">{NOMBRES_DIA[indice]}</span>
+                <span className="text-base font-black leading-none">{dia.getDate()}</span>
+                <span className="text-[9px] font-bold uppercase opacity-70">
+                  {dia.toLocaleDateString('es-AR', { month: 'short' }).replace('.', '')}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      <div className="mt-6">
+        <p className="flex items-center gap-1.5 text-sm font-bold text-rp-muted">
+          <MapPin size={15} className="text-rp-accent" />
+          {lugarNombre || 'Sucursal'}{canchaNombre ? ` · ${canchaNombre}` : ''}
+        </p>
+
+        <div className="mt-3">
+          {error && <p className="rounded-md border border-rp-danger/40 bg-rp-danger/10 px-3 py-2 text-sm font-bold text-rp-danger">{error}</p>}
+          {slots.length === 0 && cargando ? (
+            <p className="text-sm text-rp-muted">Cargando disponibilidad...</p>
+          ) : slots.length === 0 ? (
+            <p className="text-sm text-rp-muted">No hay horarios configurados para esta cancha en ese día.</p>
+          ) : (
+            <div className={`grid grid-cols-3 gap-2 transition-opacity duration-150 sm:grid-cols-4 ${cargando ? 'pointer-events-none opacity-50' : 'opacity-100'}`}>
+              {slots.map((slot) => {
+                const elegido = horariosElegidos.includes(slot.horaInicio)
+                return (
+                  <button
+                    key={slot.horaInicio}
+                    disabled={!slot.disponible}
+                    onClick={() => alternarHorario(slot)}
+                    aria-pressed={elegido}
+                    className={
+                      !slot.disponible
+                        ? 'cursor-not-allowed rounded-md border border-rp-border bg-rp-surface-2 px-3 py-2 text-sm font-semibold text-rp-muted line-through'
+                        : elegido
+                          ? 'rounded-md border border-rp-accent bg-rp-accent px-3 py-2 text-sm font-black text-white transition'
+                          : 'rounded-md border border-rp-accent/50 bg-rp-accent/15 px-3 py-2 text-sm font-bold text-rp-text transition hover:bg-rp-accent/25'
+                    }
+                  >
+                    {hhmm(slot.horaInicio)}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {horariosElegidos.length > 0 && (
+        <div className="sticky bottom-4 z-10 mt-5 flex items-center justify-between gap-3 rounded-xl border border-rp-accent/40 bg-rp-surface/95 px-4 py-3 shadow-lg backdrop-blur">
+          <span className="text-sm font-bold text-rp-text">
+            {horariosElegidos.length} {horariosElegidos.length === 1 ? 'turno' : 'turnos'}
+            <span className="ml-1 font-semibold text-rp-muted">· {horariosOrdenados.map(hhmm).join(', ')} hs</span>
+          </span>
+          <Button size="sm" onClick={abrirModal}>Reservar ({horariosElegidos.length})</Button>
+        </div>
+      )}
+
+      <Modal isOpen={modalAbierto} onClose={cerrarModal} title={reservasCreadas.length > 0 ? 'Turnos solicitados' : 'Pedir turnos'} size="sm">
+        {reservasCreadas.length > 0 ? (
+          <div className="flex flex-col gap-3">
+            <p className="text-sm text-rp-text">
+              {reservasCreadas.length === 1 ? 'Tu turno quedó' : `Tus ${reservasCreadas.length} turnos quedaron`} <strong>pendiente{reservasCreadas.length === 1 ? '' : 's'}</strong> en {reservasCreadas[0].canchaNombre}:
+            </p>
+            <ul className="flex flex-col gap-1.5">
+              {reservasCreadas.map((reserva) => (
+                <li key={reserva.id} className="flex items-center justify-between rounded-md border border-rp-border bg-rp-surface-2 px-3 py-2 text-sm">
+                  <span className="font-bold text-rp-text">{reserva.fecha} · {hhmm(reserva.horaInicio)} hs</span>
+                  <span className="text-xs text-rp-muted">código {reserva.codigo}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="text-sm text-rp-muted">Confirmalos con el club por WhatsApp:</p>
+            <a
+              href={enlaceWhatsApp(reservasCreadas)}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center justify-center rounded-md bg-rp-accent px-4 py-2.5 text-sm font-black text-rp-bg transition hover:opacity-90"
+            >
+              Confirmar por WhatsApp
+            </a>
+            <Button variant="ghost" size="sm" onClick={cerrarModal}>Cerrar</Button>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-4">
+            <div className="rounded-md border border-rp-border bg-rp-surface-2 px-3 py-2 text-sm">
+              <p className="font-bold text-rp-text">{lugarNombre} · {canchaNombre} · {fecha}</p>
+              <p className="mt-0.5 text-rp-muted">{horariosOrdenados.map(hhmm).join(', ')} hs</p>
+            </div>
+            <Input label="Nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Tu nombre" />
+            <Input label="Teléfono" type="tel" value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="385..." />
+            {errorFormulario && <p className="rounded-md border border-rp-danger/40 bg-rp-danger/10 px-3 py-2 text-sm font-bold text-rp-danger">{errorFormulario}</p>}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="ghost" size="sm" onClick={cerrarModal} disabled={enviando}>Cancelar</Button>
+              <Button size="sm" onClick={confirmarReserva} disabled={enviando}>{enviando ? 'Enviando...' : `Pedir ${horariosElegidos.length} ${horariosElegidos.length === 1 ? 'turno' : 'turnos'}`}</Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+    </section>
+  )
+}

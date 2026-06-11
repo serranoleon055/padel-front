@@ -10,6 +10,7 @@ const HomePage = lazy(() => import('@/pages/public/HomePage'))
 const LoginPage = lazy(() => import('@/pages/public/LoginPage'))
 const RankingPage = lazy(() => import('@/pages/public/RankingPage'))
 const PlayerProfilePage = lazy(() => import('@/pages/public/PlayerProfilePage'))
+const PlayerMatchesPage = lazy(() => import('@/pages/public/PlayerMatchesPage'))
 const TournamentDetailPage = lazy(() => import('@/pages/public/TournamentDetailPage'))
 const TournamentsPage = lazy(() => import('@/pages/public/TournamentsPage'))
 const ContactoPage = lazy(() => import('@/pages/public/legal/ContactoPage'))
@@ -25,6 +26,10 @@ const TournamentAdminDetailPage = lazy(() => import('@/pages/admin/TournamentAdm
 const AdminUsersPage = lazy(() => import('@/pages/admin/AdminUsersPage'))
 const FormatTemplatesPage = lazy(() => import('@/pages/admin/FormatTemplatesPage'))
 const PointTemplatesPage = lazy(() => import('@/pages/admin/PointTemplatesPage'))
+const ReservarPage = lazy(() => import('@/pages/public/ReservarPage'))
+const TurnosAdminPage = lazy(() => import('@/pages/admin/TurnosAdminPage'))
+const InscribirmePage = lazy(() => import('@/pages/public/InscribirmePage'))
+const InscripcionesAdminPage = lazy(() => import('@/pages/admin/InscripcionesAdminPage'))
 
 function PageFallback() {
   return (
@@ -45,8 +50,11 @@ export function AppRouter() {
           <Route index element={<HomePage />} />
           <Route path="torneos" element={<TournamentsPage />} />
           <Route path="torneos/:torneoId" element={<TournamentDetailPage />} />
+          <Route path="torneos/:torneoId/inscribirme" element={<InscribirmePage />} />
           <Route path="ranking" element={<RankingPage />} />
+          <Route path="reservar" element={<ReservarPage />} />
           <Route path="jugadores/:jugadorId" element={<PlayerProfilePage />} />
+          <Route path="jugadores/:jugadorId/partidos" element={<PlayerMatchesPage />} />
           <Route path="contacto" element={<ContactoPage />} />
           <Route path="terminos" element={<TerminosPage />} />
           <Route path="privacidad" element={<PrivacidadPage />} />
@@ -58,11 +66,13 @@ export function AppRouter() {
           <Route path="jugadores" element={<PlayersPage />} />
           <Route path="categorias" element={<CategoriesPage />} />
           <Route path="lugares" element={<PlacesPage />} />
+          <Route path="turnos" element={<TurnosAdminPage />} />
           <Route path="temporadas" element={<SeasonsPage />} />
           <Route path="torneos" element={<TournamentsAdminPage />} />
           <Route path="torneos/nuevo" element={<TournamentFormPage />} />
           <Route path="torneos/:torneoId/editar" element={<TournamentFormPage />} />
           <Route path="torneos/:torneoId" element={<TournamentAdminDetailPage />} />
+          <Route path="torneos/:torneoId/inscripciones" element={<InscripcionesAdminPage />} />
           <Route path="plantillas-formato" element={<FormatTemplatesPage />} />
           <Route path="plantillas-puntos" element={<PointTemplatesPage />} />
           <Route path="usuarios-admin" element={<AdminUsersPage />} />
