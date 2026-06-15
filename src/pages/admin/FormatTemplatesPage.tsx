@@ -187,7 +187,7 @@ export default function FormatTemplatesPage() {
         <Pagination page={pagina} pageSize={TAMANO_PAGINA} total={filtrados.length} onPageChange={setPagina} />
       </div>
 
-      <Modal isOpen={modalAbierto} onClose={cerrarModal} title={objetivoEdicion ? 'Editar plantilla' : 'Nueva plantilla'} size="lg">
+      <Modal isOpen={modalAbierto} onClose={cerrarModal} onSubmit={manejarGuardar} title={objetivoEdicion ? 'Editar plantilla' : 'Nueva plantilla'} size="lg">
         <div className="grid gap-4">
           <Input label="Nombre" value={formulario.nombre} onChange={(e) => setFormulario((f) => ({ ...f, nombre: e.target.value }))} placeholder="12 parejas - 4 grupos" />
           <Input label="Descripción" value={formulario.descripcion ?? ''} onChange={(e) => setFormulario((f) => ({ ...f, descripcion: e.target.value }))} placeholder="Fase de grupos y eliminación posterior" />
@@ -236,7 +236,7 @@ export default function FormatTemplatesPage() {
           {errorFormulario && <p className="rounded-md border border-rp-danger/40 bg-rp-danger/10 px-3 py-2 text-sm font-bold text-rp-danger">{errorFormulario}</p>}
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="ghost" size="sm" onClick={cerrarModal} disabled={guardando}>Cancelar</Button>
-            <Button size="sm" onClick={manejarGuardar} disabled={guardando}>{guardando ? 'Guardando...' : 'Guardar'}</Button>
+            <Button type="submit" size="sm" disabled={guardando}>{guardando ? 'Guardando...' : 'Guardar'}</Button>
           </div>
         </div>
       </Modal>

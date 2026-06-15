@@ -365,7 +365,7 @@ export default function HomePage() {
             </div>
 
             <div className="champs-footer">
-              <NavLink to="/torneos" className="see-all">
+              <NavLink to="/campeones" className="see-all">
                 Ver todos los campeones
                 <ArrowRight size={15} />
               </NavLink>

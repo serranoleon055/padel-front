@@ -8,7 +8,7 @@ import { useToast } from '@/shared/ui/Toast'
 import { formatearFecha, formatearEnum } from '@/shared/lib/formatters'
 import { nombreCompletoEmpiezaCon } from '@/shared/lib/tournamentView'
 import { ordenarCategorias } from '@/shared/lib/categorias'
-import type { CategoriaResponse, Genero, JugadorRequest, JugadorResponse } from '@/shared/types/api'
+import type { CategoriaResponse, Genero, JugadorRequest, JugadorResponse, PosicionJuego } from '@/shared/types/api'
 import { AdminPageHeader } from '@/shared/ui/AdminPageHeader'
 import { AdminTable, type Column } from '@/shared/ui/AdminTable'
 import { Button } from '@/shared/ui/Button'
@@ -19,7 +19,7 @@ import { Pagination } from '@/shared/ui/Pagination'
 import { Select } from '@/shared/ui/Select'
 
 const TAMANO_PAGINA = 8
-const VACIO: JugadorRequest = { nombre: '', apellido: '', genero: 'MASCULINO', fotoUrl: null, categoriaId: null, fechaNacimiento: '' }
+const VACIO: JugadorRequest = { nombre: '', apellido: '', genero: 'MASCULINO', fotoUrl: null, categoriaId: null, fechaNacimiento: '', posicionJuego: null }
 
 export default function PlayersPage() {
   const [jugadores, setJugadores] = useState<JugadorResponse[]>([])
@@ -105,7 +105,7 @@ export default function PlayersPage() {
 
   function abrirEditar(jugador: JugadorResponse) {
     setObjetivoEdicion(jugador)
-    setFormulario({ nombre: jugador.nombre, apellido: jugador.apellido, genero: jugador.genero, fotoUrl: jugador.fotoUrl ?? null, categoriaId: jugador.categoriaId ?? null, fechaNacimiento: '' })
+    setFormulario({ nombre: jugador.nombre, apellido: jugador.apellido, genero: jugador.genero, fotoUrl: jugador.fotoUrl ?? null, categoriaId: jugador.categoriaId ?? null, fechaNacimiento: '', posicionJuego: jugador.posicionJuego ?? null })
     setArchivoFoto(null)
     setQuitarFotoAlGuardar(false)
     setErrorFormulario(null)
@@ -254,7 +254,7 @@ export default function PlayersPage() {
         <Pagination page={pagina} pageSize={TAMANO_PAGINA} total={filtrados.length} onPageChange={setPagina} />
       </div>
 
-      <Modal isOpen={modalAbierto} onClose={cerrarModal} title={objetivoEdicion ? 'Editar jugador' : 'Nuevo jugador'} size="lg">
+      <Modal isOpen={modalAbierto} onClose={cerrarModal} onSubmit={manejarGuardar} title={objetivoEdicion ? 'Editar jugador' : 'Nuevo jugador'} size="lg">
         <div className="flex flex-col gap-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <Input label="Nombre" value={formulario.nombre} onChange={(event) => setFormulario((actual) => ({ ...actual, nombre: event.target.value }))} placeholder="Carlos" />
@@ -265,6 +265,10 @@ export default function PlayersPage() {
             </Select>
             <Select label="Categoría" value={formulario.categoriaId?.toString() ?? ''} onChange={(event) => setFormulario((actual) => ({ ...actual, categoriaId: event.target.value ? Number(event.target.value) : null }))} placeholder="Sin categoría">
               {opcionesCategoriaFormulario.map((categoria) => <option key={categoria.id} value={categoria.id}>{categoria.nombre}</option>)}
+            </Select>
+            <Select label="Posición (opcional)" value={formulario.posicionJuego ?? ''} onChange={(event) => setFormulario((actual) => ({ ...actual, posicionJuego: event.target.value ? (event.target.value as PosicionJuego) : null }))} placeholder="Sin definir">
+              <option value="DRIVE">Drive</option>
+              <option value="REVES">Revés</option>
             </Select>
             <Input label="Fecha de nacimiento (opcional)" type="date" value={formulario.fechaNacimiento ?? ''} onChange={(event) => setFormulario((actual) => ({ ...actual, fechaNacimiento: event.target.value }))} />
             <Input
@@ -294,7 +298,7 @@ export default function PlayersPage() {
           {errorFormulario && <p className="rounded-md border border-rp-danger/40 bg-rp-danger/10 px-3 py-2 text-sm font-bold text-rp-danger">{errorFormulario}</p>}
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="ghost" size="sm" onClick={cerrarModal} disabled={guardando}>Cancelar</Button>
-            <Button size="sm" onClick={manejarGuardar} disabled={guardando}>{guardando ? 'Guardando...' : 'Guardar'}</Button>
+            <Button type="submit" size="sm" disabled={guardando}>{guardando ? 'Guardando...' : 'Guardar'}</Button>
           </div>
         </div>
       </Modal>

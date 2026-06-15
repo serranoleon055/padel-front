@@ -1,17 +1,38 @@
-import { BarChart3, CalendarDays, CheckCircle2, Trophy, Users } from 'lucide-react'
+import { BarChart3, CalendarDays, CheckCircle2, RefreshCw, Trophy, Users } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { homeApi } from '@/features/home/homeApi'
+import { rankingApi } from '@/features/ranking/rankingApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
 import { formatearFecha } from '@/shared/lib/formatters'
 import type { AdminDashboardResponse } from '@/shared/types/api'
+import { Button } from '@/shared/ui/Button'
+import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
 import { StatusBadge } from '@/shared/ui/StatusBadge'
 import { StatusMessage } from '@/shared/ui/StatusMessage'
+import { useToast } from '@/shared/ui/Toast'
 
 export default function AdminDashboardPage() {
   const [panel, setPanel] = useState<AdminDashboardResponse | null>(null)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [confirmarRecalculo, setConfirmarRecalculo] = useState(false)
+  const [recalculando, setRecalculando] = useState(false)
+  const { success: avisoExito, error: avisoError } = useToast()
+
+  async function manejarRecalcular() {
+    setRecalculando(true)
+    try {
+      const mensaje = await rankingApi.recalcularPuntos()
+      setConfirmarRecalculo(false)
+      avisoExito(mensaje || 'Ranking recalculado')
+    } catch (errorCapturado: unknown) {
+      setConfirmarRecalculo(false)
+      avisoError(obtenerMensajeErrorApi(errorCapturado))
+    } finally {
+      setRecalculando(false)
+    }
+  }
 
   useEffect(() => {
     let montado = true
@@ -87,6 +108,25 @@ export default function AdminDashboardPage() {
           </div>
         </div>
       )}
+
+      <div className="mt-5 rounded-lg border border-rp-border bg-rp-surface/82 p-4">
+        <h3 className="text-xs font-black uppercase tracking-[0.16em] text-rp-accent">Mantenimiento</h3>
+        <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-rp-muted">Recalcula los puntos del ranking a partir de los partidos finalizados. Las victorias y derrotas no cambian.</p>
+          <Button size="sm" variant="subtle" onClick={() => setConfirmarRecalculo(true)} disabled={recalculando} className="shrink-0">
+            <RefreshCw size={16} />{recalculando ? 'Recalculando...' : 'Recalcular ranking'}
+          </Button>
+        </div>
+      </div>
+
+      <ConfirmDialog
+        isOpen={confirmarRecalculo}
+        onClose={() => setConfirmarRecalculo(false)}
+        onConfirm={manejarRecalcular}
+        title="Recalcular ranking"
+        description="Se recalcularán todos los puntos del ranking a partir de los partidos finalizados. ¿Continuar?"
+        isLoading={recalculando}
+      />
     </section>
   )
 }

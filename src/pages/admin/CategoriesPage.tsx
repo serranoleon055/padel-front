@@ -149,7 +149,7 @@ export default function CategoriesPage() {
                 />
                 <Pagination page={pagina} pageSize={TAMANO_PAGINA} total={filtrados.length} onPageChange={setPagina} />
             </div>
-            <Modal isOpen={modalAbierto} onClose={cerrarModal} title={objetivoEdicion ? 'Editar categoría' : 'Nueva categoría'} size="sm">
+            <Modal isOpen={modalAbierto} onClose={cerrarModal} onSubmit={manejarGuardar} title={objetivoEdicion ? 'Editar categoría' : 'Nueva categoría'} size="sm">
                 <div className="flex flex-col gap-4">
                 <Input label="Nombre" value={formulario.nombre} onChange={(e) => setFormulario((f) => ({ ...f, nombre: e.target.value }))} placeholder="Primera" />
                 <Input label="Nivel (1-8)" type="text" inputMode="numeric" pattern="[1-8]" maxLength={1} placeholder="1-8" value={formulario.nivel ? String(formulario.nivel) : ''} onChange={(e) => {
@@ -164,7 +164,7 @@ export default function CategoriesPage() {
                 {errorFormulario && <p className="rounded-md border border-rp-danger/40 bg-rp-danger/10 px-3 py-2 text-sm font-bold text-rp-danger">{errorFormulario}</p>}
                 <div className="flex justify-end gap-2 pt-2">
                     <Button variant="ghost" size="sm" onClick={cerrarModal} disabled={guardando}>Cancelar</Button>
-                    <Button size="sm" onClick={manejarGuardar} disabled={guardando}>{guardando ? 'Guardando...' : 'Guardar'}</Button>
+                    <Button type="submit" size="sm" disabled={guardando}>{guardando ? 'Guardando...' : 'Guardar'}</Button>
                 </div>
                 </div>
             </Modal>

@@ -166,7 +166,7 @@ export default function AdminUsersPage() {
         <Pagination page={pagina} pageSize={TAMANO_PAGINA} total={filtrados.length} onPageChange={setPagina} />
       </div>
 
-      <Modal isOpen={modalAbierto} onClose={cerrarModal} title={objetivoEdicion ? 'Editar admin' : 'Nuevo admin'} size="sm">
+      <Modal isOpen={modalAbierto} onClose={cerrarModal} onSubmit={manejarGuardar} title={objetivoEdicion ? 'Editar admin' : 'Nuevo admin'} size="sm">
         <div className="flex flex-col gap-4">
           <Input label="Usuario" value={formulario.username} onChange={(event) => setFormulario((actual) => ({ ...actual, username: event.target.value }))} placeholder="admin" />
           <Input
@@ -180,7 +180,7 @@ export default function AdminUsersPage() {
           {errorFormulario && <p className="rounded-md border border-rp-danger/40 bg-rp-danger/10 px-3 py-2 text-sm font-bold text-rp-danger">{errorFormulario}</p>}
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="ghost" size="sm" onClick={cerrarModal} disabled={guardando}>Cancelar</Button>
-            <Button size="sm" onClick={manejarGuardar} disabled={guardando}>{guardando ? 'Guardando...' : 'Guardar'}</Button>
+            <Button type="submit" size="sm" disabled={guardando}>{guardando ? 'Guardando...' : 'Guardar'}</Button>
           </div>
         </div>
       </Modal>

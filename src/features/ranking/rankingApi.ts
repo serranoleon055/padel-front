@@ -22,4 +22,9 @@ export const rankingApi = {
     })
     return data
   },
+
+  async recalcularPuntos() {
+    const { data } = await apiClient.post<string>('/api/ranking/recalcular')
+    return data
+  },
 }
