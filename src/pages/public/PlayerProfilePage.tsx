@@ -63,7 +63,10 @@ export default function PlayerProfilePage() {
         )}
         <div>
           <h1 className="text-3xl font-black" style={{ color: 'var(--rp-green-800)' }}>{jugador.nombre} {jugador.apellido}</h1>
-          <p className="mt-1 text-sm" style={{ color: 'var(--rp-muted-light)' }}>{formatearEnum(jugador.genero)} · {jugador.categoriaNombre ?? 'Sin categoría'}</p>
+          <p className="mt-1 text-sm" style={{ color: 'var(--rp-muted-light)' }}>
+            {formatearEnum(jugador.genero)} · {jugador.categoriaNombre ?? 'Sin categoría'}
+            {jugador.posicionJuego ? ` · ${jugador.posicionJuego === 'DRIVE' ? 'Drive' : 'Revés'}` : ''}
+          </p>
           <p className="text-xs" style={{ color: 'var(--rp-faint)' }}>Desde {formatearFecha(jugador.fechaRegistro)}</p>
         </div>
       </section>

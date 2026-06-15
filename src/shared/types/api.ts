@@ -1,5 +1,7 @@
 export type Genero = 'MASCULINO' | 'FEMENINO'
 
+export type PosicionJuego = 'DRIVE' | 'REVES'
+
 export type EstadoTorneo = 'BORRADOR' | 'INSCRIPCION' | 'SORTEADO' | 'EN_CURSO' | 'FINALIZADO' | 'CANCELADO'
 
 export type FormatoTorneo = 'MINITORNEO' | 'TORNEO_LARGO' | 'LIGA' | 'ELIMINACION_DIRECTA'
@@ -71,6 +73,7 @@ export type JugadorResponse = {
   fechaRegistro: string | null
   categoriaId: number | null
   categoriaNombre: string | null
+  posicionJuego: PosicionJuego | null
 }
 
 export type JugadorRequest = {
@@ -81,6 +84,7 @@ export type JugadorRequest = {
   categoriaId?: number | null
   telefono?: string | null
   fechaNacimiento?: string | null
+  posicionJuego?: PosicionJuego | null
 }
 
 export type JugadorFichaResponse = {

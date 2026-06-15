@@ -90,7 +90,7 @@ export function CanchasLugarModal({ lugar, onClose }: { lugar: LugarResponse | n
   }
 
   return (
-    <Modal isOpen={Boolean(lugar)} onClose={onClose} title={lugar ? `Canchas de ${lugar.nombre}` : 'Canchas'} size="md">
+    <Modal isOpen={Boolean(lugar)} onClose={onClose} onSubmit={guardar} title={lugar ? `Canchas de ${lugar.nombre}` : 'Canchas'} size="md">
       <div className="flex flex-col gap-4">
         {error && <p className="rounded-md border border-rp-danger/40 bg-rp-danger/10 px-3 py-2 text-sm font-bold text-rp-danger">{error}</p>}
 
@@ -107,8 +107,8 @@ export function CanchasLugarModal({ lugar, onClose }: { lugar: LugarResponse | n
                   {cancha.descripcion && <p className="text-xs text-rp-muted">{cancha.descripcion}</p>}
                 </div>
                 <div className="flex gap-1">
-                  <button onClick={() => empezarEdicion(cancha)} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent" aria-label="Editar"><Pencil size={15} /></button>
-                  <button onClick={() => setAArchivar(cancha)} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger" aria-label="Archivar"><Trash2 size={15} /></button>
+                  <button type="button" onClick={() => empezarEdicion(cancha)} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent" aria-label="Editar"><Pencil size={15} /></button>
+                  <button type="button" onClick={() => setAArchivar(cancha)} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger" aria-label="Archivar"><Trash2 size={15} /></button>
                 </div>
               </div>
             ))
@@ -122,7 +122,7 @@ export function CanchasLugarModal({ lugar, onClose }: { lugar: LugarResponse | n
             <Input label="Descripción (opcional)" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Cristal / muro / techada" />
             <div className="flex justify-end gap-2">
               {editando && <Button variant="ghost" size="sm" onClick={limpiarFormulario} disabled={guardando}>Cancelar</Button>}
-              <Button size="sm" onClick={guardar} disabled={guardando}>
+              <Button type="submit" size="sm" disabled={guardando}>
                 {editando ? <><Pencil size={15} />Guardar</> : <><Plus size={15} />Agregar</>}
               </Button>
             </div>

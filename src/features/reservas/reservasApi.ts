@@ -102,6 +102,13 @@ export const horariosCanchaApi = {
     return data
   },
 
+  async guardarSucursal(lugarId: number, payload: HorarioCanchaRequest) {
+    const { data } = await apiClient.post<HorarioCanchaResponse[]>('/api/horarios-cancha/sucursal', payload, {
+      params: { lugarId },
+    })
+    return data
+  },
+
   async listar(canchaId: number) {
     const { data } = await apiClient.get<HorarioCanchaResponse[]>('/api/horarios-cancha', {
       params: { canchaId },

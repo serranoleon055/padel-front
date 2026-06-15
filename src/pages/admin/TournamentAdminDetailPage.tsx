@@ -439,7 +439,7 @@ export default function TournamentAdminDetailPage() {
                 </div>
             </Modal>
 
-            <Modal isOpen={resultadoAbierto} onClose={() => setResultadoAbierto(false)} title="Cargar resultado" size="sm">
+            <Modal isOpen={resultadoAbierto} onClose={() => setResultadoAbierto(false)} onSubmit={manejarGuardarResultado} title="Cargar resultado" size="sm">
                 {partidoResultado && (
                 <div className="flex flex-col gap-4">
                     <div className="rounded-lg border border-rp-border bg-rp-bg/55 p-3 text-sm">
@@ -454,13 +454,13 @@ export default function TournamentAdminDetailPage() {
                     {errorResultado && <p className="rounded-md border border-rp-danger/40 bg-rp-danger/10 px-3 py-2 text-sm font-bold text-rp-danger">{errorResultado}</p>}
                     <div className="flex justify-end gap-2 pt-2">
                     <Button variant="ghost" size="sm" onClick={() => setResultadoAbierto(false)} disabled={guardandoResultado}>Cancelar</Button>
-                    <Button size="sm" onClick={manejarGuardarResultado} disabled={guardandoResultado}>{guardandoResultado ? 'Guardando...' : 'Guardar resultado'}</Button>
+                    <Button type="submit" size="sm" disabled={guardandoResultado}>{guardandoResultado ? 'Guardando...' : 'Guardar resultado'}</Button>
                     </div>
                 </div>
                 )}
             </Modal>
 
-            <Modal isOpen={programacionAbierta} onClose={() => setProgramacionAbierta(false)} title="Programar partido" size="sm">
+            <Modal isOpen={programacionAbierta} onClose={() => setProgramacionAbierta(false)} onSubmit={manejarGuardarProgramacion} title="Programar partido" size="sm">
                 {partidoProgramacion && (
                 <div className="flex flex-col gap-4">
                     <div className="rounded-lg border border-rp-border bg-rp-bg/55 p-3 text-sm">
@@ -479,13 +479,13 @@ export default function TournamentAdminDetailPage() {
                     {errorProgramacion && <p className="rounded-md border border-rp-danger/40 bg-rp-danger/10 px-3 py-2 text-sm font-bold text-rp-danger">{errorProgramacion}</p>}
                     <div className="flex justify-end gap-2 pt-2">
                     <Button variant="ghost" size="sm" onClick={() => setProgramacionAbierta(false)} disabled={guardandoProgramacion}>Cancelar</Button>
-                    <Button size="sm" onClick={manejarGuardarProgramacion} disabled={guardandoProgramacion}>{guardandoProgramacion ? 'Guardando...' : 'Guardar programación'}</Button>
+                    <Button type="submit" size="sm" disabled={guardandoProgramacion}>{guardandoProgramacion ? 'Guardando...' : 'Guardar programación'}</Button>
                     </div>
                 </div>
                 )}
             </Modal>
 
-            <Modal isOpen={woAbierto} onClose={() => setWoAbierto(false)} title="Declarar W.O. / Retiro" size="sm">
+            <Modal isOpen={woAbierto} onClose={() => setWoAbierto(false)} onSubmit={manejarGuardarWo} title="Declarar W.O. / Retiro" size="sm">
                 {partidoWo && (
                 <div className="flex flex-col gap-4">
                     <div className="rounded-lg border border-rp-border bg-rp-bg/55 p-3 text-sm">
@@ -511,7 +511,7 @@ export default function TournamentAdminDetailPage() {
                     {errorWo && <p className="rounded-md border border-rp-danger/40 bg-rp-danger/10 px-3 py-2 text-sm font-bold text-rp-danger">{errorWo}</p>}
                     <div className="flex justify-end gap-2 pt-2">
                     <Button variant="ghost" size="sm" onClick={() => setWoAbierto(false)} disabled={guardandoWo}>Cancelar</Button>
-                    <Button size="sm" variant="danger" onClick={manejarGuardarWo} disabled={guardandoWo}>{guardandoWo ? 'Guardando...' : 'Confirmar'}</Button>
+                    <Button type="submit" size="sm" variant="danger" disabled={guardandoWo}>{guardandoWo ? 'Guardando...' : 'Confirmar'}</Button>
                     </div>
                 </div>
                 )}

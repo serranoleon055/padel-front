@@ -129,11 +129,12 @@ export default function TurnosAdminPage() {
   }
 
   async function guardarHorario() {
+    if (lugarId == null) return
     setGuardandoHorario(true)
     setErrorHorario(null)
     try {
-      await horariosCanchaApi.guardar(horario)
-      avisoExito('Horario guardado')
+      await horariosCanchaApi.guardarSucursal(lugarId, horario)
+      avisoExito('Horario guardado para todas las canchas de la sucursal')
       setHorarioAbierto(false)
       if (canchaId != null) cargarReservas(canchaId, fecha)
     } catch (e: unknown) {
@@ -221,8 +222,9 @@ export default function TurnosAdminPage() {
         />
       </div>
 
-      <Modal isOpen={horarioAbierto} onClose={() => setHorarioAbierto(false)} title={`Horario de ${canchasDelLugar.find((c) => c.id === canchaId)?.nombre ?? 'la cancha'}`} size="sm">
+      <Modal isOpen={horarioAbierto} onClose={() => setHorarioAbierto(false)} onSubmit={guardarHorario} title={`Horario de ${lugares.find((l) => l.id === lugarId)?.nombre ?? 'la sucursal'}`} size="sm">
         <div className="flex flex-col gap-4">
+          <p className="rounded-md border border-rp-border bg-rp-surface-2 px-3 py-2 text-xs leading-5 text-rp-muted">Este horario se aplica a todas las canchas de la sucursal.</p>
           <div className="grid grid-cols-2 gap-3">
             <Input label="Apertura" type="time" value={horario.horaApertura} onChange={(e) => setHorario((h) => ({ ...h, horaApertura: e.target.value }))} />
             <Input label="Cierre" type="time" value={horario.horaCierre} onChange={(e) => setHorario((h) => ({ ...h, horaCierre: e.target.value }))} />
@@ -236,7 +238,7 @@ export default function TurnosAdminPage() {
           {errorHorario && <p className="rounded-md border border-rp-danger/40 bg-rp-danger/10 px-3 py-2 text-sm font-bold text-rp-danger">{errorHorario}</p>}
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="ghost" size="sm" onClick={() => setHorarioAbierto(false)} disabled={guardandoHorario}>Cancelar</Button>
-            <Button size="sm" onClick={guardarHorario} disabled={guardandoHorario}>{guardandoHorario ? 'Guardando...' : 'Guardar'}</Button>
+            <Button type="submit" size="sm" disabled={guardandoHorario}>{guardandoHorario ? 'Guardando...' : 'Guardar'}</Button>
           </div>
         </div>
       </Modal>

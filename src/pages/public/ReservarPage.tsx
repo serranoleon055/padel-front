@@ -303,7 +303,7 @@ export default function ReservarPage() {
         </div>
       )}
 
-      <Modal isOpen={modalAbierto} onClose={cerrarModal} title={reservasCreadas.length > 0 ? 'Turnos solicitados' : 'Pedir turnos'} size="sm">
+      <Modal isOpen={modalAbierto} onClose={cerrarModal} onSubmit={reservasCreadas.length > 0 ? undefined : confirmarReserva} title={reservasCreadas.length > 0 ? 'Turnos solicitados' : 'Pedir turnos'} size="sm">
         {reservasCreadas.length > 0 ? (
           <div className="flex flex-col gap-3">
             <p className="text-sm text-rp-text">
@@ -339,7 +339,7 @@ export default function ReservarPage() {
             {errorFormulario && <p className="rounded-md border border-rp-danger/40 bg-rp-danger/10 px-3 py-2 text-sm font-bold text-rp-danger">{errorFormulario}</p>}
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="ghost" size="sm" onClick={cerrarModal} disabled={enviando}>Cancelar</Button>
-              <Button size="sm" onClick={confirmarReserva} disabled={enviando}>{enviando ? 'Enviando...' : `Pedir ${horariosElegidos.length} ${horariosElegidos.length === 1 ? 'turno' : 'turnos'}`}</Button>
+              <Button type="submit" size="sm" disabled={enviando}>{enviando ? 'Enviando...' : `Pedir ${horariosElegidos.length} ${horariosElegidos.length === 1 ? 'turno' : 'turnos'}`}</Button>
             </div>
           </div>
         )}

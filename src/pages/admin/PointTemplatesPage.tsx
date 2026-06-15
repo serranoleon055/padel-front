@@ -130,7 +130,7 @@ export default function PointTemplatesPage() {
         <Pagination page={pagina} pageSize={TAMANO_PAGINA} total={filtrados.length} onPageChange={setPagina} />
       </div>
 
-      <Modal isOpen={modalAbierto} onClose={cerrarModal} title={objetivoEdicion ? 'Editar plantilla' : 'Nueva plantilla'} size="lg">
+      <Modal isOpen={modalAbierto} onClose={cerrarModal} onSubmit={manejarGuardar} title={objetivoEdicion ? 'Editar plantilla' : 'Nueva plantilla'} size="lg">
         <div className="grid gap-4">
           <Input label="Nombre" value={formulario.nombre} onChange={(e) => setFormulario((f) => ({ ...f, nombre: e.target.value }))} placeholder="Ranking estándar" />
           <Input label="Descripción" value={formulario.descripcion ?? ''} onChange={(e) => setFormulario((f) => ({ ...f, descripcion: e.target.value }))} placeholder="Puntos habituales por ronda" />
@@ -142,7 +142,7 @@ export default function PointTemplatesPage() {
                 <Input label="Ronda" value={fila.nombreRonda} onChange={(e) => actualizarFila(i, { nombreRonda: e.target.value })} placeholder="Final" />
                 <Input label="Ganador" type="number" min={0} value={Number.isNaN(fila.puntosGanador) ? '' : fila.puntosGanador} onChange={(e) => actualizarFila(i, { puntosGanador: e.target.value === '' ? NaN : Number(e.target.value) })} />
                 <Input label="Perdedor" type="number" min={0} value={Number.isNaN(fila.puntosPerdedor) ? '' : fila.puntosPerdedor} onChange={(e) => actualizarFila(i, { puntosPerdedor: e.target.value === '' ? NaN : Number(e.target.value) })} />
-                <button onClick={() => quitarFila(i)} className="mb-0.5 flex size-9 self-end items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger"><Minus size={15} /></button>
+                <button type="button" onClick={() => quitarFila(i)} className="mb-0.5 flex size-9 self-end items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger"><Minus size={15} /></button>
               </div>
             ))}
             <Button variant="ghost" size="sm" onClick={agregarFila} className="self-start"><Plus size={15} />Agregar ronda</Button>
@@ -151,7 +151,7 @@ export default function PointTemplatesPage() {
           {errorFormulario && <p className="rounded-md border border-rp-danger/40 bg-rp-danger/10 px-3 py-2 text-sm font-bold text-rp-danger">{errorFormulario}</p>}
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="ghost" size="sm" onClick={cerrarModal} disabled={guardando}>Cancelar</Button>
-            <Button size="sm" onClick={manejarGuardar} disabled={guardando}>{guardando ? 'Guardando...' : 'Guardar'}</Button>
+            <Button type="submit" size="sm" disabled={guardando}>{guardando ? 'Guardando...' : 'Guardar'}</Button>
           </div>
         </div>
       </Modal>

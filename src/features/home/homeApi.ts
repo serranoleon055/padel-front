@@ -1,6 +1,6 @@
 import { apiClient } from '@/shared/api/apiClient'
 
-import type { AdminDashboardResponse, HomeResponse, HomeSummaryResponse, PartidoResponse } from '@/shared/types/api'
+import type { AdminDashboardResponse, HomeResponse, HomeSummaryResponse, PagedResponse, PartidoResponse } from '@/shared/types/api'
 
 export function invalidateHomeCache() {
 }
@@ -23,6 +23,11 @@ export const homeApi = {
 
   async getAdminDashboard() {
     const { data } = await apiClient.get<AdminDashboardResponse>('/api/home/admin-dashboard')
+    return data
+  },
+
+  async getCampeones(params: { categoriaId?: number; pagina?: number; tamanio?: number } = {}) {
+    const { data } = await apiClient.get<PagedResponse<PartidoResponse>>('/api/home/campeones', { params })
     return data
   },
 }

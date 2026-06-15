@@ -10,11 +10,12 @@ type ModalProps = {
     onClose: () => void
     title: string
     size?: 'sm' | 'md' | 'lg'
+    onSubmit?: () => void
 }
 
 const sizeClass = { sm: 'max-w-md', md: 'max-w-xl', lg: 'max-w-2xl' }
 
-export const Modal = memo(function Modal({ children, isOpen, onClose, title, size = 'md' }: ModalProps) {
+export const Modal = memo(function Modal({ children, isOpen, onClose, title, size = 'md', onSubmit }: ModalProps) {
     const onCloseRef = useRef(onClose)
     onCloseRef.current = onClose
 
@@ -42,7 +43,11 @@ export const Modal = memo(function Modal({ children, isOpen, onClose, title, siz
                     <X size={18} />
                 </button>
                 </div>
-                <div className="overflow-y-auto px-4 py-4 sm:px-5 sm:py-5">{children}</div>
+                {onSubmit ? (
+                    <form className="overflow-y-auto px-4 py-4 sm:px-5 sm:py-5" onSubmit={(e) => { e.preventDefault(); onSubmit() }}>{children}</form>
+                ) : (
+                    <div className="overflow-y-auto px-4 py-4 sm:px-5 sm:py-5">{children}</div>
+                )}
             </div>
         </div>
     )
