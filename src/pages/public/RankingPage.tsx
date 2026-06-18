@@ -43,6 +43,7 @@ export default function RankingPage() {
   const [rankingGeneral, setRankingGeneral] = useState<RankingResponse[]>([])
   const [categorias, setCategorias] = useState<CategoriaResponse[]>([])
   const [busqueda, setBusqueda] = useState('')
+  const [genero, setGenero] = useState<'MASCULINO' | 'FEMENINO'>('MASCULINO')
   const [categoriaId, setCategoriaId] = useState('')
   const [pagina, setPagina] = useState(1)
   const [cargando, setCargando] = useState(true)
@@ -55,9 +56,9 @@ export default function RankingPage() {
       .then((listaCategorias) => {
         if (!montado) return
         setCategorias(listaCategorias)
+        // Categoría por defecto: la de mayor nivel (nivel 1 = más alto) del género actual.
         const ordenadas = [...listaCategorias].sort((a, b) => a.nivel - b.nivel || a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }))
-        const categoriaPorDefecto =
-          ordenadas.find((c) => c.genero === 'MASCULINO') ?? ordenadas[0]
+        const categoriaPorDefecto = ordenadas.find((c) => c.genero === 'MASCULINO') ?? ordenadas[0]
         setCategoriaId((actual) => actual || categoriaPorDefecto?.id.toString() || '')
       })
       .catch((errorCapturado: unknown) => {
@@ -143,18 +144,30 @@ export default function RankingPage() {
   // En los cambios de categoría posteriores mantenemos las filas y solo las atenuamos.
   const cargaInicial = cargando && ranking.length === 0
 
-  const categoriasOrdenadas = useMemo(() => [...categorias].sort((a, b) => {
-    if (a.genero !== b.genero) return a.genero === 'MASCULINO' ? -1 : 1
-    return a.nivel - b.nivel || a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' })
-  }), [categorias])
+  // Solo las categorías del género elegido, de mayor a menor nivel (nivel 1 = más alto).
+  const categoriasDelGenero = useMemo(
+    () => categorias
+      .filter((c) => c.genero === genero)
+      .sort((a, b) => a.nivel - b.nivel || a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' })),
+    [categorias, genero]
+  )
+
+  function cambiarGenero(nuevoGenero: 'MASCULINO' | 'FEMENINO') {
+    setGenero(nuevoGenero)
+    setPagina(1)
+    const primera = categorias
+      .filter((c) => c.genero === nuevoGenero)
+      .sort((a, b) => a.nivel - b.nivel || a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }))[0]
+    setCategoriaId(primera ? primera.id.toString() : '')
+  }
 
   const estadisticasCategoria = useMemo(() => {
-    const categoriaSeleccionada = categoriasOrdenadas.find((categoria) => categoria.id === Number(categoriaId))
+    const categoriaSeleccionada = categoriasDelGenero.find((categoria) => categoria.id === Number(categoriaId))
     const mayorGanador = ranking.reduce<RankingResponse | null>((mejor, entrada) => (!mejor || entrada.victorias > mejor.victorias ? entrada : mejor), null)
     const mejorRacha = ranking.reduce<RankingResponse | null>((mejor, entrada) => (!mejor || entrada.victorias - entrada.derrotas > mejor.victorias - mejor.derrotas ? entrada : mejor), null)
 
     return { categoriaSeleccionada, mayorGanador, mejorRacha }
-  }, [categoriaId, ranking, categoriasOrdenadas])
+  }, [categoriaId, ranking, categoriasDelGenero])
 
   const elementosTicker = useMemo(() => [
     { label: 'Temporada 2026', text: 'ranking por categoría' },
@@ -199,6 +212,17 @@ export default function RankingPage() {
           <div className="rank-shell">
             <div className="rank-toolbar">
               <label className="rank-category-filter">
+                <span>Género</span>
+                <select
+                  value={genero}
+                  onChange={(event) => cambiarGenero(event.target.value as 'MASCULINO' | 'FEMENINO')}
+                >
+                  <option value="MASCULINO">Masculino</option>
+                  <option value="FEMENINO">Femenino</option>
+                </select>
+              </label>
+
+              <label className="rank-category-filter">
                 <span>Categoría</span>
                 <select
                   value={categoriaId}
@@ -207,7 +231,7 @@ export default function RankingPage() {
                     setPagina(1)
                   }}
                 >
-                  {categoriasOrdenadas.map((cat) => (
+                  {categoriasDelGenero.map((cat) => (
                     <option key={cat.id} value={cat.id}>{cat.nombre}</option>
                   ))}
                 </select>
