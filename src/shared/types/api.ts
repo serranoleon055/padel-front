@@ -346,6 +346,12 @@ export type TorneoDetalleResponse = {
   campeones: CampeonResponse[]
 }
 
+export type CrucePreviewResponse = {
+  ronda: string
+  local: string
+  visitante: string
+}
+
 export type CampeonResponse = {
   torneoId: number | null
   torneoNombre: string | null
