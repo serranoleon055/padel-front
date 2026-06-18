@@ -48,6 +48,16 @@ export function PartidosTab({ partidos, mostrarSorteo, showResults, canSchedule,
                     return (orden[a.estado] ?? 2) - (orden[b.estado] ?? 2)
                 })
 
+            const porJornada = (lista: PartidoResponse[]): Array<[number | null, PartidoResponse[]]> => {
+                const mapa = new Map<number | null, PartidoResponse[]>()
+                for (const partido of lista) {
+                    const clave = partido.jornada ?? null
+                    if (!mapa.has(clave)) mapa.set(clave, [])
+                    mapa.get(clave)!.push(partido)
+                }
+                return Array.from(mapa.entries()).sort((a, b) => (a[0] ?? Infinity) - (b[0] ?? Infinity))
+            }
+
             const porRonda = eliminacion.reduce<Record<string, PartidoResponse[]>>((acum, partido) => {
                 const clave = partido.ronda ?? 'Eliminación'
                 if (!acum[clave]) acum[clave] = []
@@ -63,13 +73,28 @@ export function PartidosTab({ partidos, mostrarSorteo, showResults, canSchedule,
                 <div className="mb-4">
                     <h4 className="mb-2 text-xs font-bold uppercase tracking-[0.1em] text-rp-muted">Fase de grupos</h4>
                     <div className="space-y-3">
-                    {Object.entries(porGrupo).map(([grupoNombre, partidosGrupo]) => (
+                    {Object.entries(porGrupo).map(([grupoNombre, partidosGrupo]) => {
+                        const jornadas = porJornada(partidosGrupo)
+                        const tieneJornadas = jornadas.some(([j]) => j !== null) && jornadas.length > 1
+                        return (
                         <GrupoPartidosColapsable key={grupoNombre} title={grupoNombre} count={partidosGrupo.length}>
-                            {ordenarPorEstado(partidosGrupo).map((partido) => (
-                            <FilaPartido key={partido.id} partido={partido} showResults={showResults} canSchedule={canSchedule} onStartMatch={onStartMatch} onLoadResult={onLoadResult} onSchedule={onSchedule} onDeclareWo={onDeclareWo} />
-                            ))}
+                            {tieneJornadas ? (
+                                jornadas.map(([jornada, partidosJornada]) => (
+                                    <div key={jornada ?? 'sin-fecha'} className="space-y-2">
+                                        <p className="pt-1 text-xs font-black uppercase tracking-[0.1em] text-rp-muted">{jornada !== null ? `Fecha ${jornada}` : 'Sin fecha'}</p>
+                                        {ordenarPorEstado(partidosJornada).map((partido) => (
+                                        <FilaPartido key={partido.id} partido={partido} showResults={showResults} canSchedule={canSchedule} onStartMatch={onStartMatch} onLoadResult={onLoadResult} onSchedule={onSchedule} onDeclareWo={onDeclareWo} />
+                                        ))}
+                                    </div>
+                                ))
+                            ) : (
+                                ordenarPorEstado(partidosGrupo).map((partido) => (
+                                <FilaPartido key={partido.id} partido={partido} showResults={showResults} canSchedule={canSchedule} onStartMatch={onStartMatch} onLoadResult={onLoadResult} onSchedule={onSchedule} onDeclareWo={onDeclareWo} />
+                                ))
+                            )}
                         </GrupoPartidosColapsable>
-                    ))}
+                        )
+                    })}
                     </div>
                 </div>
                 )}
