@@ -1,7 +1,7 @@
 import { CalendarDays } from 'lucide-react'
 import { memo } from 'react'
 
-import { fechaCompacta, formatearEtapaPartido, formatearPareja } from '@/shared/lib/formatters'
+import { fechaCompacta, formatearPareja, instanciaPartido } from '@/shared/lib/formatters'
 import { obtenerLadoGanador, parsearMarcador } from '@/shared/lib/score'
 import type { SetMarcador } from '@/shared/lib/score'
 import type { PartidoResponse } from '@/shared/types/api'
@@ -15,12 +15,13 @@ function TarjetaResultadoInterna({ elemento }: PropsResultado) {
   const visitante = formatearPareja(elemento, 'visitante')
   const sets = parsearMarcador(elemento.marcador)
   const ladoGanador = obtenerLadoGanador(elemento)
+  const instancia = instanciaPartido(elemento)
 
   return (
     <article className="match-card">
       <div className="mc-head">
         <span className="mc-tournament">{elemento.torneoNombre ?? 'Torneo'}</span>
-        <span className="mc-round">{formatearEtapaPartido(elemento).toUpperCase()}</span>
+        {instancia ? <span className="mc-round">{instancia.toUpperCase()}</span> : null}
       </div>
 
       <div className="scoreboard">

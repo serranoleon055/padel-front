@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 
 import { canchasApi } from '@/features/catalog/catalogApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
+import { formatearMoneda } from '@/shared/lib/formatters'
 import type { CanchaResponse, LugarResponse } from '@/shared/types/api'
 import { Button } from '@/shared/ui/Button'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
@@ -18,6 +19,8 @@ export function CanchasLugarModal({ lugar, onClose }: { lugar: LugarResponse | n
 
   const [nombre, setNombre] = useState('')
   const [descripcion, setDescripcion] = useState('')
+  const [precioPorHora, setPrecioPorHora] = useState('')
+  const [seniaPorcentaje, setSeniaPorcentaje] = useState('')
   const [editando, setEditando] = useState<CanchaResponse | null>(null)
   const [guardando, setGuardando] = useState(false)
   const [aArchivar, setAArchivar] = useState<CanchaResponse | null>(null)
@@ -34,6 +37,8 @@ export function CanchasLugarModal({ lugar, onClose }: { lugar: LugarResponse | n
     if (!lugar) return
     setNombre('')
     setDescripcion('')
+    setPrecioPorHora('')
+    setSeniaPorcentaje('')
     setEditando(null)
     setError(null)
     cargar(lugar.id)
@@ -43,12 +48,16 @@ export function CanchasLugarModal({ lugar, onClose }: { lugar: LugarResponse | n
     setEditando(cancha)
     setNombre(cancha.nombre)
     setDescripcion(cancha.descripcion ?? '')
+    setPrecioPorHora(cancha.precioPorHora != null ? String(cancha.precioPorHora) : '')
+    setSeniaPorcentaje(cancha.seniaPorcentaje != null ? String(cancha.seniaPorcentaje) : '')
   }
 
   function limpiarFormulario() {
     setEditando(null)
     setNombre('')
     setDescripcion('')
+    setPrecioPorHora('')
+    setSeniaPorcentaje('')
   }
 
   async function guardar() {
@@ -59,7 +68,13 @@ export function CanchasLugarModal({ lugar, onClose }: { lugar: LugarResponse | n
     setGuardando(true)
     setError(null)
     try {
-      const payload = { nombre: nombre.trim(), descripcion: descripcion.trim() || undefined, lugarId: lugar.id }
+      const payload = {
+        nombre: nombre.trim(),
+        descripcion: descripcion.trim() || undefined,
+        lugarId: lugar.id,
+        precioPorHora: precioPorHora ? Number(precioPorHora) : null,
+        seniaPorcentaje: seniaPorcentaje ? Number(seniaPorcentaje) : null,
+      }
       if (editando) {
         await canchasApi.update(editando.id, payload)
         avisoExito('Cancha actualizada')
@@ -105,6 +120,7 @@ export function CanchasLugarModal({ lugar, onClose }: { lugar: LugarResponse | n
                 <div>
                   <p className="text-sm font-bold text-rp-text">{cancha.nombre}</p>
                   {cancha.descripcion && <p className="text-xs text-rp-muted">{cancha.descripcion}</p>}
+                  {cancha.precioPorHora != null && <p className="text-xs text-rp-muted">{formatearMoneda(cancha.precioPorHora)}/hora</p>}
                 </div>
                 <div className="flex gap-1">
                   <button type="button" onClick={() => empezarEdicion(cancha)} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent" aria-label="Editar"><Pencil size={15} /></button>
@@ -120,6 +136,10 @@ export function CanchasLugarModal({ lugar, onClose }: { lugar: LugarResponse | n
           <div className="mt-2 flex flex-col gap-2">
             <Input label="Nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Cancha 1" />
             <Input label="Descripción (opcional)" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Cristal / muro / techada" />
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Input label="Precio por hora (opcional)" type="number" min={0} value={precioPorHora} onChange={(e) => setPrecioPorHora(e.target.value)} placeholder="8000" />
+              <Input label="Seña (%, por defecto 50)" type="number" min={1} max={100} value={seniaPorcentaje} onChange={(e) => setSeniaPorcentaje(e.target.value)} placeholder="50" />
+            </div>
             <div className="flex justify-end gap-2">
               {editando && <Button variant="ghost" size="sm" onClick={limpiarFormulario} disabled={guardando}>Cancelar</Button>}
               <Button type="submit" size="sm" disabled={guardando}>

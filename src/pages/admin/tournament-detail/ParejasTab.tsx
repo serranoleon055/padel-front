@@ -1,4 +1,4 @@
-import { Plus, Trash2 } from 'lucide-react'
+import { Pencil, Plus, Trash2 } from 'lucide-react'
 
 import { formatearEnum } from '@/shared/lib/formatters'
 import type { TorneoDetalleResponse } from '@/shared/types/api'
@@ -8,11 +8,12 @@ import { StatusMessage } from '@/shared/ui/StatusMessage'
 
 type Pareja = TorneoDetalleResponse['parejas'][number]
 
-export function ParejasTab({ parejas, puedeInscribir, estadoTorneo, onOpenInscribir, onEliminar, onRetirar }: {
+export function ParejasTab({ parejas, puedeInscribir, estadoTorneo, onOpenInscribir, onEditar, onEliminar, onRetirar }: {
     parejas: Pareja[]
     puedeInscribir: boolean
     estadoTorneo: string | undefined
     onOpenInscribir: () => void
+    onEditar: (pareja: Pareja) => void
     onEliminar: (pareja: { id: number; name: string }) => void
     onRetirar: (pareja: { id: number; name: string }) => void
 }) {
@@ -41,6 +42,11 @@ export function ParejasTab({ parejas, puedeInscribir, estadoTorneo, onOpenInscri
                     <StatusBadge tone={pareja.estado === 'CAMPEON' ? 'success' : pareja.estado === 'ELIMINADA' ? 'neutral' : 'warning'}>
                         {formatearEnum(pareja.estado)}
                     </StatusBadge>
+                    {puedeInscribir && (
+                        <button onClick={() => onEditar(pareja)} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent" title="Editar pareja">
+                        <Pencil size={14} />
+                        </button>
+                    )}
                     {puedeInscribir && (
                         <button onClick={() => onEliminar({ id: pareja.id, name: `${pareja.jugador1Nombre} / ${pareja.jugador2Nombre}` })} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger" title="Eliminar pareja">
                         <Trash2 size={14} />

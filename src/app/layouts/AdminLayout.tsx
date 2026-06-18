@@ -102,7 +102,7 @@ export function AdminLayout() {
           </div>
         </header>
 
-        <main className="flex-1 px-4 py-4 sm:px-5 lg:px-6">
+        <main className="min-w-0 flex-1 overflow-x-clip px-4 py-4 sm:px-5 lg:px-6">
           <Outlet />
         </main>
       </div>

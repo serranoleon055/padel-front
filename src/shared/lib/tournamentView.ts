@@ -65,3 +65,16 @@ export function obtenerNombreSubcampeon(partido: PartidoResponse | null) {
 export function ordenarPartidosCuadro(partidos: PartidoResponse[]) {
   return [...partidos].sort((a, b) => (a.rondaOrden ?? 0) - (b.rondaOrden ?? 0) || a.id - b.id)
 }
+
+export function obtenerCampeonLiga(grupos: GrupoResponse[]) {
+  const posiciones = grupos.flatMap((grupo) => grupo.posiciones ?? [])
+  const algunaJugada = posiciones.some((posicion) => posicion.pj > 0)
+  if (!algunaJugada) return { campeon: null, subcampeon: null }
+  const ordenadas = grupos.length > 1
+    ? [...posiciones].sort((a, b) => b.puntos - a.puntos || (b.setsGanados - b.setsPerdidos) - (a.setsGanados - a.setsPerdidos))
+    : posiciones
+  return {
+    campeon: ordenadas[0]?.parejaNombre ?? null,
+    subcampeon: ordenadas[1]?.parejaNombre ?? null,
+  }
+}

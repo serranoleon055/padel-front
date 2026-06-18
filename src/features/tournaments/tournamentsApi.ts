@@ -96,6 +96,13 @@ export const tournamentsApi = {
     return data
   },
 
+  async editPair(id: number, pairId: number, payload: ParejaRequest) {
+    const { data } = await apiClient.put<ParejaResponse>(`/api/torneos/${id}/parejas/${pairId}`, payload)
+    invalidateTournamentsCache()
+    invalidateHomeCache()
+    return data
+  },
+
   async removePair(id: number, pairId: number) {
     await apiClient.delete(`/api/torneos/${id}/parejas/${pairId}`)
     invalidateTournamentsCache()

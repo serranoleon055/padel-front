@@ -1,4 +1,4 @@
-import { ArrowLeft, CalendarDays, ClipboardList, MapPin, Shuffle, Trophy, Users } from 'lucide-react'
+import { ArrowLeft, CalendarDays, ClipboardList, MapPin, Settings, Shuffle, Trophy, Users } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { NavLink, useParams } from 'react-router-dom'
 
@@ -7,7 +7,7 @@ import { playersApi } from '@/features/players/playersApi'
 import { tournamentsApi } from '@/features/tournaments/tournamentsApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
 import { useToast } from '@/shared/ui/Toast'
-import { formatearFecha, formatearFechaHora, formatearEnum, formatearEtapaPartido, formatearPareja } from '@/shared/lib/formatters'
+import { formatearFecha, formatearFechaHora, formatearEnum, formatearEtapaPartido, formatearPareja, formatearMoneda } from '@/shared/lib/formatters'
 import { obtenerPartidoCampeon, obtenerNombreSubcampeon } from '@/shared/lib/tournamentView'
 import type {
     CategoriaResponse,
@@ -55,6 +55,7 @@ export default function TournamentAdminDetailPage() {
     const [sorteando, setSorteando] = useState(false)
 
     const [parejaAbierta, setParejaAbierta] = useState(false)
+    const [parejaEditandoId, setParejaEditandoId] = useState<number | null>(null)
     const [formularioPareja, setFormularioPareja] = useState<ParejaRequest>(PAREJA_VACIA)
     const [errorPareja, setErrorPareja] = useState<string | null>(null)
     const [guardandoPareja, setGuardandoPareja] = useState(false)
@@ -144,7 +145,16 @@ export default function TournamentAdminDetailPage() {
         if (!formularioPareja.jugador1Id || !formularioPareja.jugador2Id || !formularioPareja.categoriaId) { setErrorPareja('Seleccioná ambos jugadores y la categoría.'); return }
         if (formularioPareja.jugador1Id === formularioPareja.jugador2Id) { setErrorPareja('Los jugadores deben ser distintos.'); return }
         setGuardandoPareja(true); setErrorPareja(null)
-        try { await tournamentsApi.addPair(id, formularioPareja); setParejaAbierta(false); setFormularioPareja(PAREJA_VACIA); recargarDetalle(); avisoExito('Pareja inscripta') }
+        try {
+            if (parejaEditandoId != null) {
+                await tournamentsApi.editPair(id, parejaEditandoId, formularioPareja)
+                avisoExito('Pareja actualizada')
+            } else {
+                await tournamentsApi.addPair(id, formularioPareja)
+                avisoExito('Pareja inscripta')
+            }
+            setParejaAbierta(false); setParejaEditandoId(null); setFormularioPareja(PAREJA_VACIA); recargarDetalle()
+        }
         catch (e: unknown) { setErrorPareja(obtenerMensajeErrorApi(e)) }
         finally { setGuardandoPareja(false) }
     }
@@ -279,6 +289,7 @@ export default function TournamentAdminDetailPage() {
                     {torneo.fechaFin && <span className="flex items-center gap-1"><CalendarDays size={13} />→ {formatearFecha(torneo.fechaFin)}</span>}
                     <span className="flex items-center gap-1"><Users size={13} />{parejas.length} parejas</span>
                     <span className="flex items-center gap-1"><Trophy size={13} />{partidos.length} partidos</span>
+                    {torneo.premioAcumulado ? <span className="flex items-center gap-1"><Trophy size={13} />{formatearMoneda(torneo.premioAcumulado)} en premios</span> : null}
                     </div>
                     {torneo.temporadaNombre && (
                     <p className="mt-1 text-xs text-rp-muted">Temporada: <strong className="text-rp-text">{torneo.temporadaNombre}</strong></p>
@@ -303,6 +314,9 @@ export default function TournamentAdminDetailPage() {
                     <Button size="sm" variant="ghost" asChild>
                         <NavLink to={`/admin/torneos/${torneoId}/inscripciones`}><ClipboardList size={15} />Inscripciones</NavLink>
                     </Button>
+                    <Button size="sm" variant="ghost" asChild>
+                        <NavLink to={`/admin/torneos/${torneoId}/editar`}><Settings size={15} />Configuración</NavLink>
+                    </Button>
                 </div>
                 </div>
                 {errorAccion && <p className="mt-4 rounded-md border border-rp-danger/40 bg-rp-danger/10 px-3 py-2 text-sm font-bold text-rp-danger">{errorAccion}</p>}
@@ -312,7 +326,6 @@ export default function TournamentAdminDetailPage() {
                     <StatusBadge key={categoria.id} tone="neutral">{categoria.nombre}</StatusBadge>
                 ))}
                 {torneo.sumaPuntosRanking && <StatusBadge tone="warning">Suma ranking</StatusBadge>}
-                {torneo.esMixto && <StatusBadge tone="neutral">Mixto</StatusBadge>}
                 </div>
             </div>
 
@@ -354,7 +367,18 @@ export default function TournamentAdminDetailPage() {
                     parejas={parejasSeleccionadas}
                     puedeInscribir={puedeInscribir}
                     estadoTorneo={torneo?.estado}
-                    onOpenInscribir={() => { setFormularioPareja(PAREJA_VACIA); setErrorPareja(null); setParejaAbierta(true) }}
+                    onOpenInscribir={() => { setParejaEditandoId(null); setFormularioPareja(PAREJA_VACIA); setErrorPareja(null); setParejaAbierta(true) }}
+                    onEditar={(pareja) => {
+                        setFormularioPareja({
+                            jugador1Id: pareja.jugador1Id ?? 0,
+                            jugador2Id: pareja.jugador2Id ?? 0,
+                            categoriaId: pareja.categoriaId ?? 0,
+                            esCabezaDeSerie: pareja.esCabezaDeSerie,
+                        })
+                        setParejaEditandoId(pareja.id)
+                        setErrorPareja(null)
+                        setParejaAbierta(true)
+                    }}
                     onEliminar={(pareja) => setParejaAEliminar(pareja)}
                     onRetirar={(pareja) => setParejaARetirar(pareja)}
                 />
@@ -408,7 +432,7 @@ export default function TournamentAdminDetailPage() {
                 description={`¿Retirás la pareja "${parejaARetirar?.name}"? Se generará W.O. automático en todos sus partidos pendientes.`}
                 isLoading={retirandoPareja} />
 
-            <Modal isOpen={parejaAbierta} onClose={() => setParejaAbierta(false)} title="Inscribir pareja" size="sm">
+            <Modal isOpen={parejaAbierta} onClose={() => { setParejaAbierta(false); setParejaEditandoId(null) }} title={parejaEditandoId != null ? 'Editar pareja' : 'Inscribir pareja'} size="sm">
                 <div className="flex flex-col gap-4">
                 <Select label="Categoría" value={formularioPareja.categoriaId.toString()} onChange={(e) => setFormularioPareja((f) => ({ ...f, categoriaId: Number(e.target.value), jugador1Id: 0, jugador2Id: 0 }))} placeholder="Seleccionar...">
                     {categoriasTorneo.map((categoria) => <option key={categoria.id} value={categoria.id}>{categoria.nombre}</option>)}
@@ -433,8 +457,8 @@ export default function TournamentAdminDetailPage() {
                 ) : null}
                 {errorPareja && <p className="rounded-md border border-rp-danger/40 bg-rp-danger/10 px-3 py-2 text-sm font-bold text-rp-danger">{errorPareja}</p>}
                 <div className="flex justify-end gap-2 pt-2">
-                    <Button variant="ghost" size="sm" onClick={() => setParejaAbierta(false)} disabled={guardandoPareja}>Cancelar</Button>
-                    <Button size="sm" onClick={manejarGuardarPareja} disabled={guardandoPareja}>{guardandoPareja ? 'Inscribiendo...' : 'Inscribir'}</Button>
+                    <Button variant="ghost" size="sm" onClick={() => { setParejaAbierta(false); setParejaEditandoId(null) }} disabled={guardandoPareja}>Cancelar</Button>
+                    <Button size="sm" onClick={manejarGuardarPareja} disabled={guardandoPareja}>{guardandoPareja ? 'Guardando...' : parejaEditandoId != null ? 'Guardar cambios' : 'Inscribir'}</Button>
                 </div>
                 </div>
             </Modal>

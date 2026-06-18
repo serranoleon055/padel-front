@@ -33,6 +33,9 @@ export interface ReservaResponse {
   clienteNombre: string
   clienteTelefono: string
   codigo: string
+  estadoPago?: string | null
+  montoSenia?: number | null
+  montoTotal?: number | null
 }
 
 export interface HorarioCanchaRequest {

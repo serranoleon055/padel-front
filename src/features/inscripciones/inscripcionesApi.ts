@@ -15,6 +15,7 @@ export interface IntegranteInscripcion {
   genero?: string
   telefono?: string
   fechaNacimiento?: string
+  posicionJuego?: string
 }
 
 export interface SolicitudInscripcionRequest {
@@ -44,6 +45,9 @@ export interface SolicitudInscripcionResponse {
   jugador2EsNuevo: boolean
   jugador1Candidatos: JugadorCandidato[]
   jugador2Candidatos: JugadorCandidato[]
+  pagada: boolean
+  estadoPago: string | null
+  montoSenia: number | null
 }
 
 export interface AprobarInscripcionRequest {

@@ -1,13 +1,14 @@
 import './TournamentDetailPage.css'
-import { ArrowLeft, CalendarDays, CircleDot, ClipboardList, GitBranch, ListChecks, MapPin, Medal, NotebookPen, Table2, Trophy } from 'lucide-react'
+import { ArrowLeft, CalendarDays, Check, CircleDot, ClipboardList, GitBranch, ListChecks, MapPin, Medal, NotebookPen, Table2, Trophy } from 'lucide-react'
 import { memo, useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { NavLink, useParams } from 'react-router-dom'
 
 import { tournamentsApi } from '@/features/tournaments/tournamentsApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
-import { formatearFecha, formatearFechaHora, formatearEnum, formatearEtapaPartido, formatearPareja, formatearNombreRonda } from '@/shared/lib/formatters'
-import { obtenerPartidoCampeon, obtenerNombreSubcampeon, gruposPorCategoria, partidosPorCategoria, parejasPorCategoria, ordenarPartidosCuadro } from '@/shared/lib/tournamentView'
+import { formatearFecha, formatearEnum, formatearEstadoPartido, formatearEtapaPartido, formatearPareja, formatearNombreRonda, formatearFechaPartido, formatearMoneda, metaPartido } from '@/shared/lib/formatters'
+import { parsearMarcador, type SetMarcador } from '@/shared/lib/score'
+import { obtenerPartidoCampeon, obtenerNombreSubcampeon, obtenerCampeonLiga, gruposPorCategoria, partidosPorCategoria, parejasPorCategoria, ordenarPartidosCuadro } from '@/shared/lib/tournamentView'
 import type { GrupoResponse, PartidoResponse, TorneoDetalleResponse } from '@/shared/types/api'
 import { Button } from '@/shared/ui/Button'
 import { StatusBadge } from '@/shared/ui/StatusBadge'
@@ -92,9 +93,22 @@ export default function TournamentDetailPage() {
   const esBorrador = torneo.estado === 'BORRADOR'
   const mostrarInfo = !esBorrador
   const mostrarVistaCompetitiva = !esBorrador && !enInscripcion
+  const descripcionPartidos = enInscripcion
+    ? 'Organizadas por categoría.'
+    : torneo.formato === 'LIGA'
+      ? 'Tabla de posiciones por categoría.'
+      : torneo.incluyeFaseGrupos && torneo.incluyeEliminacion
+        ? 'Fase de grupos y llaves por categoría.'
+        : torneo.incluyeEliminacion
+          ? 'Llaves por categoría.'
+          : 'Fase de grupos por categoría.'
   const campeonesPorCategoria = datosVista.categorias.map((categoria) => {
     const partidoCampeon = obtenerPartidoCampeon(partidosPorCategoria(detalle.partidos)[categoria] ?? [])
-    return { categoria, partidoCampeon, subcampeon: obtenerNombreSubcampeon(partidoCampeon) }
+    if (partidoCampeon) {
+      return { categoria, campeon: partidoCampeon.ganadorNombre ?? null, subcampeon: obtenerNombreSubcampeon(partidoCampeon) }
+    }
+    const { campeon, subcampeon } = obtenerCampeonLiga(gruposPorCategoria(grupos)[categoria] ?? [])
+    return { categoria, campeon, subcampeon }
   })
 
   return (
@@ -145,6 +159,9 @@ export default function TournamentDetailPage() {
             <ItemInfo icon={CalendarDays} label="Inicio" value={formatearFecha(torneo.fechaInicio)} />
             {torneo.fechaFin ? <ItemInfo icon={CalendarDays} label="Fin" value={formatearFecha(torneo.fechaFin)} /> : null}
             <ItemInfo icon={MapPin} label="Lugar" value={torneo.lugarNombre ?? 'Sin lugar'} />
+            {torneo.premioAcumulado ? (
+              <ItemInfo icon={Trophy} label="Premios" value={formatearMoneda(torneo.premioAcumulado)} />
+            ) : null}
             <ItemInfo icon={Trophy} label="Partidos" value={String(detalle.partidos.length)} />
             {torneo.cupoMaximoParejas ? (
               <ItemInfo icon={Trophy} label="Cupo" value={`${detalle.parejas.length}/${torneo.cupoMaximoParejas} parejas`} />
@@ -162,10 +179,10 @@ export default function TournamentDetailPage() {
           <section className="td-champions rp-surface">
             <h2 className="td-title-with-icon"><Trophy size={22} />Campeones por categoría</h2>
             <div className="td-champion-grid">
-              {campeonesPorCategoria.map(({ categoria, partidoCampeon, subcampeon }) => (
+              {campeonesPorCategoria.map(({ categoria, campeon, subcampeon }) => (
                 <article key={categoria} className="td-champion-card rp-card-hover">
                   <span>{categoria}</span>
-                  <strong>{partidoCampeon?.ganadorNombre ?? 'Sin campeón cargado'}</strong>
+                  <strong>{campeon ?? 'Sin campeón cargado'}</strong>
                   <small><Medal size={13} />Subcampeón: {subcampeon ?? 'Sin dato'}</small>
                 </article>
               ))}
@@ -185,7 +202,7 @@ export default function TournamentDetailPage() {
                     <span className="td-partido-pair">{p.jugadorVisitante1Nombre} / {p.jugadorVisitante2Nombre}</span>
                   </div>
                   <div className="td-partido-meta">
-                    <span className="td-partido-cat">{p.categoriaNombre} · {p.ronda ?? p.grupoNombre}</span>
+                    <span className="td-partido-cat">{metaPartido(p).join(' · ')}</span>
                   </div>
                   <div className="td-partido-right">
                     {p.fechaHoraProgramada && (
@@ -209,7 +226,7 @@ export default function TournamentDetailPage() {
                   {enInscripcion ? <NotebookPen size={22} /> : <ClipboardList size={22} />}
                   {enInscripcion ? 'Parejas inscriptas' : 'Partidos y resultados'}
                 </h2>
-                <p>{enInscripcion ? 'Organizadas por categoría.' : 'Fase de grupos y llaves por categoría.'}</p>
+                <p>{descripcionPartidos}</p>
               </div>
 
               <label className="td-category-select">
@@ -417,8 +434,8 @@ function construirRondasCuadro(partidos: PartidoResponse[], parejas: TorneoDetal
   })
 }
 
-const UNIDAD_CUADRO = 104
-const CONECTOR_CUADRO = 24
+const UNIDAD_CUADRO = 132
+const CONECTOR_CUADRO = 18
 
 function Cuadro({ partidos, parejas, torneo }: { partidos: PartidoResponse[]; parejas: TorneoDetalleResponse['parejas']; torneo: TorneoDetalleResponse['torneo'] }) {
   if (partidos.length === 0) return <p className="td-muted">Sin llaves cargadas.</p>
@@ -480,16 +497,63 @@ function TarjetaPartidoVacia() {
   )
 }
 
-function TarjetaPartido({ compacto = false, partido }: { compacto?: boolean; partido: PartidoResponse }) {
+function FilaParejaBracket({ partido, lado, sets }: { partido: PartidoResponse; lado: 'local' | 'visitante'; sets: SetMarcador[] }) {
+  const jugadores = formatearPareja(partido, lado).split(' / ')
+  const parejaId = lado === 'local' ? partido.parejaLocalId : partido.parejaVisitanteId
+  const esGanador = partido.ganadorId != null && partido.ganadorId === parejaId
+
   return (
-    <article className={compacto ? 'td-match-card compact' : 'td-match-card'}>
+    <div className={esGanador ? 'td-sb-row win' : 'td-sb-row'}>
+      <div className="td-sb-nombres">
+        {jugadores.map((jugador, indice) => <span key={indice}>{jugador}</span>)}
+      </div>
+      <div className="td-sb-sets">
+        {sets.length > 0
+          ? sets.map((set, indice) => (
+              <span key={indice} className={set.winner === lado ? 'td-sb-set ganado' : 'td-sb-set'}>
+                {lado === 'local' ? set.local : set.visitante}
+              </span>
+            ))
+          : partido.ganadorId != null
+            ? <span className="td-sb-nota">{esGanador ? 'Pasa' : formatearEstadoPartido(partido.estado)}</span>
+            : null}
+      </div>
+      {esGanador ? <Check size={13} className="td-sb-check" /> : <span className="td-sb-check-vacio" />}
+    </div>
+  )
+}
+
+function TarjetaPartido({ compacto = false, partido }: { compacto?: boolean; partido: PartidoResponse }) {
+  const tieneHorario = Boolean(partido.fechaHora || partido.fechaHoraProgramada)
+  const mostrarHorario = tieneHorario && (!compacto || !partido.marcador)
+  const tono = partido.estado === 'EN_CURSO' ? 'live' : partido.estado === 'FINALIZADO' ? 'success' : 'neutral'
+  const horario = mostrarHorario
+    ? <small><ListChecks size={12} />{formatearFechaPartido(partido)}{partido.canchaNombre ? ` · ${partido.canchaNombre}` : ''}</small>
+    : null
+
+  if (compacto) {
+    const sets = parsearMarcador(partido.marcador)
+    return (
+      <article className="td-match-card compact">
+        <div className="td-match-top">
+          <StatusBadge tone={tono}>{formatearEnum(partido.estado)}</StatusBadge>
+        </div>
+        <FilaParejaBracket partido={partido} lado="local" sets={sets} />
+        <FilaParejaBracket partido={partido} lado="visitante" sets={sets} />
+        {horario}
+      </article>
+    )
+  }
+
+  return (
+    <article className="td-match-card">
       <div className="td-match-top">
-        <StatusBadge tone={partido.estado === 'EN_CURSO' ? 'live' : partido.estado === 'FINALIZADO' ? 'success' : 'neutral'}>{formatearEnum(partido.estado)}</StatusBadge>
+        <StatusBadge tone={tono}>{formatearEnum(partido.estado)}</StatusBadge>
         <span>{partido.marcador ?? 'Sin resultado'}</span>
       </div>
       <p className={partido.ganadorId === partido.parejaLocalId ? 'winner' : ''}>{formatearPareja(partido, 'local')}</p>
       <p className={partido.ganadorId === partido.parejaVisitanteId ? 'winner' : ''}>{formatearPareja(partido, 'visitante')}</p>
-      {!compacto && partido.fechaHora ? <small><ListChecks size={12} />{formatearFechaHora(partido.fechaHora)}</small> : null}
+      {horario}
     </article>
   )
 }

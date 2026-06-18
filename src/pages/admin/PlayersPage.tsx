@@ -31,6 +31,7 @@ export default function PlayersPage() {
   const [objetivoEdicion, setObjetivoEdicion] = useState<JugadorResponse | null>(null)
   const [formulario, setFormulario] = useState<JugadorRequest>(VACIO)
   const [archivoFoto, setArchivoFoto] = useState<File | null>(null)
+  const [cargandoFicha, setCargandoFicha] = useState(false)
   const [quitarFotoAlGuardar, setQuitarFotoAlGuardar] = useState(false)
   const [errorFormulario, setErrorFormulario] = useState<string | null>(null)
   const [guardando, setGuardando] = useState(false)
@@ -98,6 +99,7 @@ export default function PlayersPage() {
     setObjetivoEdicion(null)
     setFormulario(VACIO)
     setArchivoFoto(null)
+    setCargandoFicha(false)
     setQuitarFotoAlGuardar(false)
     setErrorFormulario(null)
     setModalAbierto(true)
@@ -110,9 +112,11 @@ export default function PlayersPage() {
     setQuitarFotoAlGuardar(false)
     setErrorFormulario(null)
     setModalAbierto(true)
+    setCargandoFicha(true)
     playersApi.getFicha(jugador.id)
       .then((ficha) => setFormulario((actual) => ({ ...actual, fechaNacimiento: ficha.fechaNacimiento ?? '' })))
-      .catch(() => {})
+      .catch(() => setErrorFormulario('No se pudo cargar la fecha de nacimiento; editala antes de guardar para no borrarla.'))
+      .finally(() => setCargandoFicha(false))
   }
 
   function cerrarModal() {
@@ -128,6 +132,7 @@ export default function PlayersPage() {
 
   async function manejarGuardar() {
     if (!formulario.nombre.trim() || !formulario.apellido.trim()) { setErrorFormulario('Nombre y apellido son obligatorios.'); return }
+    if (objetivoEdicion && cargandoFicha) { setErrorFormulario('Esperá a que termine de cargar el jugador.'); return }
     setGuardando(true)
     setErrorFormulario(null)
     try {
@@ -285,7 +290,7 @@ export default function PlayersPage() {
               type="file"
               accept="image/jpeg,image/png"
               onChange={(event) => { setArchivoFoto(event.target.files?.[0] ?? null); setQuitarFotoAlGuardar(false) }}
-              className="rounded-md border border-rp-border bg-rp-surface px-3 py-2 text-sm text-rp-muted"
+              className="w-full min-w-0 max-w-full rounded-md border border-rp-border bg-rp-surface px-3 py-2 text-sm text-rp-muted"
             />
           </label>
           <p className="text-xs leading-5 text-rp-muted">Para nube, usá este flujo de subida: JPG o PNG cuadrada, ideal 800x800 px y menor a 2 MB. El backend la redimensiona y guarda la URL final en el jugador.</p>
@@ -298,7 +303,7 @@ export default function PlayersPage() {
           {errorFormulario && <p className="rounded-md border border-rp-danger/40 bg-rp-danger/10 px-3 py-2 text-sm font-bold text-rp-danger">{errorFormulario}</p>}
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="ghost" size="sm" onClick={cerrarModal} disabled={guardando}>Cancelar</Button>
-            <Button type="submit" size="sm" disabled={guardando}>{guardando ? 'Guardando...' : 'Guardar'}</Button>
+            <Button type="submit" size="sm" disabled={guardando || cargandoFicha}>{guardando ? 'Guardando...' : 'Guardar'}</Button>
           </div>
         </div>
       </Modal>

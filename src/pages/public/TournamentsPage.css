@@ -264,6 +264,11 @@ select.filter-field {
   font-size: 22px;
   font-weight: 900;
   line-height: 1.05;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, .55);
+}
+
+.tournament-card .tc-meta > span {
+  text-shadow: 0 1px 8px rgba(0, 0, 0, .5);
 }
 
 .tc-meta {

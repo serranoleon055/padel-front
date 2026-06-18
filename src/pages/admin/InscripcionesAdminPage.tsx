@@ -19,6 +19,12 @@ function integranteNecesitaResolucion(esNuevo: boolean, candidatos: JugadorCandi
   return esNuevo && candidatos.length > 0
 }
 
+function textoCandidatos(candidatos: JugadorCandidato[]) {
+  return candidatos
+    .map((c) => `${c.nombre} ${c.apellido}${c.categoriaNombre ? ` (${c.categoriaNombre})` : ''}`)
+    .join(', ')
+}
+
 function solicitudNecesitaResolucion(s: SolicitudInscripcionResponse) {
   return integranteNecesitaResolucion(s.jugador1EsNuevo, s.jugador1Candidatos)
     || integranteNecesitaResolucion(s.jugador2EsNuevo, s.jugador2Candidatos)
@@ -158,17 +164,33 @@ export default function InscripcionesAdminPage() {
     { key: 'categoria', label: 'Categoría', render: (s: SolicitudInscripcionResponse) => <span className="text-sm text-rp-muted">{s.categoriaNombre}</span> },
     { key: 'contacto', label: 'Contacto', render: (s: SolicitudInscripcionResponse) => <span className="text-xs text-rp-muted">{s.telefonoContacto ?? '-'}</span> },
     {
+      key: 'pago',
+      label: 'Pago',
+      render: (s: SolicitudInscripcionResponse) => (
+        s.pagada
+          ? <span className="rounded-full bg-rp-accent/15 px-2 py-0.5 text-[10px] font-bold text-rp-accent">Pagada · cupo asegurado</span>
+          : <span className="text-xs text-rp-muted">Sin pagar</span>
+      ),
+    },
+    {
       key: 'estado',
       label: 'Estado',
       render: (s: SolicitudInscripcionResponse) => (
-        <span className="flex items-center gap-1.5">
+        <div className="flex flex-col gap-1">
           <span className="text-xs font-black uppercase tracking-wide text-rp-accent">{s.estado}</span>
-          {s.estado === 'PENDIENTE' && solicitudNecesitaResolucion(s) && (
-            <span className="flex items-center gap-1 rounded-full bg-rp-accent/15 px-2 py-0.5 text-[10px] font-bold text-rp-accent">
-              <TriangleAlert size={11} /> posible duplicado
+          {s.estado === 'PENDIENTE' && integranteNecesitaResolucion(s.jugador1EsNuevo, s.jugador1Candidatos) && (
+            <span className="flex items-start gap-1 rounded-md bg-rp-accent/10 px-2 py-1 text-[10px] font-bold text-rp-accent">
+              <TriangleAlert size={11} className="mt-px shrink-0" />
+              <span>«{s.jugador1}» ya existe: {textoCandidatos(s.jugador1Candidatos)}</span>
             </span>
           )}
-        </span>
+          {s.estado === 'PENDIENTE' && integranteNecesitaResolucion(s.jugador2EsNuevo, s.jugador2Candidatos) && (
+            <span className="flex items-start gap-1 rounded-md bg-rp-accent/10 px-2 py-1 text-[10px] font-bold text-rp-accent">
+              <TriangleAlert size={11} className="mt-px shrink-0" />
+              <span>«{s.jugador2}» ya existe: {textoCandidatos(s.jugador2Candidatos)}</span>
+            </span>
+          )}
+        </div>
       ),
     },
   ] as Column<SolicitudInscripcionResponse>[], [])
