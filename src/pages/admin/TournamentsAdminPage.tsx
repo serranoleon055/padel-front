@@ -1,13 +1,13 @@
-import { CalendarDays, ChevronRight, MapPin, Plus, Trash2 } from 'lucide-react'
+import { CalendarDays, ChevronRight, MapPin, Plus, Trash2, Trophy } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 
 import { tournamentsApi } from '@/features/tournaments/tournamentsApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
 import { useToast } from '@/shared/ui/Toast'
-import { formatearFecha, formatearEnum } from '@/shared/lib/formatters'
+import { formatearFecha, formatearEnum, formatearMoneda } from '@/shared/lib/formatters'
 import { coincidePrefijoNombre } from '@/shared/lib/tournamentView'
-import type { TorneoResponse } from '@/shared/types/api'
+import type { EstadoTorneo, TorneoResponse } from '@/shared/types/api'
 import { ETIQUETA_SIGUIENTE, ESTADO_SIGUIENTE, tono } from '@/shared/lib/tournamentState'
 import { AdminPageHeader } from '@/shared/ui/AdminPageHeader'
 import { Button } from '@/shared/ui/Button'
@@ -19,6 +19,8 @@ import { StatusMessage } from '@/shared/ui/StatusMessage'
 
 const TAMANO_PAGINA = 3
 
+const ESTADOS_TORNEO: EstadoTorneo[] = ['BORRADOR', 'INSCRIPCION', 'SORTEADO', 'EN_CURSO', 'FINALIZADO', 'CANCELADO']
+
 export default function TournamentsAdminPage() {
     const [elementos, setElementos] = useState<TorneoResponse[]>([])
     const [cargando, setCargando] = useState(true)
@@ -28,6 +30,7 @@ export default function TournamentsAdminPage() {
     const [objetivoEliminar, setObjetivoEliminar] = useState<TorneoResponse | null>(null)
     const [eliminando, setEliminando] = useState(false)
     const [busqueda, setBusqueda] = useState('')
+    const [filtroEstado, setFiltroEstado] = useState<EstadoTorneo | ''>('')
     const [pagina, setPagina] = useState(1)
 
     const refScrollY = useRef(0)
@@ -64,10 +67,11 @@ export default function TournamentsAdminPage() {
 
     useEffect(() => {
         setPagina(1)
-    }, [busqueda])
+    }, [busqueda, filtroEstado])
 
     const torneosFiltrados = elementos
         .filter((elemento) => coincidePrefijoNombre(elemento.nombre, busqueda))
+        .filter((elemento) => !filtroEstado || elemento.estado === filtroEstado)
         .sort((a, b) => b.id - a.id)
 
     const torneosPaginados = torneosFiltrados.slice((pagina - 1) * TAMANO_PAGINA, pagina * TAMANO_PAGINA)
@@ -78,6 +82,10 @@ export default function TournamentsAdminPage() {
 
             <div className="rp-toolbar">
                 <Input placeholder="Buscar por nombre..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
+                <select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value as EstadoTorneo | '')} className="h-11 w-full rounded-md border border-rp-border bg-rp-surface px-3 text-sm text-rp-muted sm:w-48">
+                    <option value="">Todos los estados</option>
+                    {ESTADOS_TORNEO.map((estado) => <option key={estado} value={estado}>{formatearEnum(estado)}</option>)}
+                </select>
             </div>
 
             <div className="mt-8">
@@ -101,7 +109,6 @@ export default function TournamentsAdminPage() {
                                 {torneo.plantillaFormatoNombre ?? formatearEnum(torneo.formato)}
                             </span>
                             {torneo.sumaPuntosRanking && <StatusBadge tone="warning">Ranking</StatusBadge>}
-                            {torneo.esMixto && <StatusBadge tone="neutral">Mixto</StatusBadge>}
                             </div>
                             <h2 className="mt-2 truncate text-base font-black text-rp-text">{torneo.nombre}</h2>
                             <div className="mt-1 flex flex-wrap gap-3 text-xs text-rp-muted">
@@ -110,6 +117,7 @@ export default function TournamentsAdminPage() {
                             {torneo.fechaFin && <span className="flex items-center gap-1"><CalendarDays size={12} />→ {formatearFecha(torneo.fechaFin)}</span>}
                             <span>{torneo.cantidadParejas} parejas · {torneo.cantidadPartidos} partidos</span>
                             <span>{torneo.categorias?.length ?? 0} categorías</span>
+                            {torneo.premioAcumulado ? <span className="flex items-center gap-1"><Trophy size={12} />{formatearMoneda(torneo.premioAcumulado)}</span> : null}
                             </div>
                             {torneo.categorias && torneo.categorias.length > 0 && (
                             <div className="mt-2 flex flex-wrap gap-1">

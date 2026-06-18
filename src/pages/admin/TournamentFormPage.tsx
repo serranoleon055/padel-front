@@ -6,7 +6,7 @@ import { categoriesApi, placesApi, seasonsApi } from '@/features/catalog/catalog
 import { formatTemplatesApi, pointTemplatesApi } from '@/features/templates/templatesApi'
 import { tournamentsApi } from '@/features/tournaments/tournamentsApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
-import { formatearEnum } from '@/shared/lib/formatters'
+import { formatearEnum, formatearMoneda } from '@/shared/lib/formatters'
 import type {
   CategoriaResponse,
   ConfiguracionPuntosResponse,
@@ -28,11 +28,13 @@ const POR_DEFECTO: TorneoRequest = {
   descripcion: null,
   imagenUrl: null,
   cupoMaximoParejas: null,
+  costoInscripcionJugador: null,
+  premioAcumulado: null,
+  seniaPorcentaje: null,
   cuposPorCategoria: {},
   formato: 'MINITORNEO',
   fechaInicio: '',
   fechaFin: null,
-  esMixto: false,
   sumaPuntosRanking: true,
   plantillaFormatoId: null,
   plantillaPuntosId: null,
@@ -67,6 +69,9 @@ export default function TournamentFormPage() {
   const [enviando, setEnviando] = useState(false)
   const [errorFormulario, setErrorFormulario] = useState<string | null>(null)
   const [archivoImagen, setArchivoImagen] = useState<File | null>(null)
+  const [esBorrador, setEsBorrador] = useState(true)
+  const [nombrePlantillaFormato, setNombrePlantillaFormato] = useState<string | null>(null)
+  const [nombrePlantillaPuntos, setNombrePlantillaPuntos] = useState<string | null>(null)
 
   useEffect(() => {
     setCargandoMeta(true)
@@ -96,16 +101,21 @@ export default function TournamentFormPage() {
 
         if (estaEditando && resultados[5]) {
           const torneo = resultados[5] as TorneoResponse
+          setEsBorrador(torneo.estado === 'BORRADOR')
+          setNombrePlantillaFormato(torneo.plantillaFormatoNombre ?? null)
+          setNombrePlantillaPuntos(torneo.plantillaPuntosNombre ?? null)
           setFormulario({
             nombre: torneo.nombre,
             descripcion: torneo.descripcion ?? null,
             imagenUrl: torneo.imagenUrl ?? null,
             cupoMaximoParejas: torneo.cupoMaximoParejas ?? null,
+            costoInscripcionJugador: torneo.costoInscripcionJugador ?? null,
+            premioAcumulado: torneo.premioAcumulado ?? null,
+            seniaPorcentaje: torneo.seniaPorcentaje ?? null,
             cuposPorCategoria: torneo.cuposPorCategoria ?? {},
             formato: torneo.formato,
             fechaInicio: torneo.fechaInicio ?? '',
             fechaFin: torneo.fechaFin ?? null,
-            esMixto: torneo.esMixto,
             sumaPuntosRanking: torneo.sumaPuntosRanking,
             plantillaFormatoId: torneo.plantillaFormatoId ?? null,
             plantillaPuntosId: torneo.plantillaPuntosId ?? null,
@@ -137,8 +147,16 @@ export default function TournamentFormPage() {
   const categoriasVisibles = categorias
     .filter((categoria) => categoria.genero === filtroGeneroCategoria)
     .sort((a, b) => a.nivel - b.nivel)
+  const categoriasSeleccionadas = categorias
+    .filter((categoria) => formulario.categoriaIds.includes(categoria.id))
+    .sort((a, b) => a.genero.localeCompare(b.genero) || a.nivel - b.nivel)
+  const categoriasParaMostrar = esBorrador ? categoriasVisibles : categoriasSeleccionadas
   const plantillaFormatoSeleccionada = plantillasFormato.find((plantilla) => plantilla.id === formulario.plantillaFormatoId)
   const plantillaPuntosSeleccionada = plantillasPuntos.find((plantilla) => plantilla.id === formulario.plantillaPuntosId)
+  const costoJugador = formulario.costoInscripcionJugador ?? 0
+  const totalPareja = costoJugador * 2
+  const porcentajeSenia = formulario.seniaPorcentaje && formulario.seniaPorcentaje > 0 ? formulario.seniaPorcentaje : 50
+  const seniaInscripcion = Math.round((totalPareja * porcentajeSenia) / 100)
 
   function alternarCategoria(id: number) {
     setFormulario((f) => {
@@ -186,9 +204,11 @@ export default function TournamentFormPage() {
   async function manejarEnviar() {
     if (!formulario.nombre.trim()) { setErrorFormulario('El nombre es obligatorio.'); return }
     if (!formulario.fechaInicio) { setErrorFormulario('La fecha de inicio es obligatoria.'); return }
-    if (formulario.categoriaIds.length === 0) { setErrorFormulario('Seleccioná al menos una categoría.'); return }
-    if (plantillasFormato.length > 0 && !formulario.plantillaFormatoId) { setErrorFormulario('Seleccioná una plantilla de formato activa.'); return }
-    if (formulario.sumaPuntosRanking && plantillasPuntos.length > 0 && !formulario.plantillaPuntosId) { setErrorFormulario('Seleccioná una plantilla de puntos activa.'); return }
+    if (esBorrador) {
+      if (formulario.categoriaIds.length === 0) { setErrorFormulario('Seleccioná al menos una categoría.'); return }
+      if (plantillasFormato.length > 0 && !formulario.plantillaFormatoId) { setErrorFormulario('Seleccioná una plantilla de formato activa.'); return }
+      if (formulario.sumaPuntosRanking && plantillasPuntos.length > 0 && !formulario.plantillaPuntosId) { setErrorFormulario('Seleccioná una plantilla de puntos activa.'); return }
+    }
 
     setEnviando(true)
     setErrorFormulario(null)
@@ -217,7 +237,12 @@ export default function TournamentFormPage() {
 
       <div className="mt-5">
         <p className="text-xs font-black uppercase tracking-[0.22em] text-rp-accent">Admin</p>
-        <h1 className="mt-2 text-2xl font-black text-rp-text sm:text-3xl">{estaEditando ? 'Editar torneo' : 'Nuevo torneo'}</h1>
+        <h1 className="mt-2 text-2xl font-black text-rp-text sm:text-3xl">{estaEditando ? 'Configuración del torneo' : 'Nuevo torneo'}</h1>
+        {estaEditando && !esBorrador && (
+          <p className="mt-3 rounded-md border border-rp-accent/40 bg-rp-accent/10 px-3 py-2 text-sm font-bold text-rp-muted">
+            El torneo ya arrancó: solo podés editar datos básicos, lugar y temporada. El formato, las plantillas y las categorías quedan fijos.
+          </p>
+        )}
       </div>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_360px]">
@@ -240,7 +265,7 @@ export default function TournamentFormPage() {
                 <Input label="URL de imagen (opcional, alternativa)" value={formulario.imagenUrl ?? ''} onChange={(e) => setFormulario((f) => ({ ...f, imagenUrl: e.target.value || null }))} placeholder="https://..." />
                 <label className="flex flex-col gap-2 text-sm font-bold text-rp-text">
                   Subir imagen (opcional)
-                  <input type="file" accept="image/jpeg,image/png" onChange={(e) => setArchivoImagen(e.target.files?.[0] ?? null)} className="rounded-md border border-rp-border bg-rp-surface px-3 py-2 text-sm text-rp-muted" />
+                  <input type="file" accept="image/jpeg,image/png" onChange={(e) => setArchivoImagen(e.target.files?.[0] ?? null)} className="w-full min-w-0 max-w-full rounded-md border border-rp-border bg-rp-surface px-3 py-2 text-sm text-rp-muted" />
                 </label>
               </div>
               <p className="text-xs leading-5 text-rp-muted">El cupo máximo de parejas se define por categoría más abajo. JPG o PNG, ideal cuadrada y menor a 2 MB.</p>
@@ -264,12 +289,34 @@ export default function TournamentFormPage() {
           </fieldset>
 
           <fieldset className="rounded-lg border border-rp-border bg-rp-surface/82 p-5">
+            <legend className="px-1 text-xs font-black uppercase tracking-[0.14em] text-rp-accent">Inscripción y premios</legend>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <Input label="Costo de inscripción por jugador" type="number" min={0} value={formulario.costoInscripcionJugador?.toString() ?? ''} onChange={(e) => setFormulario((f) => ({ ...f, costoInscripcionJugador: e.target.value ? Number(e.target.value) : null }))} placeholder="20000" />
+              <Input label="Premio acumulado / prize pool (opcional)" type="number" min={0} value={formulario.premioAcumulado?.toString() ?? ''} onChange={(e) => setFormulario((f) => ({ ...f, premioAcumulado: e.target.value ? Number(e.target.value) : null }))} placeholder="0" />
+              <Input label="Seña (% del total, por defecto 50)" type="number" min={1} max={100} value={formulario.seniaPorcentaje?.toString() ?? ''} onChange={(e) => setFormulario((f) => ({ ...f, seniaPorcentaje: e.target.value ? Number(e.target.value) : null }))} placeholder="50" />
+            </div>
+            {formulario.costoInscripcionJugador ? (
+              <p className="mt-3 rounded-md border border-rp-border bg-rp-bg/55 px-3 py-2 text-xs text-rp-muted">
+                {formatearMoneda(costoJugador)} por jugador · {formatearMoneda(totalPareja)} la pareja · seña {formatearMoneda(seniaInscripcion)} ({porcentajeSenia}%)
+              </p>
+            ) : (
+              <p className="mt-3 text-xs text-rp-muted">Sin costo de inscripción no se cobra seña online: los jugadores se inscriben sin pagar.</p>
+            )}
+          </fieldset>
+
+          <fieldset disabled={!esBorrador} className={`rounded-lg border border-rp-border bg-rp-surface/82 p-5 ${esBorrador ? '' : 'opacity-60'}`}>
             <legend className="px-1 text-xs font-black uppercase tracking-[0.14em] text-rp-accent">Plantillas</legend>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <Select label="Plantilla de formato" value={formulario.plantillaFormatoId?.toString() ?? ''} onChange={(e) => aplicarPlantillaFormato(e.target.value)} placeholder="Seleccionar...">
+                {formulario.plantillaFormatoId && !plantillasFormato.some((plantilla) => plantilla.id === formulario.plantillaFormatoId) && (
+                  <option value={formulario.plantillaFormatoId}>{nombrePlantillaFormato ?? 'Plantilla actual'}</option>
+                )}
                 {plantillasFormato.map((plantilla) => <option key={plantilla.id} value={plantilla.id}>{plantilla.nombre}</option>)}
               </Select>
               <Select label="Plantilla de puntos" value={formulario.plantillaPuntosId?.toString() ?? ''} onChange={(e) => aplicarPlantillaPuntos(e.target.value)} placeholder={formulario.sumaPuntosRanking ? 'Seleccionar...' : 'No suma ranking'}>
+                {formulario.plantillaPuntosId && !plantillasPuntos.some((plantilla) => plantilla.id === formulario.plantillaPuntosId) && (
+                  <option value={formulario.plantillaPuntosId}>{nombrePlantillaPuntos ?? 'Plantilla actual'}</option>
+                )}
                 {plantillasPuntos.map((plantilla) => <option key={plantilla.id} value={plantilla.id}>{plantilla.nombre}</option>)}
               </Select>
             </div>
@@ -279,12 +326,12 @@ export default function TournamentFormPage() {
                 formatearEnum(plantillaFormatoSeleccionada.tipoSorteo),
                 plantillaFormatoSeleccionada.incluyeFaseGrupos ? 'Con fase de grupos' : 'Sin fase de grupos',
                 plantillaFormatoSeleccionada.incluyeEliminacion ? 'Con eliminación' : 'Sin eliminación',
-              ] : ['Sin plantilla seleccionada']} />
-              <ResumenPlantilla title="Puntos" lineas={plantillaPuntosSeleccionada ? plantillaPuntosSeleccionada.rondas.map((r) => `${r.nombreRonda}: ${r.puntosGanador}/${r.puntosPerdedor}`) : ['Sin plantilla seleccionada']} />
+              ] : [nombrePlantillaFormato ?? 'Sin plantilla seleccionada']} />
+              <ResumenPlantilla title="Puntos" lineas={plantillaPuntosSeleccionada ? plantillaPuntosSeleccionada.rondas.map((r) => `${r.nombreRonda}: ${r.puntosGanador}/${r.puntosPerdedor}`) : [nombrePlantillaPuntos ?? 'Sin plantilla seleccionada']} />
             </div>
           </fieldset>
 
-          <fieldset className="rounded-lg border border-rp-border bg-rp-surface/82 p-5">
+          <fieldset disabled={!esBorrador} className={`rounded-lg border border-rp-border bg-rp-surface/82 p-5 ${esBorrador ? '' : 'opacity-60'}`}>
             <legend className="px-1 text-xs font-black uppercase tracking-[0.14em] text-rp-accent">Opciones mínimas</legend>
             <div className="mt-4">
               <Select label="Formato de sets" value={String(formulario.mejorDeSets ?? 3)} onChange={(e) => setFormulario((f) => ({ ...f, mejorDeSets: Number(e.target.value) }))}>
@@ -292,35 +339,33 @@ export default function TournamentFormPage() {
                 <option value="1">A 1 set (minitorneo / partido rápido)</option>
               </Select>
             </div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="mt-4">
               <label className="flex cursor-pointer items-center gap-3 text-sm font-bold text-rp-muted">
                 <input type="checkbox" checked={formulario.sumaPuntosRanking} onChange={(e) => setFormulario((f) => ({ ...f, sumaPuntosRanking: e.target.checked, plantillaPuntosId: e.target.checked ? f.plantillaPuntosId : null }))} className="size-4 accent-rp-accent" />
                 Suma puntos al ranking
-              </label>
-              <label className="flex cursor-pointer items-center gap-3 text-sm font-bold text-rp-muted">
-                <input type="checkbox" checked={formulario.esMixto} onChange={(e) => setFormulario((f) => ({ ...f, esMixto: e.target.checked }))} className="size-4 accent-rp-accent" />
-                Torneo mixto
               </label>
             </div>
           </fieldset>
         </div>
 
         <div className="flex flex-col gap-5">
-          <fieldset className="rounded-lg border border-rp-border bg-rp-surface/82 p-5">
+          <fieldset disabled={!esBorrador} className={`rounded-lg border border-rp-border bg-rp-surface/82 p-5 ${esBorrador ? '' : 'opacity-60'}`}>
             <legend className="px-1 text-xs font-black uppercase tracking-[0.14em] text-rp-accent">Categorías</legend>
-            <p className="mt-2 text-xs text-rp-muted">Seleccioná las categorías que participarán.</p>
-            <div className="mt-4">
-              <Select value={filtroGeneroCategoria} onChange={(e) => setFiltroGeneroCategoria(e.target.value as Genero)}>
-                <option value="MASCULINO">Masculino</option>
-                <option value="FEMENINO">Femenino</option>
-              </Select>
-            </div>
+            <p className="mt-2 text-xs text-rp-muted">{esBorrador ? 'Seleccioná las categorías que participarán.' : 'Categorías del torneo.'}</p>
+            {esBorrador && (
+              <div className="mt-4">
+                <Select value={filtroGeneroCategoria} onChange={(e) => setFiltroGeneroCategoria(e.target.value as Genero)}>
+                  <option value="MASCULINO">Masculino</option>
+                  <option value="FEMENINO">Femenino</option>
+                </Select>
+              </div>
+            )}
             <div className="mt-4 grid gap-2">
               {categorias.length === 0 ? (
                 <p className="text-sm text-rp-muted">No hay categorías. Creá alguna primero.</p>
-              ) : categoriasVisibles.length === 0 ? (
-                <p className="text-sm text-rp-muted">No hay categorías para este género.</p>
-              ) : categoriasVisibles.map((categoria) => {
+              ) : categoriasParaMostrar.length === 0 ? (
+                <p className="text-sm text-rp-muted">{esBorrador ? 'No hay categorías para este género.' : 'Sin categorías cargadas.'}</p>
+              ) : categoriasParaMostrar.map((categoria) => {
                 const seleccionada = formulario.categoriaIds.includes(categoria.id)
                 return (
                   <div key={categoria.id} className="flex flex-wrap items-center gap-3 rounded-md border border-rp-border p-4 transition hover:border-rp-accent/50">

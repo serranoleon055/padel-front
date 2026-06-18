@@ -4,9 +4,10 @@ import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 
 import { brand } from '@/config/brand'
+import { resolveApiAssetUrl } from '@/shared/api/apiClient'
 import { tournamentsApi } from '@/features/tournaments/tournamentsApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
-import { formatearFecha, formatearEnum } from '@/shared/lib/formatters'
+import { formatearFecha, formatearEnum, formatearMoneda } from '@/shared/lib/formatters'
 import type { CategoriaResponse, EstadoTorneo, Genero, TorneoResponse } from '@/shared/types/api'
 import { Pagination } from '@/shared/ui/Pagination'
 import { StatusMessage } from '@/shared/ui/StatusMessage'
@@ -18,8 +19,17 @@ const opcionesGenero: Genero[] = ['MASCULINO', 'FEMENINO']
 const TAMANO_PAGINA = 9
 
 const TarjetaTorneo = memo(function TarjetaTorneo({ torneo }: { torneo: TorneoResponse }) {
+  const fondo = resolveApiAssetUrl(torneo.imagenUrl)
   return (
-    <NavLink to={`/torneos/${torneo.id}`} className="tournament-card">
+    <NavLink
+      to={`/torneos/${torneo.id}`}
+      className="tournament-card"
+      style={fondo ? {
+        backgroundImage: `linear-gradient(180deg, rgba(6, 15, 9, .76), rgba(6, 15, 9, .5) 42%, rgba(4, 11, 6, .94)), url("${fondo}")`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      } : undefined}
+    >
       <div className="tc-head">
         <span className={`tc-status ${torneo.estado === 'EN_CURSO' ? 'live' : ''}`}>
           {formatearEnum(torneo.estado)}
@@ -40,6 +50,12 @@ const TarjetaTorneo = memo(function TarjetaTorneo({ torneo }: { torneo: TorneoRe
           <span className="tc-icon"><Users size={16} /></span>
           {torneo.cantidadParejas} parejas
         </span>
+        {torneo.premioAcumulado ? (
+          <span>
+            <span className="tc-icon"><Trophy size={16} /></span>
+            {formatearMoneda(torneo.premioAcumulado)} en premios
+          </span>
+        ) : null}
       </div>
       <div className="tc-categories">
         {torneo.categorias.length > 0 ? (

@@ -92,12 +92,12 @@ export const canchasApi = {
     return data
   },
 
-  async create(payload: { nombre: string; descripcion?: string; lugarId: number }) {
+  async create(payload: { nombre: string; descripcion?: string; lugarId: number; precioPorHora?: number | null; seniaPorcentaje?: number | null }) {
     const { data } = await apiClient.post<CanchaResponse>('/api/canchas', payload)
     return data
   },
 
-  async update(id: number, payload: { nombre: string; descripcion?: string; lugarId: number }) {
+  async update(id: number, payload: { nombre: string; descripcion?: string; lugarId: number; precioPorHora?: number | null; seniaPorcentaje?: number | null }) {
     const { data } = await apiClient.put<CanchaResponse>(`/api/canchas/${id}`, payload)
     return data
   },

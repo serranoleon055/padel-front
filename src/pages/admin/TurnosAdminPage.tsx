@@ -85,7 +85,13 @@ export default function TurnosAdminPage() {
   function cargarReservas(idCancha: number, dia: string) {
     setCargando(true)
     reservasApi.listar(idCancha, dia)
-      .then((datos) => { setReservas([...datos].sort((a, b) => a.horaInicio.localeCompare(b.horaInicio))); setError(null) })
+      .then((datos) => {
+        const ordenadas = [...datos].sort((a, b) =>
+          a.clienteNombre.localeCompare(b.clienteNombre, 'es', { sensitivity: 'base' })
+          || a.horaInicio.localeCompare(b.horaInicio))
+        setReservas(ordenadas)
+        setError(null)
+      })
       .catch((e: unknown) => setError(obtenerMensajeErrorApi(e)))
       .finally(() => setCargando(false))
   }
@@ -148,6 +154,17 @@ export default function TurnosAdminPage() {
     { key: 'horario', label: 'Horario', render: (reserva: ReservaResponse) => <span className="text-sm font-bold text-rp-text">{hhmm(reserva.horaInicio)} - {hhmm(reserva.horaFin)}</span> },
     { key: 'cliente', label: 'Cliente', render: (reserva: ReservaResponse) => <div><p className="text-sm font-bold text-rp-text">{reserva.clienteNombre}</p><p className="text-xs text-rp-muted">{reserva.clienteTelefono}</p></div> },
     { key: 'estado', label: 'Estado', render: (reserva: ReservaResponse) => <span className="text-xs font-black uppercase tracking-wide text-rp-accent">{reserva.estado}</span> },
+    {
+      key: 'pago',
+      label: 'Pago',
+      render: (reserva: ReservaResponse) => (
+        reserva.estadoPago === 'APROBADO'
+          ? <span className="rounded-full bg-rp-accent/15 px-2 py-0.5 text-[10px] font-bold text-rp-accent">Seña pagada</span>
+          : reserva.estadoPago === 'PENDIENTE'
+            ? <span className="text-xs text-rp-muted">Pago pendiente</span>
+            : <span className="text-xs text-rp-muted">En el club</span>
+      ),
+    },
     { key: 'codigo', label: 'Código', render: (reserva: ReservaResponse) => <span className="text-xs text-rp-muted">{reserva.codigo}</span> },
   ] as Column<ReservaResponse>[], [])
 

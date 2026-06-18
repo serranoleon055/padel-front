@@ -30,6 +30,7 @@ const PointTemplatesPage = lazy(() => import('@/pages/admin/PointTemplatesPage')
 const ReservarPage = lazy(() => import('@/pages/public/ReservarPage'))
 const TurnosAdminPage = lazy(() => import('@/pages/admin/TurnosAdminPage'))
 const InscribirmePage = lazy(() => import('@/pages/public/InscribirmePage'))
+const PagoResultadoPage = lazy(() => import('@/pages/public/PagoResultadoPage'))
 const InscripcionesAdminPage = lazy(() => import('@/pages/admin/InscripcionesAdminPage'))
 
 function PageFallback() {
@@ -52,9 +53,11 @@ export function AppRouter() {
           <Route path="torneos" element={<TournamentsPage />} />
           <Route path="torneos/:torneoId" element={<TournamentDetailPage />} />
           <Route path="torneos/:torneoId/inscribirme" element={<InscribirmePage />} />
+          <Route path="torneos/:torneoId/pago/resultado" element={<PagoResultadoPage />} />
           <Route path="ranking" element={<RankingPage />} />
           <Route path="campeones" element={<CampeonesPage />} />
           <Route path="reservar" element={<ReservarPage />} />
+          <Route path="reservar/pago/resultado" element={<PagoResultadoPage />} />
           <Route path="jugadores/:jugadorId" element={<PlayerProfilePage />} />
           <Route path="jugadores/:jugadorId/partidos" element={<PlayerMatchesPage />} />
           <Route path="contacto" element={<ContactoPage />} />

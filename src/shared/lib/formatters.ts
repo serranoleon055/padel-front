@@ -13,6 +13,20 @@ const formateadorFechaHora = new Intl.DateTimeFormat('es-AR', {
   minute: '2-digit',
 })
 
+const formateadorMoneda = new Intl.NumberFormat('es-AR', {
+  style: 'currency',
+  currency: 'ARS',
+  maximumFractionDigits: 0,
+})
+
+export function formatearMoneda(valor: number | null | undefined) {
+  if (valor == null) {
+    return 'Sin definir'
+  }
+
+  return formateadorMoneda.format(valor)
+}
+
 export function formatearFecha(valor: string | null | undefined) {
   if (!valor) {
     return 'Sin fecha'
@@ -67,6 +81,45 @@ export function formatearPareja(partido: PartidoResponse, lado: 'local' | 'visit
 
 export function formatearEtapaPartido(partido: PartidoResponse) {
   return formatearNombreRonda(partido.ronda) ?? partido.grupoNombre ?? formatearEnum(partido.fase)
+}
+
+export function instanciaPartido(partido: PartidoResponse): string | null {
+  const ronda = formatearNombreRonda(partido.ronda)
+  if (ronda) return ronda
+
+  const grupo = partido.grupoNombre?.trim()
+  const categoria = partido.categoriaNombre?.trim().toLowerCase() ?? ''
+  if (grupo) {
+    const grupoNormalizado = grupo.toLowerCase()
+    const esRedundanteConCategoria =
+      categoria !== '' && (grupoNormalizado.includes(categoria) || categoria.includes(grupoNormalizado))
+    if (!esRedundanteConCategoria) return grupo
+  }
+
+  return null
+}
+
+function quitarTokensRedundantes(tokens: string[]): string[] {
+  const limpios = tokens.map((token) => token.trim()).filter(Boolean)
+  return limpios.filter((token, indice) =>
+    !limpios.some((otro, otroIndice) => {
+      if (otroIndice === indice) return false
+      const contiene = otro.toLowerCase().includes(token.toLowerCase())
+      return contiene && (otro.length > token.length || otroIndice < indice)
+    }),
+  )
+}
+
+export function metaPartido(partido: PartidoResponse, opciones?: { incluirTorneo?: boolean }): string[] {
+  const tokens: string[] = []
+  if (opciones?.incluirTorneo && partido.torneoNombre) tokens.push(partido.torneoNombre)
+  if (partido.categoriaNombre) tokens.push(partido.categoriaNombre)
+
+  const fechaPartido = partido.fechaHora ?? partido.fechaHoraProgramada
+  const instancia = instanciaPartido(partido) ?? (fechaPartido ? fechaCompacta(fechaPartido) : null)
+  if (instancia) tokens.push(instancia)
+
+  return quitarTokensRedundantes(tokens)
 }
 
 export function formatearEstadoPartido(estado: string | null | undefined): string {

@@ -3,8 +3,10 @@ import { NavLink, useParams } from 'react-router-dom'
 
 import { tournamentsApi } from '@/features/tournaments/tournamentsApi'
 import { inscripcionesApi, type IntegranteInscripcion, type JugadorBusqueda } from '@/features/inscripciones/inscripcionesApi'
+import { pagosApi } from '@/features/pagos/pagosApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
 import { ordenarCategorias } from '@/shared/lib/categorias'
+import { formatearMoneda } from '@/shared/lib/formatters'
 import type { CategoriaResponse } from '@/shared/types/api'
 import { Button } from '@/shared/ui/Button'
 import { Input } from '@/shared/ui/Input'
@@ -77,6 +79,10 @@ function SelectorJugador({ titulo, valor, onChange, generoCategoria }: {
           <Input label="Nombre" value={valor.nombre ?? ''} onChange={(e) => onChange({ ...valor, nombre: e.target.value, genero: generoCategoria ?? valor.genero })} placeholder="Juan" />
           <Input label="Apellido" value={valor.apellido ?? ''} onChange={(e) => onChange({ ...valor, apellido: e.target.value, genero: generoCategoria ?? valor.genero })} placeholder="Pérez" />
           <Input label="Fecha de nacimiento (opcional)" type="date" value={valor.fechaNacimiento ?? ''} onChange={(e) => onChange({ ...valor, fechaNacimiento: e.target.value })} />
+          <Select label="Posición (opcional)" value={valor.posicionJuego ?? ''} onChange={(e) => onChange({ ...valor, posicionJuego: e.target.value || undefined })} placeholder="Sin definir">
+            <option value="DRIVE">Drive</option>
+            <option value="REVES">Revés</option>
+          </Select>
         </div>
       </div>
     )
@@ -113,6 +119,8 @@ export default function InscribirmePage() {
 
   const [nombreTorneo, setNombreTorneo] = useState('')
   const [categorias, setCategorias] = useState<CategoriaResponse[]>([])
+  const [costoInscripcion, setCostoInscripcion] = useState<number | null>(null)
+  const [porcentajeSenia, setPorcentajeSenia] = useState(50)
   const [categoriaId, setCategoriaId] = useState<number | null>(null)
   const [jugador1, setJugador1] = useState<IntegranteInscripcion>({})
   const [jugador2, setJugador2] = useState<IntegranteInscripcion>({})
@@ -124,7 +132,12 @@ export default function InscribirmePage() {
   useEffect(() => {
     if (idTorneo == null) return
     tournamentsApi.getById(idTorneo)
-      .then((torneo) => { setNombreTorneo(torneo.nombre); setCategorias(torneo.categorias) })
+      .then((torneo) => {
+        setNombreTorneo(torneo.nombre)
+        setCategorias(torneo.categorias)
+        setCostoInscripcion(torneo.costoInscripcionJugador ?? null)
+        setPorcentajeSenia(torneo.seniaPorcentaje && torneo.seniaPorcentaje > 0 ? torneo.seniaPorcentaje : 50)
+      })
       .catch((e: unknown) => setError(obtenerMensajeErrorApi(e)))
   }, [idTorneo])
 
@@ -145,19 +158,27 @@ export default function InscribirmePage() {
     return Boolean(integrante.nombre?.trim() && integrante.apellido?.trim() && integrante.genero)
   }
 
-  async function enviar() {
+  const totalPareja = costoInscripcion != null ? costoInscripcion * 2 : null
+  const montoSenia = totalPareja != null ? Math.round((totalPareja * porcentajeSenia) / 100) : null
+
+  function formularioValido() {
     if (idTorneo == null || categoriaId == null) {
       setError('Elegí una categoría.')
-      return
+      return false
     }
     if (!telefono.trim()) {
       setError('Dejá un teléfono de contacto para que el club coordine la confirmación.')
-      return
+      return false
     }
     if (!integranteCompleto(jugador1) || !integranteCompleto(jugador2)) {
       setError('Completá los dos jugadores (elegí existentes o cargá los datos).')
-      return
+      return false
     }
+    return true
+  }
+
+  async function enviar() {
+    if (!formularioValido() || idTorneo == null || categoriaId == null) return
     setEnviando(true)
     setError(null)
     try {
@@ -171,6 +192,27 @@ export default function InscribirmePage() {
     } catch (e: unknown) {
       setError(obtenerMensajeErrorApi(e))
     } finally {
+      setEnviando(false)
+    }
+  }
+
+  async function pagarEInscribir() {
+    if (!formularioValido() || idTorneo == null || categoriaId == null) return
+    setEnviando(true)
+    setError(null)
+    try {
+      const { initPoint } = await pagosApi.crearPagoInscripcion({
+        torneoId: idTorneo,
+        inscripcion: {
+          categoriaId,
+          telefonoContacto: telefono.trim() || undefined,
+          jugador1,
+          jugador2,
+        },
+      })
+      window.location.href = initPoint
+    } catch (e: unknown) {
+      setError(obtenerMensajeErrorApi(e))
       setEnviando(false)
     }
   }
@@ -215,9 +257,23 @@ export default function InscribirmePage() {
 
         <Input label="Teléfono de contacto" type="tel" value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="385..." />
 
+        {montoSenia != null && (
+          <div className="rounded-md border border-rp-accent/40 bg-rp-accent/10 px-3 py-2 text-sm">
+            <p className="font-bold text-rp-text">{formatearMoneda(costoInscripcion)} por jugador · {formatearMoneda(totalPareja)} la pareja</p>
+            <p className="text-rp-muted">Seña a pagar ahora: <strong className="text-rp-accent">{formatearMoneda(montoSenia)}</strong> ({porcentajeSenia}%). Asegura tu lugar.</p>
+          </div>
+        )}
+
         {error && <p className="rounded-md border border-rp-danger/40 bg-rp-danger/10 px-3 py-2 text-sm font-bold text-rp-danger">{error}</p>}
 
-        <Button onClick={enviar} disabled={enviando}>{enviando ? 'Enviando...' : 'Enviar inscripción'}</Button>
+        {montoSenia != null ? (
+          <div className="flex flex-col gap-2">
+            <Button onClick={pagarEInscribir} disabled={enviando}>{enviando ? 'Redirigiendo...' : `Pagar seña e inscribirme (${formatearMoneda(montoSenia)})`}</Button>
+            <Button variant="subtle" onClick={enviar} disabled={enviando}>{enviando ? 'Enviando...' : 'Inscribirme sin pagar'}</Button>
+          </div>
+        ) : (
+          <Button onClick={enviar} disabled={enviando}>{enviando ? 'Enviando...' : 'Enviar inscripción'}</Button>
+        )}
       </div>
     </section>
   )

@@ -17,6 +17,8 @@ export type CanchaResponse = {
   activo: boolean
   lugarId: number | null
   lugarNombre: string | null
+  precioPorHora?: number | null
+  seniaPorcentaje?: number | null
 }
 
 export type FasePartido = 'GRUPOS' | 'ELIMINACION'
@@ -190,11 +192,13 @@ export type TorneoRequest = {
   descripcion?: string | null
   imagenUrl?: string | null
   cupoMaximoParejas?: number | null
+  costoInscripcionJugador?: number | null
+  premioAcumulado?: number | null
+  seniaPorcentaje?: number | null
   cuposPorCategoria?: Record<number, number>
   formato: FormatoTorneo
   fechaInicio: string
   fechaFin?: string | null
-  esMixto: boolean
   sumaPuntosRanking: boolean
   plantillaFormatoId?: number | null
   plantillaPuntosId?: number | null
@@ -233,13 +237,15 @@ export type TorneoResponse = {
   descripcion?: string | null
   imagenUrl?: string | null
   cupoMaximoParejas?: number | null
+  costoInscripcionJugador?: number | null
+  premioAcumulado?: number | null
+  seniaPorcentaje?: number | null
   cuposPorCategoria?: Record<number, number>
   parejasPorCategoria?: Record<number, number>
   formato: FormatoTorneo
   estado: EstadoTorneo
   fechaInicio: string | null
   fechaFin: string | null
-  esMixto: boolean
   sumaPuntosRanking: boolean
   plantillaFormatoId: number | null
   plantillaFormatoNombre: string | null
@@ -288,8 +294,11 @@ export type RankingResponse = {
 
 export type ParejaResponse = {
   id: number
+  jugador1Id: number | null
+  jugador2Id: number | null
   jugador1Nombre: string
   jugador2Nombre: string
+  categoriaId: number | null
   categoriaNombre: string
   esCabezaDeSerie: boolean
   estado: EstadoPareja

@@ -1,7 +1,7 @@
 import { CalendarDays, ChevronDown, Clock, Play } from 'lucide-react'
 import { memo, useState } from 'react'
 
-import { formatearEnum, formatearEstadoPartido, formatearEtapaPartido, formatearFechaHora, formatearFechaPartido, formatearPareja } from '@/shared/lib/formatters'
+import { formatearEnum, formatearEstadoPartido, formatearFechaHora, formatearFechaPartido, formatearPareja, metaPartido } from '@/shared/lib/formatters'
 import type { PartidoResponse } from '@/shared/types/api'
 import { Button } from '@/shared/ui/Button'
 import { StatusBadge } from '@/shared/ui/StatusBadge'
@@ -28,10 +28,12 @@ export const FilaPartido = memo(function FilaPartido({ partido, showResults, can
                     <StatusBadge tone={tonoBadge}>
                     {formatearEstadoPartido(partido.estado)}
                     </StatusBadge>
-                    <span className="text-xs text-rp-muted">{formatearEtapaPartido(partido)}</span>
-                    <span className="text-xs text-rp-muted">{partido.categoriaNombre}</span>
+                    <span className="text-xs text-rp-muted">{metaPartido(partido).join(' · ')}</span>
                 </div>
-                <p className="mt-3 truncate text-sm font-bold text-rp-text">{formatearPareja(partido, 'local')} vs {formatearPareja(partido, 'visitante')}</p>
+                <div className="mt-3 flex flex-col gap-0.5 text-sm font-bold text-rp-text">
+                    <span className={partido.ganadorId === partido.parejaLocalId ? 'text-rp-accent' : ''}>{formatearPareja(partido, 'local')}</span>
+                    <span className={partido.ganadorId === partido.parejaVisitanteId ? 'text-rp-accent' : ''}>{formatearPareja(partido, 'visitante')}</span>
+                </div>
                 {partido.marcador && <p className="mt-2 text-sm font-black text-rp-accent">{partido.marcador}</p>}
                 {!partido.marcador && (partido.fechaHoraProgramada || partido.fechaHora) && (
                     <p className="mt-1 flex items-center gap-1 text-xs text-rp-muted">
