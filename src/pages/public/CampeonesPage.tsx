@@ -58,7 +58,6 @@ export default function CampeonesPage() {
     return () => { montado = false }
   }, [categoriaId, genero, pagina])
 
-  // Solo las categorías del género elegido, de mayor a menor nivel (nivel 1 = más alto).
   const categoriasDelGenero = useMemo(
     () => categorias
       .filter((c) => c.genero === genero)

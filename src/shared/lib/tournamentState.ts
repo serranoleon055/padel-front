@@ -31,9 +31,6 @@ export function puedeSortear(estado: EstadoTorneo, cantidadParejas: number, _can
     return estado === 'INSCRIPCION' && cantidadParejas > 0
 }
 
-// `jugables` debe contar los partidos PENDIENTE + EN_CURSO (los que todavía
-// pueden recibir resultado). Si solo se contaran los PENDIENTE, un partido
-// iniciado (EN_CURSO) dejaría la categoría sin botones para cargar el resultado.
 export function puedeCargarResultados(estado: EstadoTorneo, jugables: number): boolean {
     return estado === 'EN_CURSO' && jugables > 0
 }

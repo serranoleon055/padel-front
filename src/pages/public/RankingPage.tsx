@@ -56,7 +56,6 @@ export default function RankingPage() {
       .then((listaCategorias) => {
         if (!montado) return
         setCategorias(listaCategorias)
-        // Categoría por defecto: la de mayor nivel (nivel 1 = más alto) del género actual.
         const ordenadas = [...listaCategorias].sort((a, b) => a.nivel - b.nivel || a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }))
         const categoriaPorDefecto = ordenadas.find((c) => c.genero === 'MASCULINO') ?? ordenadas[0]
         setCategoriaId((actual) => actual || categoriaPorDefecto?.id.toString() || '')
@@ -144,7 +143,6 @@ export default function RankingPage() {
   // En los cambios de categoría posteriores mantenemos las filas y solo las atenuamos.
   const cargaInicial = cargando && ranking.length === 0
 
-  // Solo las categorías del género elegido, de mayor a menor nivel (nivel 1 = más alto).
   const categoriasDelGenero = useMemo(
     () => categorias
       .filter((c) => c.genero === genero)
