@@ -141,7 +141,7 @@ export default function PointTemplatesPage() {
               <div key={i} className="grid items-end gap-3 rounded-lg border border-rp-border bg-rp-bg/55 p-3 sm:grid-cols-[1fr_95px_95px_36px]">
                 <Input label="Ronda" value={fila.nombreRonda} onChange={(e) => actualizarFila(i, { nombreRonda: e.target.value })} placeholder="Final" />
                 <Input label="Ganador" type="number" min={0} value={Number.isNaN(fila.puntosGanador) ? '' : fila.puntosGanador} onChange={(e) => actualizarFila(i, { puntosGanador: e.target.value === '' ? NaN : Number(e.target.value) })} />
-                <Input label="Perdedor" type="number" min={0} value={Number.isNaN(fila.puntosPerdedor) ? '' : fila.puntosPerdedor} onChange={(e) => actualizarFila(i, { puntosPerdedor: e.target.value === '' ? NaN : Number(e.target.value) })} />
+                <Input label="Perdedor" type="number" title="Puede ser negativo para penalizar la derrota" value={Number.isNaN(fila.puntosPerdedor) ? '' : fila.puntosPerdedor} onChange={(e) => actualizarFila(i, { puntosPerdedor: e.target.value === '' ? NaN : Number(e.target.value) })} />
                 <button type="button" onClick={() => quitarFila(i)} className="mb-0.5 flex size-9 self-end items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger"><Minus size={15} /></button>
               </div>
             ))}
