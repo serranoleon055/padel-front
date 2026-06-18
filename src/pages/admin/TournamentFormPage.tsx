@@ -193,6 +193,8 @@ export default function TournamentFormPage() {
       avanzanPorGrupo: plantilla.avanzanPorGrupo ?? null,
       incluyeFaseGrupos: plantilla.incluyeFaseGrupos,
       incluyeEliminacion: plantilla.incluyeEliminacion,
+      // Sets por formato: minitorneo a 1 set; liga / eliminación directa / torneo largo al mejor de 3.
+      mejorDeSets: plantilla.formatoTorneo === 'MINITORNEO' ? 1 : 3,
     }) : ({ ...f, plantillaFormatoId: null }))
   }
 
