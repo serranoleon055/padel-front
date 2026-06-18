@@ -9,7 +9,6 @@ import { resolveApiAssetUrl } from '@/shared/api/apiClient'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
 import { ordenarCategorias } from '@/shared/lib/categorias'
 import { fechaCompacta, formatearFecha, formatearEnum, formatearEtapaPartido, formatearPareja } from '@/shared/lib/formatters'
-import { obtenerLadoGanador, parsearMarcador } from '@/shared/lib/score'
 import type { HomeResponse, TorneoResponse } from '@/shared/types/api'
 import { StatusMessage } from '@/shared/ui/StatusMessage'
 import { ResultMatchCard } from '@/pages/public/components/ResultMatchCard'
@@ -310,54 +309,45 @@ export default function HomePage() {
                 </tr>
               </thead>
               <tbody>
-                {campeonesVisibles.map((item, index) => {
-                  const sets = parsearMarcador(item.marcador)
-                  const ganador = formatearPareja(item, obtenerLadoGanador(item))
-
-                  return (
-                    <tr key={item.id}>
+                {campeonesVisibles.map((item, index) => (
+                    <tr key={`${item.torneoId}-${item.categoriaId}`}>
                       <td><div className="ct-num">{String(index + 1).padStart(2, '0')}</div></td>
                       <td>
                         <div className="ct-torneo">{item.torneoNombre ?? 'Torneo'}</div>
-                        <div className="ct-fecha">{`${fechaCompacta(item.fechaHora)} - ${item.lugarNombre ?? 'Sede a confirmar'}`}</div>
+                        <div className="ct-fecha">{`${fechaCompacta(item.fecha)} - ${item.lugarNombre ?? 'Sede a confirmar'}`}</div>
                       </td>
                       <td>
                         <div className="ct-pair">
                           <div className="ct-trophy"><Trophy size={20} /></div>
-                          <div className="ct-names">{ganador}</div>
+                          <div className="ct-names">{item.campeonaNombre ?? 'Sin dato'}</div>
                         </div>
                       </td>
                       <td>
-                        <div className="ct-score">
-                          {sets.length > 0 ? sets.map((set) => `${set.local}-${set.visitante}`).join(' / ') : item.marcador ?? 'Sin resultado'}
-                        </div>
+                        <div className="ct-score">{item.marcadorFinal ?? 'Campeón de liga'}</div>
                       </td>
                       <td className="ct-cat"><span className="ct-pill">{item.categoriaNombre ?? 'Categoría'}</span></td>
                     </tr>
-                  )
-                })}
+                ))}
               </tbody>
             </table>
 
             <div className="champ-cards">
               {campeonesVisibles.map((item, index) => (
-                <article key={item.id} className="champ-card">
+                <article key={`${item.torneoId}-${item.categoriaId}`} className="champ-card">
                   <div className="champ-card-row">
                     <div className="champ-card-num">{String(index + 1).padStart(2, '0')}</div>
                     <div className="champ-card-info">
                       <div className="champ-card-torneo">{item.torneoNombre ?? 'Torneo'}</div>
                       <div className="champ-card-fecha">
-                        {`${fechaCompacta(item.fechaHora)} - ${item.lugarNombre ?? 'Sede a confirmar'} - ${item.categoriaNombre ?? 'Categoría'}`}
+                        {`${fechaCompacta(item.fecha)} - ${item.lugarNombre ?? 'Sede a confirmar'} - ${item.categoriaNombre ?? 'Categoría'}`}
                       </div>
                     </div>
                   </div>
                   <div className="champ-card-winner">
                     <div className="ct-trophy"><Trophy size={20} /></div>
                     <div>
-                      <div className="champ-card-names">{formatearPareja(item, obtenerLadoGanador(item))}</div>
-                      <div className="champ-card-score">
-                        {(() => { const s = parsearMarcador(item.marcador); return s.length > 0 ? s.map((set) => `${set.local}-${set.visitante}`).join(' / ') : (item.marcador ?? 'Sin resultado') })()}
-                      </div>
+                      <div className="champ-card-names">{item.campeonaNombre ?? 'Sin dato'}</div>
+                      <div className="champ-card-score">{item.marcadorFinal ?? 'Campeón de liga'}</div>
                     </div>
                   </div>
                 </article>

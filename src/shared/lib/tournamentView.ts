@@ -70,9 +70,9 @@ export function obtenerCampeonLiga(grupos: GrupoResponse[]) {
   const posiciones = grupos.flatMap((grupo) => grupo.posiciones ?? [])
   const algunaJugada = posiciones.some((posicion) => posicion.pj > 0)
   if (!algunaJugada) return { campeon: null, subcampeon: null }
-  const ordenadas = grupos.length > 1
-    ? [...posiciones].sort((a, b) => b.puntos - a.puntos || (b.setsGanados - b.setsPerdidos) - (a.setsGanados - a.setsPerdidos))
-    : posiciones
+  // Ordenamos siempre (incluso con un único grupo) por puntos y diferencia de
+  // sets, para no depender del orden en que vengan las posiciones del backend.
+  const ordenadas = [...posiciones].sort((a, b) => b.puntos - a.puntos || (b.setsGanados - b.setsPerdidos) - (a.setsGanados - a.setsPerdidos))
   return {
     campeon: ordenadas[0]?.parejaNombre ?? null,
     subcampeon: ordenadas[1]?.parejaNombre ?? null,

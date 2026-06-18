@@ -1,6 +1,6 @@
 import { apiClient } from '@/shared/api/apiClient'
 
-import type { AdminDashboardResponse, HomeResponse, HomeSummaryResponse, PagedResponse, PartidoResponse } from '@/shared/types/api'
+import type { AdminDashboardResponse, CampeonResponse, Genero, HomeResponse, HomeSummaryResponse, PagedResponse, PartidoResponse } from '@/shared/types/api'
 
 export function invalidateHomeCache() {
 }
@@ -26,8 +26,8 @@ export const homeApi = {
     return data
   },
 
-  async getCampeones(params: { categoriaId?: number; pagina?: number; tamanio?: number } = {}) {
-    const { data } = await apiClient.get<PagedResponse<PartidoResponse>>('/api/home/campeones', { params })
+  async getCampeones(params: { categoriaId?: number; genero?: Genero; pagina?: number; tamanio?: number } = {}) {
+    const { data } = await apiClient.get<PagedResponse<CampeonResponse>>('/api/home/campeones', { params })
     return data
   },
 }

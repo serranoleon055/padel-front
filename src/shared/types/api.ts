@@ -342,6 +342,21 @@ export type TorneoDetalleResponse = {
   torneo: TorneoResponse
   parejas: ParejaResponse[]
   partidos: PartidoResponse[]
+  campeones: CampeonResponse[]
+}
+
+export type CampeonResponse = {
+  torneoId: number | null
+  torneoNombre: string | null
+  categoriaId: number | null
+  categoriaNombre: string | null
+  genero: Genero | null
+  campeonaId: number | null
+  campeonaNombre: string | null
+  subcampeonaNombre: string | null
+  marcadorFinal: string | null
+  fecha: string | null
+  lugarNombre: string | null
 }
 
 export type HomeSummaryResponse = {
@@ -401,6 +416,6 @@ export type HomeResponse = {
   torneosEnVivo: TorneoResponse[]
   partidosEnVivo: PartidoResponse[]
   ultimosResultados: PartidoResponse[]
-  ultimosCampeones: PartidoResponse[]
+  ultimosCampeones: CampeonResponse[]
   rankingDestacado: RankingResponse[]
 }

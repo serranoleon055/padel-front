@@ -8,7 +8,6 @@ import { tournamentsApi } from '@/features/tournaments/tournamentsApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
 import { useToast } from '@/shared/ui/Toast'
 import { formatearFecha, formatearFechaHora, formatearEnum, formatearEtapaPartido, formatearPareja, formatearMoneda } from '@/shared/lib/formatters'
-import { obtenerPartidoCampeon, obtenerNombreSubcampeon } from '@/shared/lib/tournamentView'
 import { validarMarcador } from '@/shared/lib/score'
 import type {
     CategoriaResponse,
@@ -243,8 +242,7 @@ export default function TournamentAdminDetailPage() {
     const parejasSeleccionadas = categoriaActiva ? parejas.filter((pareja) => pareja.categoriaNombre === categoriaActiva) : parejas
     const partidosSeleccionados = categoriaActiva ? partidos.filter((partido) => partido.categoriaNombre === categoriaActiva) : partidos
     const gruposSeleccionados = categoriaActiva ? grupos.filter((grupo) => grupo.categoriaNombre === categoriaActiva) : grupos
-    const partidoCampeon = obtenerPartidoCampeon(partidosSeleccionados)
-    const nombreSubcampeon = obtenerNombreSubcampeon(partidoCampeon)
+    const campeonCategoria = (datosDetalle?.campeones ?? []).find((c) => c.categoriaNombre === categoriaActiva)
     // "Pendientes" = lo que todavía falta jugar/cargar: incluye EN_CURSO para que
     // los partidos iniciados no queden sin botones de resultado y para que las
     // tarjetas (Pendientes + Finalizados) sumen el total.
@@ -355,8 +353,8 @@ export default function TournamentAdminDetailPage() {
                 <div className="mt-4 rounded-lg border border-rp-border bg-rp-surface/82 p-4">
                     <p className="text-xs font-black uppercase tracking-[0.12em] text-rp-accent">Resultado final de {categoriaActiva}</p>
                     <div className="mt-2 grid gap-2 text-sm sm:grid-cols-2">
-                        <span className="font-bold text-rp-text">Campeón: {partidoCampeon?.ganadorNombre ?? 'Sin dato'}</span>
-                        <span className="font-bold text-rp-muted">Subcampeón: {nombreSubcampeon ?? 'Sin dato'}</span>
+                        <span className="font-bold text-rp-text">Campeón: {campeonCategoria?.campeonaNombre ?? 'Sin dato'}</span>
+                        <span className="font-bold text-rp-muted">Subcampeón: {campeonCategoria?.subcampeonaNombre ?? 'Sin dato'}</span>
                     </div>
                 </div>
             )}
