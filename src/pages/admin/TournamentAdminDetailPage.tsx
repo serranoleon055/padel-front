@@ -243,9 +243,6 @@ export default function TournamentAdminDetailPage() {
     const partidosSeleccionados = categoriaActiva ? partidos.filter((partido) => partido.categoriaNombre === categoriaActiva) : partidos
     const gruposSeleccionados = categoriaActiva ? grupos.filter((grupo) => grupo.categoriaNombre === categoriaActiva) : grupos
     const campeonCategoria = (datosDetalle?.campeones ?? []).find((c) => c.categoriaNombre === categoriaActiva)
-    // "Pendientes" = lo que todavía falta jugar/cargar: incluye EN_CURSO para que
-    // los partidos iniciados no queden sin botones de resultado y para que las
-    // tarjetas (Pendientes + Finalizados) sumen el total.
     const pendientes = partidosSeleccionados.filter((partido) => partido.estado === 'PENDIENTE' || partido.estado === 'EN_CURSO')
     const finalizados = partidosSeleccionados.filter((partido) => partido.estado === 'FINALIZADO')
 

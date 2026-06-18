@@ -30,11 +30,6 @@ export function parsearMarcador(marcador: string | null | undefined): SetMarcado
     })
 }
 
-/**
- * Valida un marcador en el cliente con las mismas reglas que el backend
- * (ResultadoService.determinarGanador / validarSet). Devuelve un mensaje de
- * error si es inválido, o null si el marcador es válido.
- */
 export function validarMarcador(marcador: string, mejorDeSets = 3): string | null {
   const texto = (marcador ?? '').trim()
   if (!texto) return 'El marcador es obligatorio.'
