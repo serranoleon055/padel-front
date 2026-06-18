@@ -11,6 +11,7 @@ import { formatearFecha, formatearFechaHora, formatearEnum, formatearEtapaPartid
 import { validarMarcador } from '@/shared/lib/score'
 import type {
     CategoriaResponse,
+    CrucePreviewResponse,
     Genero,
     GrupoResponse,
     JugadorResponse,
@@ -85,6 +86,7 @@ export default function TournamentAdminDetailPage() {
     const [guardandoWo, setGuardandoWo] = useState(false)
 
     const [gruposExpandidos, setGruposExpandidos] = useState<Set<number>>(new Set())
+    const [cruces, setCruces] = useState<CrucePreviewResponse[]>([])
     const { success: avisoExito } = useToast()
 
     function recargarDetalle() {
@@ -113,6 +115,14 @@ export default function TournamentAdminDetailPage() {
             playersApi.getAll().then(setJugadores).catch(() => {})
         }
     }, [parejaAbierta, jugadores.length])
+
+    useEffect(() => {
+        if (!detalle) { setCruces([]); return }
+        const nombre = nombreCategoriaSeleccionada || detalle.torneo.categorias[0]?.nombre
+        const categoria = detalle.torneo.categorias.find((c) => c.nombre === nombre)
+        if (!categoria) { setCruces([]); return }
+        tournamentsApi.getCuadroPreview(id, categoria.id).then(setCruces).catch(() => setCruces([]))
+    }, [id, nombreCategoriaSeleccionada, detalle])
 
     async function manejarCambioEstado() {
         if (!detalle) return
@@ -353,6 +363,23 @@ export default function TournamentAdminDetailPage() {
                         <span className="font-bold text-rp-text">Campeón: {campeonCategoria?.campeonaNombre ?? 'Sin dato'}</span>
                         <span className="font-bold text-rp-muted">Subcampeón: {campeonCategoria?.subcampeonaNombre ?? 'Sin dato'}</span>
                     </div>
+                </div>
+            )}
+
+            {cruces.length > 0 && (
+                <div className="mt-4 rounded-lg border border-rp-border bg-rp-surface/82 p-4">
+                    <p className="text-xs font-black uppercase tracking-[0.12em] text-rp-accent">Cómo se arma el cuadro · {categoriaActiva}</p>
+                    <p className="mt-1 text-xs text-rp-muted">Al terminar la fase de grupos, los clasificados se cruzan así. La posición de cada pareja depende de cómo quede la tabla.</p>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                        {cruces.map((cruce, i) => (
+                            <div key={i} className="flex items-center justify-between gap-2 rounded-md border border-rp-border bg-rp-bg/55 px-3 py-2 text-sm">
+                                <span className="font-bold text-rp-text">{cruce.local}</span>
+                                <span className="text-xs font-black uppercase text-rp-muted">vs</span>
+                                <span className="font-bold text-rp-text">{cruce.visitante}</span>
+                            </div>
+                        ))}
+                    </div>
+                    <p className="mt-2 text-xs text-rp-muted">{cruces[0].ronda} · los ganadores avanzan hasta la final.</p>
                 </div>
             )}
 

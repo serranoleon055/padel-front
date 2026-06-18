@@ -5,6 +5,7 @@ import { CacheSimple } from '@/shared/lib/cache'
 
 import type {
   CambioEstadoRequest,
+  CrucePreviewResponse,
   GrupoResponse,
   ParejaRequest,
   ParejaResponse,
@@ -131,6 +132,11 @@ export const tournamentsApi = {
 
   async getCalendario(id: number) {
     const { data } = await apiClient.get<PartidoResponse[]>(`/api/torneos/${id}/calendario`)
+    return data
+  },
+
+  async getCuadroPreview(id: number, categoriaId: number) {
+    const { data } = await apiClient.get<CrucePreviewResponse[]>(`/api/torneos/${id}/cuadro-preview`, { params: { categoriaId } })
     return data
   },
 
