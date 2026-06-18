@@ -323,6 +323,7 @@ export type PartidoResponse = {
   rondaId: number | null
   ronda: string | null
   rondaOrden: number | null
+  jornada: number | null
   parejaLocalId: number | null
   parejaVisitanteId: number | null
   marcador: string | null
