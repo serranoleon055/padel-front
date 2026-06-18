@@ -9,6 +9,7 @@ import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
 import { useToast } from '@/shared/ui/Toast'
 import { formatearFecha, formatearFechaHora, formatearEnum, formatearEtapaPartido, formatearPareja, formatearMoneda } from '@/shared/lib/formatters'
 import { obtenerPartidoCampeon, obtenerNombreSubcampeon } from '@/shared/lib/tournamentView'
+import { validarMarcador } from '@/shared/lib/score'
 import type {
     CategoriaResponse,
     Genero,
@@ -175,6 +176,8 @@ export default function TournamentAdminDetailPage() {
 
     async function manejarGuardarResultado() {
         if (!partidoResultado || !marcador.trim()) { setErrorResultado('El marcador es obligatorio.'); return }
+        const errorMarcador = validarMarcador(marcador, detalle?.torneo.mejorDeSets ?? 3)
+        if (errorMarcador) { setErrorResultado(errorMarcador); return }
         setGuardandoResultado(true); setErrorResultado(null)
         try { await tournamentsApi.loadResult(id, partidoResultado.id, { marcador: marcador.trim() }); setResultadoAbierto(false); recargarDetalleYGrupos(); avisoExito('Resultado cargado') }
         catch (e: unknown) { setErrorResultado(obtenerMensajeErrorApi(e)) }
@@ -242,13 +245,17 @@ export default function TournamentAdminDetailPage() {
     const gruposSeleccionados = categoriaActiva ? grupos.filter((grupo) => grupo.categoriaNombre === categoriaActiva) : grupos
     const partidoCampeon = obtenerPartidoCampeon(partidosSeleccionados)
     const nombreSubcampeon = obtenerNombreSubcampeon(partidoCampeon)
-    const pendientes = partidosSeleccionados.filter((partido) => partido.estado === 'PENDIENTE')
+    // "Pendientes" = lo que todavía falta jugar/cargar: incluye EN_CURSO para que
+    // los partidos iniciados no queden sin botones de resultado y para que las
+    // tarjetas (Pendientes + Finalizados) sumen el total.
+    const pendientes = partidosSeleccionados.filter((partido) => partido.estado === 'PENDIENTE' || partido.estado === 'EN_CURSO')
     const finalizados = partidosSeleccionados.filter((partido) => partido.estado === 'FINALIZADO')
 
     const puedeInscribir = torneo?.estado === 'INSCRIPCION'
     const mostrarSorteo = torneo ? puedeSortear(torneo.estado, parejas.length, partidos.length) : false
     const mostrarResultados = torneo ? puedeCargarResultados(torneo.estado, pendientes.length) : false
     const puedeProgramar = torneo ? (torneo.estado === 'SORTEADO' || torneo.estado === 'EN_CURSO') : false
+    const errorMarcadorVivo = marcador.trim() ? validarMarcador(marcador, torneo?.mejorDeSets ?? 3) : null
     const categoriasTorneo = torneo ? todasCategorias.filter((categoria) => torneo.categorias.some((tc) => tc.id === categoria.id)) : []
 
     const infoSorteo = useMemo(() => {
@@ -468,17 +475,23 @@ export default function TournamentAdminDetailPage() {
                 <div className="flex flex-col gap-4">
                     <div className="rounded-lg border border-rp-border bg-rp-bg/55 p-3 text-sm">
                     <p className="text-xs font-black uppercase tracking-[0.12em] text-rp-muted">{formatearEtapaPartido(partidoResultado)} · {partidoResultado.categoriaNombre}</p>
-                    <p className="mt-2 font-bold text-rp-text">{formatearPareja(partidoResultado, 'local')}</p>
-                    <p className="text-xs text-rp-muted">vs</p>
-                    <p className="font-bold text-rp-text">{formatearPareja(partidoResultado, 'visitante')}</p>
+                    <div className="mt-2 flex items-center gap-2">
+                        <span className="rounded bg-rp-accent/15 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-rp-accent">Local</span>
+                        <span className="font-bold text-rp-text">{formatearPareja(partidoResultado, 'local')}</span>
+                    </div>
+                    <p className="my-0.5 text-xs text-rp-muted">vs</p>
+                    <div className="flex items-center gap-2">
+                        <span className="rounded bg-rp-surface-2 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-rp-muted">Visitante</span>
+                        <span className="font-bold text-rp-text">{formatearPareja(partidoResultado, 'visitante')}</span>
+                    </div>
                     {partidoResultado.fechaHora && <p className="mt-1 text-xs text-rp-muted">{formatearFechaHora(partidoResultado.fechaHora)}</p>}
                     </div>
-                    <Input label='Marcador (ej: "6-3 / 4-6 / 7-5")' value={marcador} onChange={(e) => setMarcador(e.target.value)} placeholder="6-3 / 4-6 / 7-5" />
-                    <p className="text-xs text-rp-muted">Sets separados por / (ej: 6-3 / 4-6 / 7-5). La pareja local gana si gana más sets.</p>
-                    {errorResultado && <p className="rounded-md border border-rp-danger/40 bg-rp-danger/10 px-3 py-2 text-sm font-bold text-rp-danger">{errorResultado}</p>}
+                    <Input label='Marcador (ej: "6-3 / 4-6 / 7-5")' value={marcador} onChange={(e) => setMarcador(e.target.value)} placeholder="6-3 / 4-6 / 7-5" error={errorMarcadorVivo} />
+                    <p className="text-xs text-rp-muted">Sets separados por / (ej: 6-3 / 4-6 / 7-5). El marcador se escribe desde la <strong className="text-rp-text">pareja local</strong> (arriba): gana quien gane más sets.</p>
+                    {errorResultado && !errorMarcadorVivo && <p className="rounded-md border border-rp-danger/40 bg-rp-danger/10 px-3 py-2 text-sm font-bold text-rp-danger">{errorResultado}</p>}
                     <div className="flex justify-end gap-2 pt-2">
                     <Button variant="ghost" size="sm" onClick={() => setResultadoAbierto(false)} disabled={guardandoResultado}>Cancelar</Button>
-                    <Button type="submit" size="sm" disabled={guardandoResultado}>{guardandoResultado ? 'Guardando...' : 'Guardar resultado'}</Button>
+                    <Button type="submit" size="sm" disabled={guardandoResultado || !marcador.trim() || Boolean(errorMarcadorVivo)}>{guardandoResultado ? 'Guardando...' : 'Guardar resultado'}</Button>
                     </div>
                 </div>
                 )}
@@ -516,21 +529,15 @@ export default function TournamentAdminDetailPage() {
                     <p className="text-xs font-black uppercase tracking-[0.12em] text-rp-muted">{formatearEtapaPartido(partidoWo)} · {partidoWo.categoriaNombre}</p>
                     <p className="mt-2 font-bold text-rp-text">{formatearPareja(partidoWo, 'local')} vs {formatearPareja(partidoWo, 'visitante')}</p>
                     </div>
-                    <div className="flex flex-col gap-1">
-                    <label className="text-xs font-bold text-rp-muted">Tipo</label>
-                    <select value={woTipo} onChange={(e) => setWoTipo(e.target.value as 'WALKOVER' | 'RETIRO')} className="rounded-md border border-rp-border bg-rp-bg px-3 py-2 text-sm text-rp-text focus:border-rp-accent focus:outline-none">
+                    <Select label="Tipo" value={woTipo} onChange={(e) => setWoTipo(e.target.value as 'WALKOVER' | 'RETIRO')}>
                         <option value="WALKOVER">W.O. (no se presentó — sin puntos)</option>
                         <option value="RETIRO">Retiro (abandonó en juego — ganador recibe puntos)</option>
-                    </select>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                    <label className="text-xs font-bold text-rp-muted">Pareja ganadora</label>
-                    <select value={woGanadorId} onChange={(e) => setWoGanadorId(Number(e.target.value))} className="rounded-md border border-rp-border bg-rp-bg px-3 py-2 text-sm text-rp-text focus:border-rp-accent focus:outline-none">
+                    </Select>
+                    <Select label="Pareja ganadora" value={woGanadorId} onChange={(e) => setWoGanadorId(Number(e.target.value))}>
                         <option value={0}>— Seleccionar —</option>
                         {partidoWo.parejaLocalId && <option value={partidoWo.parejaLocalId}>{formatearPareja(partidoWo, 'local')}</option>}
                         {partidoWo.parejaVisitanteId && <option value={partidoWo.parejaVisitanteId}>{formatearPareja(partidoWo, 'visitante')}</option>}
-                    </select>
-                    </div>
+                    </Select>
                     <Input label="Motivo (opcional)" value={woMotivo} onChange={(e) => setWoMotivo(e.target.value)} placeholder="Ej: lesión, ausencia justificada..." />
                     {errorWo && <p className="rounded-md border border-rp-danger/40 bg-rp-danger/10 px-3 py-2 text-sm font-bold text-rp-danger">{errorWo}</p>}
                     <div className="flex justify-end gap-2 pt-2">
