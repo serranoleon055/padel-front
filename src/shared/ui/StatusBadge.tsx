@@ -3,7 +3,7 @@ import { cn } from '@/shared/lib/utils'
 
 type StatusBadgeProps = {
   children: string
-  tone?: 'neutral' | 'live' | 'success' | 'warning'
+  tone?: 'neutral' | 'live' | 'success' | 'warning' | 'danger'
 }
 
 const tones = {
@@ -11,6 +11,7 @@ const tones = {
   live: 'bg-rp-danger/15 text-rp-danger',
   success: 'bg-rp-accent/15 text-rp-accent',
   warning: 'bg-rp-amber/15 text-rp-amber',
+  danger: 'bg-rp-danger/15 text-rp-danger',
 }
 
 export const StatusBadge = memo(function StatusBadge({ children, tone = 'neutral' }: StatusBadgeProps) {

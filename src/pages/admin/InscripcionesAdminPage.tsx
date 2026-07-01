@@ -11,7 +11,17 @@ import { AdminTable, type Column } from '@/shared/ui/AdminTable'
 import { Button } from '@/shared/ui/Button'
 import { Modal } from '@/shared/ui/Modal'
 import { Select } from '@/shared/ui/Select'
+import { StatusBadge } from '@/shared/ui/StatusBadge'
 import { useToast } from '@/shared/ui/Toast'
+
+function toneSolicitud(estado: string | null): 'success' | 'neutral' | 'danger' {
+  switch (estado) {
+    case 'APROBADA':
+    case 'CONFIRMADA': return 'success'
+    case 'RECHAZADA': return 'danger'
+    default: return 'neutral'
+  }
+}
 
 type SeleccionIntegrante = number | 'nuevo' | null
 
@@ -177,7 +187,7 @@ export default function InscripcionesAdminPage() {
       label: 'Estado',
       render: (s: SolicitudInscripcionResponse) => (
         <div className="flex flex-col gap-1">
-          <span className="text-xs font-black uppercase tracking-wide text-rp-accent">{s.estado}</span>
+          <span><StatusBadge tone={toneSolicitud(s.estado)}>{s.estado ?? ''}</StatusBadge></span>
           {s.estado === 'PENDIENTE' && integranteNecesitaResolucion(s.jugador1EsNuevo, s.jugador1Candidatos) && (
             <span className="flex items-start gap-1 rounded-md bg-rp-accent/10 px-2 py-1 text-[10px] font-bold text-rp-accent">
               <TriangleAlert size={11} className="mt-px shrink-0" />

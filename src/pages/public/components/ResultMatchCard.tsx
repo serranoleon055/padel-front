@@ -1,18 +1,18 @@
 import { CalendarDays } from 'lucide-react'
 import { memo } from 'react'
+import { NavLink } from 'react-router-dom'
 
-import { fechaCompacta, formatearPareja, instanciaPartido } from '@/shared/lib/formatters'
+import { fechaCompacta, instanciaPartido } from '@/shared/lib/formatters'
 import { obtenerLadoGanador, parsearMarcador } from '@/shared/lib/score'
 import type { SetMarcador } from '@/shared/lib/score'
 import type { PartidoResponse } from '@/shared/types/api'
+import { NombreParejaApilado } from '@/shared/ui/NombreParejaApilado'
 
 type PropsResultado = {
   elemento: PartidoResponse
 }
 
 function TarjetaResultadoInterna({ elemento }: PropsResultado) {
-  const local = formatearPareja(elemento, 'local')
-  const visitante = formatearPareja(elemento, 'visitante')
   const sets = parsearMarcador(elemento.marcador)
   const ladoGanador = obtenerLadoGanador(elemento)
   const instancia = instanciaPartido(elemento)
@@ -20,13 +20,23 @@ function TarjetaResultadoInterna({ elemento }: PropsResultado) {
   return (
     <article className="match-card">
       <div className="mc-head">
-        <span className="mc-tournament">{elemento.torneoNombre ?? 'Torneo'}</span>
+        <span className="mc-tournament">
+          {elemento.torneoId ? <NavLink to={`/torneos/${elemento.torneoId}`} className="hover:underline">{elemento.torneoNombre ?? 'Torneo'}</NavLink> : (elemento.torneoNombre ?? 'Torneo')}
+        </span>
         {instancia ? <span className="mc-round">{instancia.toUpperCase()}</span> : null}
       </div>
 
       <div className="scoreboard">
-        <FilaPareja nombre={local} sets={sets} lado="local" ganador={ladoGanador === 'local'} />
-        <FilaPareja nombre={visitante} sets={sets} lado="visitante" ganador={ladoGanador === 'visitante'} />
+        <FilaPareja
+          jugadores={[elemento.jugadorLocal1Nombre, elemento.jugadorLocal2Nombre]}
+          jugadoresIds={[elemento.jugadorLocal1Id, elemento.jugadorLocal2Id]}
+          sets={sets} lado="local" ganador={ladoGanador === 'local'}
+        />
+        <FilaPareja
+          jugadores={[elemento.jugadorVisitante1Nombre, elemento.jugadorVisitante2Nombre]}
+          jugadoresIds={[elemento.jugadorVisitante1Id, elemento.jugadorVisitante2Id]}
+          sets={sets} lado="visitante" ganador={ladoGanador === 'visitante'}
+        />
       </div>
 
       <div className="mc-footer">
@@ -34,14 +44,17 @@ function TarjetaResultadoInterna({ elemento }: PropsResultado) {
           <CalendarDays size={15} />
           {`${fechaCompacta(elemento.fechaHora)} · ${elemento.lugarNombre ?? 'Sede a confirmar'}`}
         </div>
-        <span className="mc-cat">{elemento.categoriaNombre ?? 'Categoría'}</span>
+        {elemento.categoriaId
+          ? <NavLink to={`/ranking?categoria=${elemento.categoriaId}`} className="mc-cat hover:underline">{elemento.categoriaNombre ?? 'Categoría'}</NavLink>
+          : <span className="mc-cat">{elemento.categoriaNombre ?? 'Categoría'}</span>}
       </div>
     </article>
   )
 }
 
-function FilaPareja({ nombre, sets, lado, ganador }: {
-  nombre: string
+function FilaPareja({ jugadores, jugadoresIds, sets, lado, ganador }: {
+  jugadores: Array<string | null>
+  jugadoresIds: Array<number | null>
   sets: SetMarcador[]
   lado: 'local' | 'visitante'
   ganador: boolean
@@ -49,7 +62,7 @@ function FilaPareja({ nombre, sets, lado, ganador }: {
   return (
     <div className={`sb-row ${ganador ? 'ganador' : 'perdedor'}`}>
       <div className="sb-players">
-        <NombrePareja nombre={nombre} />
+        <NombreParejaApilado jugadores={jugadores} jugadoresIds={jugadoresIds} className="sb-name" />
       </div>
       <div className="sb-mark">
         {ganador ? <span className="sb-w" aria-label="Ganador">W</span> : null}
@@ -67,20 +80,6 @@ function FilaPareja({ nombre, sets, lado, ganador }: {
           })
         )}
       </div>
-    </div>
-  )
-}
-
-function NombrePareja({ nombre }: { nombre: string }) {
-  const jugadores = nombre.split(' / ').filter(Boolean)
-  if (jugadores.length !== 2) {
-    return <div className="sb-name">{nombre}</div>
-  }
-
-  return (
-    <div className="sb-name">
-      <span className="pair-line">{jugadores[0]} /</span>
-      <span className="pair-line">{jugadores[1]}</span>
     </div>
   )
 }

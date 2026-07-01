@@ -23,6 +23,11 @@ export function resolveApiAssetUrl(url?: string | null) {
   }
 }
 
+export function resolveSedeAsset(url?: string | null) {
+  if (!url) return null
+  return url.startsWith('/uploads') ? resolveApiAssetUrl(url) : url
+}
+
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {

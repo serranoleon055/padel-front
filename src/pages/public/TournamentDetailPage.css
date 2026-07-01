@@ -5,6 +5,7 @@
   background:
     linear-gradient(rgba(7, 17, 10, .86), rgba(7, 17, 10, .82)),
     url('/images/fondo cancha.jpg') center / cover no-repeat;
+  background-attachment: fixed;
 }
 
 .tournament-detail-inner {
@@ -62,7 +63,8 @@
   grid-column: 1 / -1;
 }
 
-.td-categories span {
+.td-categories span,
+.td-categories a {
   border: 1px solid rgba(32, 72, 43, .18);
   border-radius: 999px;
   padding: 6px 10px;
@@ -70,6 +72,11 @@
   color: var(--rp-green-700);
   font-size: 12px;
   font-weight: 800;
+  text-decoration: none;
+}
+
+.td-categories a:hover {
+  background: rgba(32, 72, 43, .16);
 }
 
 .td-info-grid {
@@ -213,9 +220,11 @@
   padding: 14px;
 }
 
-.td-pair-card strong {
+.td-pair-names {
   color: var(--rp-green-800);
   font-size: 14px;
+  font-weight: 800;
+  line-height: 1.25;
 }
 
 .td-format-grid {
@@ -328,59 +337,6 @@
 }
 
 /* ── Bracket v2: flexbox con alturas que doblan por ronda ── */
-/* BRACKET_UNIT = 104px  |  BRACKET_CONN = 24px (brazo = gap/2 = 48/2) */
-.td-bracket-v2 {
-  display: flex;
-  gap: 36px;
-  overflow-x: auto;
-  padding: 2px 2px 16px;
-}
-
-.td-bcol {
-  flex: 0 0 248px;
-  min-width: 0;
-}
-
-.td-bcol-label {
-  color: var(--rp-faint);
-  font-family: var(--font-mono);
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  margin-bottom: 10px;
-}
-
-.td-bcol-slots {
-  display: flex;
-  flex-direction: column;
-}
-
-.td-bslot {
-  position: relative;
-  display: flex;
-  align-items: center;
-  /* sin padding: la altura inline controla el espaciado */
-}
-
-/* Línea entrante: entra desde el centro del gap hacia la card receptora (columnas N+1 en adelante) */
-.td-bconn-in {
-  position: absolute;
-  left: -18px; /* brazo = BRACKET_CONN = gap/2 */
-  top: 50%;
-  transform: translateY(-50%);
-  height: 2px;
-  background: var(--rp-gold);
-  display: block;
-}
-
-/* Conectores salientes: brazo horizontal desde la card hacia el centro del gap + ramal vertical al nodo */
-.td-bconn {
-  position: absolute;
-  right: -18px; /* brazo = BRACKET_CONN = gap/2 */
-  display: block;
-}
-
 .td-sb-row {
   display: flex;
   align-items: center;
@@ -400,14 +356,21 @@
   line-height: 1.2;
 }
 
-.td-sb-nombres span {
+.td-sb-nombres span,
+.td-sb-nombres a {
   color: var(--rp-muted-light);
   font-size: 11.5px;
   font-weight: 600;
   white-space: nowrap;
+  text-decoration: none;
 }
 
-.td-sb-row.win .td-sb-nombres span {
+.td-sb-nombres a:hover {
+  text-decoration: underline;
+}
+
+.td-sb-row.win .td-sb-nombres span,
+.td-sb-row.win .td-sb-nombres a {
   color: var(--rp-green-800);
   font-weight: 900;
 }
@@ -452,20 +415,6 @@
 .td-sb-check-vacio {
   flex: 0 0 auto;
   width: 13px;
-}
-
-.bconn-top {
-  top: 50%;
-  border-top: 2px solid var(--rp-gold);
-  border-right: 2px solid var(--rp-gold);
-  border-radius: 0 4px 0 0;
-}
-
-.bconn-bot {
-  bottom: 50%;
-  border-bottom: 2px solid var(--rp-gold);
-  border-right: 2px solid var(--rp-gold);
-  border-radius: 0 0 4px 0;
 }
 
 /* ── Próximos partidos ── */
@@ -667,16 +616,6 @@
   .td-standings-head .td-st-cell {
     font-size: 8px;
     letter-spacing: .3px;
-  }
-
-  /* ── Bracket: en mobile se mantiene horizontal con scroll lateral (como promedios) ── */
-  .td-bracket-v2 {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .td-bcol {
-    flex: 0 0 232px;
   }
 
   .td-match-card.compact {

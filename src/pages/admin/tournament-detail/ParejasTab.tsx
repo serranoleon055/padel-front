@@ -39,9 +39,11 @@ export function ParejasTab({ parejas, puedeInscribir, estadoTorneo, onOpenInscri
                     {pareja.esCabezaDeSerie && <span className="mt-1 block text-xs font-bold text-rp-accent">Cabeza de serie</span>}
                     </div>
                     <div className="flex items-center gap-2">
-                    <StatusBadge tone={pareja.estado === 'CAMPEON' ? 'success' : pareja.estado === 'ELIMINADA' ? 'neutral' : 'warning'}>
+                    {pareja.estado !== 'ACTIVA' && (
+                    <StatusBadge tone={pareja.estado === 'CAMPEON' ? 'success' : 'neutral'}>
                         {formatearEnum(pareja.estado)}
                     </StatusBadge>
+                    )}
                     {puedeInscribir && (
                         <button onClick={() => onEditar(pareja)} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent" title="Editar pareja">
                         <Pencil size={14} />

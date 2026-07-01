@@ -56,6 +56,7 @@
 
 html {
   scroll-behavior: smooth;
+  scrollbar-gutter: stable;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -341,6 +342,58 @@ img {
 }
 
 .nl.on {
+  background: rgba(185, 154, 88, .12);
+}
+
+.nl-dropdown {
+  position: relative;
+}
+
+.nl-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  background: transparent;
+}
+
+.nl-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  background: rgba(7, 17, 10, .98);
+  border: 1px solid rgba(185, 154, 88, .18);
+  border-radius: 10px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-4px);
+  transition: opacity .15s ease, transform .15s ease, visibility .15s ease;
+}
+
+.nl-dropdown:hover .nl-menu,
+.nl-dropdown:focus-within .nl-menu {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.nl-menu-item {
+  padding: 8px 12px;
+  border-radius: 6px;
+  color: rgba(255, 255, 255, .56);
+  font-size: 13px;
+  font-weight: 650;
+  transition: color .15s ease, background-color .15s ease;
+}
+
+.nl-menu-item:hover,
+.nl-menu-item.on {
+  color: var(--rp-pale);
   background: rgba(185, 154, 88, .12);
 }
 

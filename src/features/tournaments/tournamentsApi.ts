@@ -116,6 +116,19 @@ export const tournamentsApi = {
     invalidateHomeCache()
   },
 
+  async reapplyPointTemplate(id: number, categoriaId?: number, plantillaPuntosId?: number) {
+    const params: Record<string, number> = {}
+    if (categoriaId != null) params.categoriaId = categoriaId
+    if (plantillaPuntosId != null) params.plantillaPuntosId = plantillaPuntosId
+    const { data } = await apiClient.post<TorneoResponse>(`/api/torneos/${id}/reaplicar-plantilla-puntos`, null, {
+      params: Object.keys(params).length > 0 ? params : undefined,
+    })
+    invalidateTournamentsCache()
+    invalidateHomeCache()
+    invalidateRankingCache()
+    return data
+  },
+
   async startMatch(id: number, matchId: number) {
     const { data } = await apiClient.patch<PartidoResponse>(`/api/torneos/${id}/partidos/${matchId}/iniciar`)
     invalidateHomeCache()
@@ -124,6 +137,14 @@ export const tournamentsApi = {
 
   async loadResult(id: number, matchId: number, payload: ResultadoRequest) {
     const { data } = await apiClient.put<PartidoResponse>(`/api/torneos/${id}/partidos/${matchId}/resultado`, payload)
+    invalidateTournamentsCache()
+    invalidateHomeCache()
+    invalidateRankingCache()
+    return data
+  },
+
+  async correctResult(id: number, matchId: number, payload: ResultadoRequest) {
+    const { data } = await apiClient.patch<PartidoResponse>(`/api/torneos/${id}/partidos/${matchId}/resultado`, payload)
     invalidateTournamentsCache()
     invalidateHomeCache()
     invalidateRankingCache()

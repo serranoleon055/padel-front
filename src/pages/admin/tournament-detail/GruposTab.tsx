@@ -1,13 +1,7 @@
-import { ChevronDown } from 'lucide-react'
-
 import type { GrupoResponse } from '@/shared/types/api'
 import { StatusMessage } from '@/shared/ui/StatusMessage'
 
-export function GruposTab({ grupos, expandidos, onToggle }: {
-    grupos: GrupoResponse[]
-    expandidos: Set<number>
-    onToggle: (grupoId: number) => void
-}) {
+export function GruposTab({ grupos }: { grupos: GrupoResponse[] }) {
     if (grupos.length === 0) {
         return <StatusMessage type="empty" title="No hay grupos" description="Los grupos se crean al generar el sorteo." />
     }
@@ -24,14 +18,12 @@ export function GruposTab({ grupos, expandidos, onToggle }: {
         ).map(([nombreCat, gruposCat]) => (
             <div key={nombreCat}>
             <h3 className="mb-3 text-sm font-black uppercase tracking-[0.12em] text-rp-accent">{nombreCat}</h3>
-            <div className="grid gap-3">
+            <div className="grid gap-3 lg:grid-cols-2">
                 {gruposCat.map((grupo) => (
                 <div key={grupo.id} className="min-w-0 rounded-lg border border-rp-border bg-rp-surface/82">
-                    <button onClick={() => onToggle(grupo.id)} className="flex w-full items-center justify-between p-4">
+                    <div className="p-4 pb-2">
                     <span className="font-bold text-rp-text">{grupo.nombre}</span>
-                    <ChevronDown size={16} className={`text-rp-muted transition-transform ${expandidos.has(grupo.id) ? 'rotate-180' : ''}`} />
-                    </button>
-                    {expandidos.has(grupo.id) && (
+                    </div>
                     <div className="border-t border-rp-border px-4 py-3">
                         <table className="w-full table-fixed text-xs">
                         <thead>
@@ -68,7 +60,6 @@ export function GruposTab({ grupos, expandidos, onToggle }: {
                         </tbody>
                         </table>
                     </div>
-                    )}
                 </div>
                 ))}
             </div>

@@ -35,7 +35,7 @@ export const Modal = memo(function Modal({ children, isOpen, onClose, title, siz
 
     return (
         <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-            <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
+            <div className="absolute inset-0 bg-black/70" onClick={onClose} aria-hidden="true" />
             <div className={cn('relative flex max-h-[92svh] w-full flex-col rounded-t-2xl border border-rp-border bg-rp-surface shadow-2xl sm:max-h-[calc(100svh-2rem)] sm:rounded-xl', sizeClass[size])}>
                 <div className="flex items-center justify-between border-b border-rp-border px-4 py-3.5 sm:px-5 sm:py-4">
                 <h2 id="modal-title" className="text-base font-black text-rp-text">{title}</h2>

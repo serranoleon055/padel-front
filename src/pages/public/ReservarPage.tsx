@@ -63,6 +63,7 @@ export default function ReservarPage() {
   const [inicioSemana, setInicioSemana] = useState(() => lunesDeLaSemana(new Date()))
   const [fecha, setFecha] = useState(hoyISO())
   const [slots, setSlots] = useState<SlotDisponibilidad[]>([])
+  const [recarga, setRecarga] = useState(0)
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -81,14 +82,27 @@ export default function ReservarPage() {
       .then(([lugaresData, canchasData]) => {
         setLugares(lugaresData)
         setCanchas(canchasData)
+        const lugarGuardado = Number(sessionStorage.getItem('rp-turnos-lugar'))
+        const canchaGuardada = Number(sessionStorage.getItem('rp-turnos-cancha'))
         const primeraConCancha = lugaresData.find((lugar) => canchasData.some((cancha) => cancha.lugarId === lugar.id))
-        const lugarInicial = primeraConCancha?.id ?? lugaresData[0]?.id ?? null
+        const lugarInicial = lugaresData.some((lugar) => lugar.id === lugarGuardado)
+          ? lugarGuardado
+          : primeraConCancha?.id ?? lugaresData[0]?.id ?? null
         setLugarId(lugarInicial)
-        const primeraCancha = canchasData.find((cancha) => cancha.lugarId === lugarInicial) ?? canchasData[0] ?? null
+        const canchaGuardadaValida = canchasData.find((cancha) => cancha.id === canchaGuardada && cancha.lugarId === lugarInicial)
+        const primeraCancha = canchaGuardadaValida ?? canchasData.find((cancha) => cancha.lugarId === lugarInicial) ?? canchasData[0] ?? null
         setCanchaId(primeraCancha?.id ?? null)
       })
       .catch((e: unknown) => setError(obtenerMensajeErrorApi(e)))
   }, [])
+
+  useEffect(() => {
+    if (lugarId != null) sessionStorage.setItem('rp-turnos-lugar', String(lugarId))
+  }, [lugarId])
+
+  useEffect(() => {
+    if (canchaId != null) sessionStorage.setItem('rp-turnos-cancha', String(canchaId))
+  }, [canchaId])
 
   const canchasDelLugar = useMemo(
     () => canchas.filter((cancha) => cancha.lugarId === lugarId),
@@ -121,7 +135,18 @@ export default function ReservarPage() {
       .catch((e: unknown) => { if (activo) setError(obtenerMensajeErrorApi(e)) })
       .finally(() => { if (activo) setCargando(false) })
     return () => { activo = false }
-  }, [canchaId, fecha])
+  }, [canchaId, fecha, recarga])
+
+  useEffect(() => {
+    const pendiente = sessionStorage.getItem('rp-pago-pendiente')
+    if (!pendiente) return
+    sessionStorage.removeItem('rp-pago-pendiente')
+    const id = Number(pendiente)
+    pagosApi.obtenerPago(id)
+      .then((pago) => (pago.estado === 'APROBADO' ? null : pagosApi.cancelarPagoReserva(id)))
+      .catch(() => {})
+      .finally(() => setRecarga((n) => n + 1))
+  }, [])
 
   const canchaNombre = useMemo(
     () => canchas.find((cancha) => cancha.id === canchaId)?.nombre ?? '',
@@ -261,13 +286,14 @@ export default function ReservarPage() {
     setEnviando(true)
     setErrorFormulario(null)
     try {
-      const { initPoint } = await pagosApi.crearPagoReserva({
+      const { pagoId, initPoint } = await pagosApi.crearPagoReserva({
         canchaId,
         fecha,
         horarios: horariosElegidos,
         clienteNombre: nombre.trim(),
         clienteTelefono: telefono.trim(),
       })
+      sessionStorage.setItem('rp-pago-pendiente', String(pagoId))
       window.location.href = initPoint
     } catch (e: unknown) {
       setErrorFormulario(obtenerMensajeErrorApi(e))
@@ -296,54 +322,51 @@ export default function ReservarPage() {
       </div>
 
       <div className="mt-6">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-black uppercase tracking-[0.14em] text-rp-muted">Elegí el día</span>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => cambiarSemana(-7)}
-              disabled={!puedeRetroceder}
-              className="flex size-8 items-center justify-center rounded-md border border-rp-border text-rp-muted disabled:opacity-40 hover:enabled:border-rp-accent hover:enabled:text-rp-accent"
-              aria-label="Semana anterior"
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <button
-              onClick={() => cambiarSemana(7)}
-              disabled={!puedeAvanzar}
-              className="flex size-8 items-center justify-center rounded-md border border-rp-border text-rp-muted disabled:opacity-40 hover:enabled:border-rp-accent hover:enabled:text-rp-accent"
-              aria-label="Semana siguiente"
-            >
-              <ChevronRight size={16} />
-            </button>
+        <span className="text-xs font-black uppercase tracking-[0.14em] text-rp-muted">Elegí el día</span>
+        <div className="mt-2 flex items-stretch gap-1.5">
+          <button
+            onClick={() => cambiarSemana(-7)}
+            disabled={!puedeRetroceder}
+            className="flex shrink-0 items-center justify-center rounded-md border border-rp-border px-1.5 text-rp-muted disabled:opacity-40 hover:enabled:border-rp-accent hover:enabled:text-rp-accent"
+            aria-label="Semana anterior"
+          >
+            <ChevronLeft size={18} />
+          </button>
+          <div className="grid flex-1 grid-cols-7 gap-1.5">
+            {dias.map((dia, indice) => {
+              const iso = aISO(dia)
+              const esPasado = iso < hoy
+              const seleccionado = iso === fecha
+              return (
+                <button
+                  key={iso}
+                  disabled={esPasado}
+                  onClick={() => setFecha(iso)}
+                  className={
+                    seleccionado
+                      ? 'flex flex-col items-center gap-0.5 rounded-md border border-rp-accent bg-rp-accent px-1 py-2 text-white'
+                      : esPasado
+                        ? 'flex flex-col items-center gap-0.5 rounded-md border border-rp-border bg-rp-surface-2 px-1 py-2 text-rp-muted/55'
+                        : 'flex flex-col items-center gap-0.5 rounded-md border border-rp-border bg-rp-surface px-1 py-2 text-rp-text hover:border-rp-accent'
+                  }
+                >
+                  <span className="text-[10px] font-black uppercase tracking-wide">{NOMBRES_DIA[indice]}</span>
+                  <span className="text-base font-black leading-none">{dia.getDate()}</span>
+                  <span className="text-[9px] font-bold uppercase opacity-70">
+                    {dia.toLocaleDateString('es-AR', { month: 'short' }).replace('.', '')}
+                  </span>
+                </button>
+              )
+            })}
           </div>
-        </div>
-
-        <div className="mt-2 grid grid-cols-7 gap-1.5">
-          {dias.map((dia, indice) => {
-            const iso = aISO(dia)
-            const esPasado = iso < hoy
-            const seleccionado = iso === fecha
-            return (
-              <button
-                key={iso}
-                disabled={esPasado}
-                onClick={() => setFecha(iso)}
-                className={
-                  seleccionado
-                    ? 'flex flex-col items-center gap-0.5 rounded-md border border-rp-accent bg-rp-accent px-1 py-2 text-white'
-                    : esPasado
-                      ? 'flex flex-col items-center gap-0.5 rounded-md border border-rp-border bg-rp-surface-2 px-1 py-2 text-rp-muted/55'
-                      : 'flex flex-col items-center gap-0.5 rounded-md border border-rp-border bg-rp-surface px-1 py-2 text-rp-text hover:border-rp-accent'
-                }
-              >
-                <span className="text-[10px] font-black uppercase tracking-wide">{NOMBRES_DIA[indice]}</span>
-                <span className="text-base font-black leading-none">{dia.getDate()}</span>
-                <span className="text-[9px] font-bold uppercase opacity-70">
-                  {dia.toLocaleDateString('es-AR', { month: 'short' }).replace('.', '')}
-                </span>
-              </button>
-            )
-          })}
+          <button
+            onClick={() => cambiarSemana(7)}
+            disabled={!puedeAvanzar}
+            className="flex shrink-0 items-center justify-center rounded-md border border-rp-border px-1.5 text-rp-muted disabled:opacity-40 hover:enabled:border-rp-accent hover:enabled:text-rp-accent"
+            aria-label="Semana siguiente"
+          >
+            <ChevronRight size={18} />
+          </button>
         </div>
       </div>
 
@@ -358,7 +381,7 @@ export default function ReservarPage() {
           {slots.length === 0 && cargando ? (
             <p className="text-sm text-rp-muted">Cargando disponibilidad...</p>
           ) : slots.length === 0 ? (
-            <p className="text-sm text-rp-muted">No hay horarios configurados para esta cancha en ese día.</p>
+            <p className="text-sm text-rp-muted">No hay turnos disponibles para esta cancha en esta fecha. Probá con otro día o cancha.</p>
           ) : (
             <div className={`grid grid-cols-2 gap-2 transition-opacity duration-150 sm:grid-cols-3 ${cargando ? 'pointer-events-none opacity-50' : 'opacity-100'}`}>
               {slots.map((slot) => {
@@ -377,7 +400,7 @@ export default function ReservarPage() {
                           : 'rounded-md border border-rp-accent/50 bg-rp-accent/15 px-3 py-2 text-sm font-bold text-rp-text transition hover:bg-rp-accent/25'
                     }
                   >
-                    {rango(slot.horaInicio, slot.horaFin)}
+                    {hhmm(slot.horaInicio)}
                   </button>
                 )
               })}

@@ -21,8 +21,10 @@ export const homeApi = {
     return data
   },
 
-  async getAdminDashboard() {
-    const { data } = await apiClient.get<AdminDashboardResponse>('/api/home/admin-dashboard')
+  async getAdminDashboard(lugarId?: number) {
+    const { data } = await apiClient.get<AdminDashboardResponse>('/api/home/admin-dashboard', {
+      params: lugarId != null ? { lugarId } : undefined,
+    })
     return data
   },
 

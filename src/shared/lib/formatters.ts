@@ -61,6 +61,8 @@ export function formatearNombreRonda(valor: string | null | undefined) {
   const tamanoExplicito = normalizado.match(/ronda\s+de\s+(\d+)/)?.[1]
   const tamano = tamanoExplicito ? Number(tamanoExplicito) : null
 
+  if (tamano === 64 || normalizado.includes('treintaidosavo') || normalizado.includes('32avo')) return 'Treintaidosavos de final'
+  if (tamano === 32 || normalizado.includes('dieciseisavo') || normalizado.includes('16avo')) return 'Dieciseisavos de final'
   if (tamano === 16 || normalizado.includes('octavo')) return 'Octavos de final'
   if (tamano === 8 || normalizado.includes('cuarto')) return 'Cuartos de final'
   if (tamano === 4 || normalizado.includes('semi')) return 'Semifinales'
@@ -68,15 +70,17 @@ export function formatearNombreRonda(valor: string | null | undefined) {
   return valor
 }
 
-export function formatearPareja(partido: PartidoResponse, lado: 'local' | 'visitante') {
-  if (lado === 'local') {
-    return [partido.jugadorLocal1Nombre, partido.jugadorLocal2Nombre].filter(Boolean).join(' / ') || 'Pareja local'
-  }
+export function nombresPareja(partido: PartidoResponse, lado: 'local' | 'visitante'): string[] {
+  const nombres = lado === 'local'
+    ? [partido.jugadorLocal1Nombre, partido.jugadorLocal2Nombre]
+    : [partido.jugadorVisitante1Nombre, partido.jugadorVisitante2Nombre]
+  const presentes = nombres.filter(Boolean) as string[]
+  if (presentes.length > 0) return presentes
+  return [lado === 'local' ? 'Pareja local' : 'Pareja visitante']
+}
 
-  return (
-    [partido.jugadorVisitante1Nombre, partido.jugadorVisitante2Nombre].filter(Boolean).join(' / ') ||
-    'Pareja visitante'
-  )
+export function formatearPareja(partido: PartidoResponse, lado: 'local' | 'visitante') {
+  return nombresPareja(partido, lado).join(' / ')
 }
 
 export function formatearEtapaPartido(partido: PartidoResponse) {

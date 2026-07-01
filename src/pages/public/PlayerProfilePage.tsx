@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, NavLink } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, Trophy, Medal, TrendingUp } from 'lucide-react'
+import { ArrowLeft, ArrowRight, CalendarDays, Trophy, Medal, TrendingUp, Users } from 'lucide-react'
 
 import { playersApi } from '@/features/players/playersApi'
 import { resolveApiAssetUrl } from '@/shared/api/apiClient'
@@ -36,14 +36,55 @@ export default function PlayerProfilePage() {
   if (error) return <StatusMessage type="error" title="Error" description={error} />
   if (!historial) return null
 
-  const { jugador, ranking, partidos, torneos } = historial
-  const victorias = partidos.filter((p) => {
-    const esJugadorLocal = p.jugadorLocal1Id === id || p.jugadorLocal2Id === id
-    const esJugadorVisitante = p.jugadorVisitante1Id === id || p.jugadorVisitante2Id === id
-    return (esJugadorLocal && p.ganadorId === p.parejaLocalId) || (esJugadorVisitante && p.ganadorId === p.parejaVisitanteId)
-  }).length
-  const total = partidos.length
+  const { jugador, ranking, partidos, torneos, agenda } = historial
+
+  const resultados = partidos
+    .filter((p) => p.ganadorId != null)
+    .map((p) => {
+      const enLocal = p.jugadorLocal1Id === id || p.jugadorLocal2Id === id
+      const parejaId = enLocal ? p.parejaLocalId : p.parejaVisitanteId
+      return { partido: p, enLocal, gano: p.ganadorId === parejaId }
+    })
+
+  const victorias = resultados.filter((r) => r.gano).length
+  const total = resultados.length
   const porcentajeVictorias = total > 0 ? Math.round((victorias / total) * 100) : 0
+
+  let rachaActual = 0
+  let rachaGanadora = false
+  for (const r of resultados) {
+    if (rachaActual === 0) { rachaGanadora = r.gano; rachaActual = 1 }
+    else if (r.gano === rachaGanadora) rachaActual += 1
+    else break
+  }
+
+  let mejorRacha = 0
+  let corrida = 0
+  for (let i = resultados.length - 1; i >= 0; i--) {
+    if (resultados[i].gano) { corrida += 1; mejorRacha = Math.max(mejorRacha, corrida) }
+    else corrida = 0
+  }
+
+  const mapaCompaneros = new Map<number, { nombre: string; jugados: number; ganados: number }>()
+  for (const r of resultados) {
+    const p = r.partido
+    const companero1Id = r.enLocal ? p.jugadorLocal1Id : p.jugadorVisitante1Id
+    const companero1Nombre = r.enLocal ? p.jugadorLocal1Nombre : p.jugadorVisitante1Nombre
+    const companero2Id = r.enLocal ? p.jugadorLocal2Id : p.jugadorVisitante2Id
+    const companero2Nombre = r.enLocal ? p.jugadorLocal2Nombre : p.jugadorVisitante2Nombre
+    const companeroId = companero1Id === id ? companero2Id : companero1Id
+    const companeroNombre = companero1Id === id ? companero2Nombre : companero1Nombre
+    if (companeroId == null) continue
+    const previo = mapaCompaneros.get(companeroId) ?? { nombre: companeroNombre ?? 'Compañero', jugados: 0, ganados: 0 }
+    previo.jugados += 1
+    if (r.gano) previo.ganados += 1
+    mapaCompaneros.set(companeroId, previo)
+  }
+  const companeros = [...mapaCompaneros.entries()]
+    .map(([companeroId, datos]) => ({ id: companeroId, ...datos }))
+    .sort((a, b) => b.jugados - a.jugados)
+    .slice(0, 5)
+
   const fotoUrl = resolveApiAssetUrl(jugador.fotoUrl)
 
   return (
@@ -72,12 +113,15 @@ export default function PlayerProfilePage() {
       </section>
 
       {/* Stats rápidas */}
-      <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <p className="mb-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--rp-muted-light)' }}>Totales en todas las categorías</p>
+      <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {[
           { label: 'Torneos', value: torneos.length },
           { label: 'Partidos', value: total },
           { label: 'Victorias', value: victorias },
           { label: '% Victorias', value: `${porcentajeVictorias}%` },
+          { label: 'Racha actual', value: total > 0 ? `${rachaActual}${rachaGanadora ? 'V' : 'D'}` : '—' },
+          { label: 'Mejor racha', value: mejorRacha > 0 ? `${mejorRacha}V` : '—' },
         ].map(({ label, value }) => (
           <div key={label} className="rounded-lg border p-4 text-center transition-transform hover:-translate-y-0.5" style={{ borderColor: 'var(--rp-border-light)', background: '#fff' }}>
             <strong className="block text-2xl font-black" style={{ color: 'var(--rp-gold)' }}>{value}</strong>
@@ -86,19 +130,45 @@ export default function PlayerProfilePage() {
         ))}
       </div>
 
+      {/* Agenda: próximos torneos */}
+      {agenda.length > 0 && (
+        <section className="mb-8">
+          <h2 className="mb-3 flex items-center gap-2 text-base font-black uppercase tracking-wider" style={{ color: 'var(--rp-green-700)' }}>
+            <CalendarDays size={16} /> Próximos torneos
+          </h2>
+          <div className="space-y-2">
+            {agenda.map((t) => (
+              <NavLink key={t.torneoId} to={`/torneos/${t.torneoId}`} className="flex items-center justify-between rounded-lg border px-4 py-3 transition-transform hover:-translate-y-0.5" style={{ borderColor: 'var(--rp-border-light)', background: '#fff' }}>
+                <div>
+                  <span className="font-bold" style={{ color: 'var(--rp-green-800)' }}>{t.torneoNombre}</span>
+                  <p className="text-xs" style={{ color: 'var(--rp-muted-light)' }}>
+                    {t.categoriaNombre}{t.fechaInicio ? ` · ${formatearFecha(t.fechaInicio)}` : ''}
+                  </p>
+                </div>
+                <span className="rounded-full px-3 py-1 text-xs font-black" style={{ background: 'var(--rp-green-800)', color: 'var(--rp-pale)' }}>
+                  {formatearEnum(t.estado ?? '')}
+                </span>
+              </NavLink>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Ranking actual */}
       {ranking.length > 0 && (
         <section className="mb-8">
           <h2 className="mb-3 flex items-center gap-2 text-base font-black uppercase tracking-wider" style={{ color: 'var(--rp-green-700)' }}>
             <TrendingUp size={16} /> Ranking actual
           </h2>
-          <div className="overflow-hidden rounded-lg border" style={{ borderColor: 'var(--rp-border-light)' }}>
+          <div className="overflow-x-auto rounded-lg border" style={{ borderColor: 'var(--rp-border-light)' }}>
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-left text-xs" style={{ borderColor: 'var(--rp-border-light)', background: 'var(--rp-green-800)', color: 'var(--rp-pale)' }}>
                   <th className="px-4 py-2">Categoría</th>
                   <th className="px-4 py-2 text-center">Pos.</th>
                   <th className="px-4 py-2 text-center">Puntos</th>
+                  <th className="px-4 py-2 text-center">Torneos</th>
+                  <th className="px-4 py-2 text-center">V-D</th>
                   <th className="px-4 py-2 text-center">Tendencia</th>
                 </tr>
               </thead>
@@ -108,6 +178,8 @@ export default function PlayerProfilePage() {
                     <td className="px-4 py-3 font-bold" style={{ color: 'var(--rp-green-800)' }}>{r.categoriaNombre}</td>
                     <td className="px-4 py-3 text-center font-black" style={{ color: 'var(--rp-gold)' }}>#{r.posicion}</td>
                     <td className="px-4 py-3 text-center font-bold" style={{ color: 'var(--rp-ink)' }}>{r.puntosTotales}</td>
+                    <td className="px-4 py-3 text-center" style={{ color: 'var(--rp-muted-light)' }}>{r.torneosJugados}</td>
+                    <td className="px-4 py-3 text-center font-bold" style={{ color: 'var(--rp-ink)' }}>{r.victorias}-{r.derrotas}</td>
                     <td className="px-4 py-3 text-center text-sm font-bold">
                       <span style={{ color: r.tendencia.startsWith('+') ? 'var(--rp-green-600)' : r.tendencia.startsWith('-') ? '#c0392b' : 'var(--rp-muted-light)' }}>
                         {r.tendencia}
@@ -121,6 +193,30 @@ export default function PlayerProfilePage() {
         </section>
       )}
 
+      {/* Compañeros frecuentes */}
+      {companeros.length > 0 && (
+        <section className="mb-8">
+          <h2 className="mb-3 flex items-center gap-2 text-base font-black uppercase tracking-wider" style={{ color: 'var(--rp-green-700)' }}>
+            <Users size={16} /> Compañeros frecuentes
+          </h2>
+          <div className="space-y-2">
+            {companeros.map((companero) => {
+              const porcentaje = companero.jugados > 0 ? Math.round((companero.ganados / companero.jugados) * 100) : 0
+              return (
+                <div key={companero.id} className="flex items-center justify-between rounded-lg border px-4 py-3 transition-transform hover:-translate-y-0.5" style={{ borderColor: 'var(--rp-border-light)', background: '#fff' }}>
+                  <NavLink to={`/jugadores/${companero.id}`} className="font-bold" style={{ color: 'var(--rp-green-800)' }}>{companero.nombre}</NavLink>
+                  <div className="flex items-center gap-4 text-sm">
+                    <span style={{ color: 'var(--rp-muted-light)' }}>{companero.jugados} {companero.jugados === 1 ? 'partido' : 'partidos'}</span>
+                    <span className="font-black" style={{ color: 'var(--rp-green-600)' }}>{companero.ganados}V · {companero.jugados - companero.ganados}D</span>
+                    <span className="font-black" style={{ color: 'var(--rp-gold)' }}>{porcentaje}%</span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </section>
+      )}
+
       {/* Historial de torneos */}
       {torneos.length > 0 && (
         <section className="mb-8">
@@ -128,7 +224,7 @@ export default function PlayerProfilePage() {
             <Trophy size={16} /> Torneos
           </h2>
           <div className="space-y-2">
-            {torneos.map((t) => (
+            {torneos.slice(0, 5).map((t) => (
               <div key={t.torneoId} className="flex items-center justify-between rounded-lg border px-4 py-3 transition-transform hover:-translate-y-0.5" style={{ borderColor: 'var(--rp-border-light)', background: '#fff' }}>
                 <div>
                   <NavLink to={`/torneos/${t.torneoId}`} className="font-bold" style={{ color: 'var(--rp-green-800)' }}>
@@ -136,7 +232,9 @@ export default function PlayerProfilePage() {
                   </NavLink>
                   <p className="text-xs" style={{ color: 'var(--rp-muted-light)' }}>
                     {t.categoriaNombre} · {formatearFecha(t.fechaInicio)}
-                    {t.mejorRonda !== '—' && ` · Hasta: ${t.mejorRonda}`}
+                    {t.estado === 'FINALIZADO'
+                      ? (t.mejorRonda !== '—' && !t.fueGanador ? ` · Hasta: ${t.mejorRonda}` : '')
+                      : ' · En curso'}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
@@ -146,6 +244,16 @@ export default function PlayerProfilePage() {
               </div>
             ))}
           </div>
+          {torneos.length > 5 && (
+            <NavLink
+              to={`/jugadores/${id}/torneos`}
+              className="mt-4 flex items-center justify-center gap-2 rounded-lg border px-4 py-3 text-sm font-black uppercase tracking-wider transition-transform hover:-translate-y-0.5"
+              style={{ borderColor: 'var(--rp-green-600)', color: 'var(--rp-green-700)', background: '#fff' }}
+            >
+              Ver todos los torneos ({torneos.length})
+              <ArrowRight size={15} />
+            </NavLink>
+          )}
         </section>
       )}
 

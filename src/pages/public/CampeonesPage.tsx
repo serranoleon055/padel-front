@@ -10,6 +10,7 @@ import { fechaCompacta } from '@/shared/lib/formatters'
 import type { CampeonResponse, CategoriaResponse, Genero } from '@/shared/types/api'
 import { Pagination } from '@/shared/ui/Pagination'
 import { StatusMessage } from '@/shared/ui/StatusMessage'
+import { ParejaCampeona } from '@/pages/public/components/ParejaCampeona'
 
 const TAMANO_PAGINA = 10
 
@@ -67,7 +68,7 @@ export default function CampeonesPage() {
   const offset = (pagina - 1) * TAMANO_PAGINA
 
   return (
-    <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
+    <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
       <NavLink to="/" className="mb-6 flex items-center gap-2 text-sm" style={{ color: 'var(--rp-muted-light)' }}>
         <ArrowLeft size={15} /> Volver al inicio
       </NavLink>
@@ -133,22 +134,28 @@ export default function CampeonesPage() {
                 <tr key={`${item.torneoId}-${item.categoriaId}`}>
                   <td><div className="ct-num">{String(offset + index + 1).padStart(2, '0')}</div></td>
                   <td>
-                    <div className="ct-torneo">{item.torneoNombre ?? 'Torneo'}</div>
+                    <div className="ct-torneo">
+                      {item.torneoId ? <NavLink to={`/torneos/${item.torneoId}`} className="hover:underline">{item.torneoNombre ?? 'Torneo'}</NavLink> : (item.torneoNombre ?? 'Torneo')}
+                    </div>
                     <div className="ct-fecha">{`${fechaCompacta(item.fecha)} - ${item.lugarNombre ?? 'Sede a confirmar'}`}</div>
                   </td>
                   <td>
                     <div className="ct-pair">
                       <div className="ct-trophy"><Trophy size={20} /></div>
                       <div className="ct-names">
-                        {item.campeonaNombre ?? 'Sin dato'}
-                        {item.subcampeonaNombre && <div className="ct-fecha">Subcampeón: {item.subcampeonaNombre}</div>}
+                        <ParejaCampeona j1Id={item.campeonaJugador1Id} j1Nombre={item.campeonaJugador1Nombre} j2Id={item.campeonaJugador2Id} j2Nombre={item.campeonaJugador2Nombre} fallback={item.campeonaNombre} />
+                        {item.subcampeonaNombre && <div className="ct-fecha">Subcampeón: <ParejaCampeona j1Id={item.subcampeonaJugador1Id} j1Nombre={item.subcampeonaJugador1Nombre} j2Id={item.subcampeonaJugador2Id} j2Nombre={item.subcampeonaJugador2Nombre} fallback={item.subcampeonaNombre} /></div>}
                       </div>
                     </div>
                   </td>
                   <td>
                     <div className="ct-score">{resultadoFinal(item)}</div>
                   </td>
-                  <td className="ct-cat"><span className="ct-pill">{item.categoriaNombre ?? 'Categoría'}</span></td>
+                  <td className="ct-cat">
+                    {item.categoriaId
+                      ? <NavLink to={`/ranking?categoria=${item.categoriaId}`} className="ct-pill hover:underline">{item.categoriaNombre ?? 'Categoría'}</NavLink>
+                      : <span className="ct-pill">{item.categoriaNombre ?? 'Categoría'}</span>}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -160,7 +167,9 @@ export default function CampeonesPage() {
                 <div className="champ-card-row">
                   <div className="champ-card-num">{String(offset + index + 1).padStart(2, '0')}</div>
                   <div className="champ-card-info">
-                    <div className="champ-card-torneo">{item.torneoNombre ?? 'Torneo'}</div>
+                    <div className="champ-card-torneo">
+                      {item.torneoId ? <NavLink to={`/torneos/${item.torneoId}`} className="hover:underline">{item.torneoNombre ?? 'Torneo'}</NavLink> : (item.torneoNombre ?? 'Torneo')}
+                    </div>
                     <div className="champ-card-fecha">
                       {`${fechaCompacta(item.fecha)} - ${item.lugarNombre ?? 'Sede a confirmar'} - ${item.categoriaNombre ?? 'Categoría'}`}
                     </div>
@@ -169,8 +178,13 @@ export default function CampeonesPage() {
                 <div className="champ-card-winner">
                   <div className="ct-trophy"><Trophy size={20} /></div>
                   <div>
-                    <div className="champ-card-names">{item.campeonaNombre ?? 'Sin dato'}</div>
-                    <div className="champ-card-score">{resultadoFinal(item)}{item.subcampeonaNombre ? ` · Subcampeón: ${item.subcampeonaNombre}` : ''}</div>
+                    <div className="champ-card-names">
+                      <ParejaCampeona j1Id={item.campeonaJugador1Id} j1Nombre={item.campeonaJugador1Nombre} j2Id={item.campeonaJugador2Id} j2Nombre={item.campeonaJugador2Nombre} fallback={item.campeonaNombre} />
+                    </div>
+                    <div className="champ-card-score">
+                      {resultadoFinal(item)}
+                      {item.subcampeonaNombre ? <> · Subcampeón: <ParejaCampeona j1Id={item.subcampeonaJugador1Id} j1Nombre={item.subcampeonaJugador1Nombre} j2Id={item.subcampeonaJugador2Id} j2Nombre={item.subcampeonaJugador2Nombre} fallback={item.subcampeonaNombre} /></> : null}
+                    </div>
                   </div>
                 </div>
               </article>

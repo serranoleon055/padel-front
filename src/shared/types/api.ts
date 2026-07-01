@@ -6,7 +6,7 @@ export type EstadoTorneo = 'BORRADOR' | 'INSCRIPCION' | 'SORTEADO' | 'EN_CURSO' 
 
 export type FormatoTorneo = 'MINITORNEO' | 'TORNEO_LARGO' | 'LIGA' | 'ELIMINACION_DIRECTA'
 
-export type TipoSorteo = 'ALEATORIO' | 'CABEZAS_SERIE' | 'COMBINADO'
+export type TipoSorteo = 'ALEATORIO' | 'CABEZAS_SERIE'
 
 export type EstadoPartido = 'PENDIENTE' | 'EN_CURSO' | 'FINALIZADO' | 'BYE' | 'WALKOVER' | 'RETIRO'
 
@@ -19,6 +19,7 @@ export type CanchaResponse = {
   lugarNombre: string | null
   precioPorHora?: number | null
   seniaPorcentaje?: number | null
+  seniaObligatoria: boolean
 }
 
 export type FasePartido = 'GRUPOS' | 'ELIMINACION'
@@ -112,6 +113,7 @@ export type JugadorHistorialResponse = {
   ranking: RankingResponse[]
   partidos: PartidoResponse[]
   torneos: JugadorHistorialTorneoItem[]
+  agenda: JugadorHistorialTorneoItem[]
 }
 
 export type LugarResponse = {
@@ -148,6 +150,43 @@ export type ConfiguracionPuntosRequest = {
   orden: number
 }
 
+export type ConfiguracionCategoriaTorneoRequest = {
+  categoriaId: number
+  formato: FormatoTorneo
+  plantillaFormatoId?: number | null
+  plantillaPuntosId?: number | null
+  cantidadParejasObjetivo?: number | null
+  cantidadGrupos?: number | null
+  parejasPorGrupo?: number | null
+  avanzanPorGrupo?: number | null
+  incluyeFaseGrupos: boolean
+  incluyeEliminacion: boolean
+  tipoSorteo: TipoSorteo
+  mejorDeSets?: number | null
+  cupo?: number | null
+  configuracionPuntos: ConfiguracionPuntosRequest[]
+}
+
+export type ConfiguracionCategoriaTorneoResponse = {
+  categoriaId: number
+  categoriaNombre: string | null
+  formato: FormatoTorneo
+  plantillaFormatoId: number | null
+  plantillaFormatoNombre: string | null
+  plantillaPuntosId: number | null
+  plantillaPuntosNombre: string | null
+  cantidadParejasObjetivo: number | null
+  cantidadGrupos: number | null
+  parejasPorGrupo: number | null
+  avanzanPorGrupo: number | null
+  incluyeFaseGrupos: boolean
+  incluyeEliminacion: boolean
+  tipoSorteo: TipoSorteo
+  mejorDeSets: number | null
+  cupo: number | null
+  configuracionPuntos: ConfiguracionPuntosResponse[]
+}
+
 export type PlantillaFormatoRequest = {
   nombre: string
   descripcion?: string | null
@@ -175,6 +214,7 @@ export type PlantillaPuntosRondaResponse = PlantillaPuntosRondaRequest & {
 export type PlantillaPuntosRequest = {
   nombre: string
   descripcion?: string | null
+  formatoTorneo?: FormatoTorneo | null
   activo: boolean
   rondas: PlantillaPuntosRondaRequest[]
 }
@@ -183,6 +223,7 @@ export type PlantillaPuntosResponse = {
   id: number
   nombre: string
   descripcion: string | null
+  formatoTorneo: FormatoTorneo | null
   activo: boolean
   rondas: PlantillaPuntosRondaResponse[]
 }
@@ -214,6 +255,7 @@ export type TorneoRequest = {
   lugarId?: number | null
   categoriaIds: number[]
   configuracionPuntos: ConfiguracionPuntosRequest[]
+  configuracionesCategoria: ConfiguracionCategoriaTorneoRequest[]
 }
 
 export type CambioEstadoRequest = {
@@ -269,6 +311,7 @@ export type TorneoResponse = {
   cantidadPartidos: number
   partidosFinalizados: number
   configuracionPuntos?: ConfiguracionPuntosResponse[]
+  configuracionesCategoria?: ConfiguracionCategoriaTorneoResponse[]
 }
 
 export type ConfiguracionPuntosResponse = {
@@ -361,6 +404,14 @@ export type CampeonResponse = {
   campeonaId: number | null
   campeonaNombre: string | null
   subcampeonaNombre: string | null
+  campeonaJugador1Id: number | null
+  campeonaJugador1Nombre: string | null
+  campeonaJugador2Id: number | null
+  campeonaJugador2Nombre: string | null
+  subcampeonaJugador1Id: number | null
+  subcampeonaJugador1Nombre: string | null
+  subcampeonaJugador2Id: number | null
+  subcampeonaJugador2Nombre: string | null
   marcadorFinal: string | null
   fecha: string | null
   lugarNombre: string | null
@@ -371,8 +422,58 @@ export type HomeSummaryResponse = {
   jugadoresRegistrados: number
   partidosFinalizados: number
   partidosEnVivo: number
-  torneosTotales: number
   categoriasActivas: number
+}
+
+export type TurnoResumenResponse = {
+  canchaId: number | null
+  canchaNombre: string
+  horaInicio: string
+  horaFin: string
+  clienteNombre: string
+}
+
+export type ReservaPendienteResumen = {
+  id: number
+  canchaId: number | null
+  canchaNombre: string | null
+  fecha: string | null
+  horaInicio: string | null
+  horaFin: string | null
+  estado: string | null
+  clienteNombre: string | null
+  clienteTelefono: string | null
+  codigo: string | null
+}
+
+export type SolicitudPendienteResumen = {
+  id: number
+  torneoId: number | null
+  torneoNombre: string | null
+  categoriaId: number | null
+  categoriaNombre: string | null
+  estado: string | null
+  jugador1: string | null
+  jugador2: string | null
+  telefonoContacto: string | null
+}
+
+export type HorarioSede = { dias: string; horas: string }
+export type FotoSede = { url: string; alt: string }
+
+export type ConfiguracionSede = {
+  email: string | null
+  telefono: string | null
+  whatsapp: string | null
+  instagram: string | null
+  facebook: string | null
+  direccion: string | null
+  mapsEmbedUrl: string | null
+  horarios: HorarioSede[]
+  galeria: FotoSede[]
+  formasPago: string[]
+  mercadoPagoAccessToken?: string | null
+  mercadoPagoConfigurado?: boolean
 }
 
 export type PosicionGrupoResponse = {
@@ -398,12 +499,30 @@ export type GrupoResponse = {
   posiciones: PosicionGrupoResponse[]
 }
 
+export type CanchaEstadoDashboard = {
+  id: number
+  nombre: string
+  ocupadaAhora: boolean
+}
+
 export type AdminDashboardResponse = {
   summary: HomeSummaryResponse
   temporadaActiva: TemporadaResponse | null
   ultimosTorneos: TorneoResponse[]
   torneosEnVivo: TorneoResponse[]
-  evolucionMeses: number[]
+  canchasTotales: number
+  canchasOcupadasAhora: number
+  canchasLibresAhora: number
+  turnosDisponiblesHoy: number
+  canchas: CanchaEstadoDashboard[]
+  reservasHoy: number
+  reservasPendientes: number
+  solicitudesPendientes: number
+  ingresoEstimadoHoy: number | null
+  turnosPorDiaSemana: number[]
+  proximosTurnosHoy: TurnoResumenResponse[]
+  reservasPendientesLista: ReservaPendienteResumen[]
+  solicitudesPendientesLista: SolicitudPendienteResumen[]
 }
 
 export type PagedResponse<T> = {

@@ -1,7 +1,7 @@
 import { CalendarDays, Filter, MapPin, Search, Trophy, Users } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { memo, useCallback, useEffect, useMemo, useState } from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useSearchParams } from 'react-router-dom'
 
 import { brand } from '@/config/brand'
 import { resolveApiAssetUrl } from '@/shared/api/apiClient'
@@ -10,10 +10,11 @@ import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
 import { formatearFecha, formatearEnum, formatearMoneda } from '@/shared/lib/formatters'
 import type { CategoriaResponse, EstadoTorneo, Genero, TorneoResponse } from '@/shared/types/api'
 import { Pagination } from '@/shared/ui/Pagination'
+import { SegmentedToggle } from '@/shared/ui/SegmentedToggle'
 import { StatusMessage } from '@/shared/ui/StatusMessage'
 import './TournamentsPage.css'
 
-const estadosPublicos: EstadoTorneo[] = ['EN_CURSO', 'FINALIZADO']
+const estadosPublicos: EstadoTorneo[] = ['INSCRIPCION', 'SORTEADO', 'EN_CURSO', 'FINALIZADO']
 const opcionesEstado: EstadoTorneo[] = estadosPublicos
 const opcionesGenero: Genero[] = ['MASCULINO', 'FEMENINO']
 const TAMANO_PAGINA = 9
@@ -73,10 +74,21 @@ const TarjetaTorneo = memo(function TarjetaTorneo({ torneo }: { torneo: TorneoRe
 export default function TournamentsPage() {
   const [torneos, setTorneos] = useState<TorneoResponse[]>([])
   const [busqueda, setBusqueda] = useState('')
-  const [estado, setEstado] = useState<EstadoTorneo | ''>('')
-  const [genero, setGenero] = useState<Genero | ''>('')
-  const [categoriaId, setCategoriaId] = useState('')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const estado = (searchParams.get('estado') ?? '') as EstadoTorneo | ''
+  const genero = (searchParams.get('genero') ?? '') as Genero | ''
+  const categoriaId = searchParams.get('categoria') ?? ''
   const [pagina, setPagina] = useState(1)
+
+  const actualizarFiltroUrl = useCallback((clave: string, valor: string) => {
+    setSearchParams((prev) => {
+      const siguiente = new URLSearchParams(prev)
+      if (valor) siguiente.set(clave, valor)
+      else siguiente.delete(clave)
+      return siguiente
+    }, { replace: true })
+    setPagina(1)
+  }, [setSearchParams])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -111,19 +123,16 @@ export default function TournamentsPage() {
   }, [])
 
   const manejarCambioEstado = useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
-    setEstado(event.target.value as EstadoTorneo | '')
-    setPagina(1)
-  }, [])
+    actualizarFiltroUrl('estado', event.target.value)
+  }, [actualizarFiltroUrl])
 
-  const manejarCambioGenero = useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
-    setGenero(event.target.value as Genero | '')
-    setPagina(1)
-  }, [])
+  const manejarCambioGenero = useCallback((valor: Genero | '') => {
+    actualizarFiltroUrl('genero', valor)
+  }, [actualizarFiltroUrl])
 
   const manejarCambioCategoria = useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
-    setCategoriaId(event.target.value)
-    setPagina(1)
-  }, [])
+    actualizarFiltroUrl('categoria', event.target.value)
+  }, [actualizarFiltroUrl])
 
   const torneosFiltrados = useMemo(() => {
     const busquedaNormalizada = busqueda.trim().toLowerCase()
@@ -245,19 +254,6 @@ export default function TournamentsPage() {
 
             <select
               className="filter-field"
-              onChange={manejarCambioGenero}
-              value={genero}
-            >
-              <option value="">Género</option>
-              {opcionesGenero.map((opcion) => (
-                <option key={opcion} value={opcion}>
-                  {formatearEnum(opcion)}
-                </option>
-              ))}
-            </select>
-
-            <select
-              className="filter-field"
               onChange={manejarCambioCategoria}
               value={categoriaId}
             >
@@ -269,6 +265,13 @@ export default function TournamentsPage() {
               ))}
             </select>
           </div>
+
+          <SegmentedToggle
+            className="mt-3"
+            opciones={[{ valor: '', label: 'Todos' }, ...opcionesGenero.map((opcion) => ({ valor: opcion, label: formatearEnum(opcion) }))]}
+            valor={genero}
+            onChange={manejarCambioGenero}
+          />
         </div>
 
         {torneosFiltrados.length > 0 ? (
