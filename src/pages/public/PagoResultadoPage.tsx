@@ -17,6 +17,9 @@ export default function PagoResultadoPage() {
   const [cargando, setCargando] = useState(true)
   const reintentos = useRef(0)
 
+  const estadoMercadoPago = (searchParams.get('status') ?? searchParams.get('collection_status') ?? '').toLowerCase()
+  const pagoFallido = ['rejected', 'failure', 'cancelled', 'cancel', 'null'].includes(estadoMercadoPago)
+
   useEffect(() => {
     if (!pagoId) {
       setError('No se encontró el pago.')
@@ -32,7 +35,7 @@ export default function PagoResultadoPage() {
           if (!activo) return
           setPago(datos)
           setError(null)
-          if (datos.estado === 'PENDIENTE' && reintentos.current < MAXIMO_REINTENTOS) {
+          if (datos.estado === 'PENDIENTE' && !pagoFallido && reintentos.current < MAXIMO_REINTENTOS) {
             reintentos.current += 1
             temporizador = setTimeout(consultar, INTERVALO_REINTENTO_MS)
           } else {
@@ -46,9 +49,16 @@ export default function PagoResultadoPage() {
         })
     }
 
-    consultar()
+    async function iniciar() {
+      if (pagoFallido) {
+        try { await pagosApi.cancelarPagoReserva(Number(pagoId)) } catch { /* el turno se libera igual al expirar */ }
+      }
+      if (activo) consultar()
+    }
+
+    iniciar()
     return () => { activo = false; if (temporizador) clearTimeout(temporizador) }
-  }, [pagoId])
+  }, [pagoId, pagoFallido])
 
   const esReserva = pago?.concepto === 'RESERVA'
 

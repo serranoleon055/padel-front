@@ -78,7 +78,7 @@ function SelectorJugador({ titulo, valor, onChange, generoCategoria }: {
         <div className="mt-2 grid gap-3 sm:grid-cols-2">
           <Input label="Nombre" value={valor.nombre ?? ''} onChange={(e) => onChange({ ...valor, nombre: e.target.value, genero: generoCategoria ?? valor.genero })} placeholder="Juan" />
           <Input label="Apellido" value={valor.apellido ?? ''} onChange={(e) => onChange({ ...valor, apellido: e.target.value, genero: generoCategoria ?? valor.genero })} placeholder="Pérez" />
-          <Input label="Fecha de nacimiento (opcional)" type="date" value={valor.fechaNacimiento ?? ''} onChange={(e) => onChange({ ...valor, fechaNacimiento: e.target.value })} />
+          <Input label="Nacimiento (opcional)" type="date" value={valor.fechaNacimiento ?? ''} onChange={(e) => onChange({ ...valor, fechaNacimiento: e.target.value })} />
           <Select label="Posición (opcional)" value={valor.posicionJuego ?? ''} onChange={(e) => onChange({ ...valor, posicionJuego: e.target.value || undefined })} placeholder="Sin definir">
             <option value="DRIVE">Drive</option>
             <option value="REVES">Revés</option>

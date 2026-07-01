@@ -15,8 +15,7 @@ type PropsBarraTicker = {
 
 const MIN_ELEMENTOS = 8
 const PIXELES_POR_SEGUNDO = 46
-const DURACION_MIN = 26
-const DURACION_MAX = 90
+const DURACION_MINIMA = 8
 
 function BarraTickerInterna({ items, label = 'NOVEDADES', variant = 'default' }: PropsBarraTicker) {
   const refGrupo = useRef<HTMLDivElement | null>(null)
@@ -34,7 +33,7 @@ function BarraTickerInterna({ items, label = 'NOVEDADES', variant = 'default' }:
     const actualizarDuracion = () => {
       const ancho = grupo.scrollWidth
       if (ancho <= 0) return
-      setDuracion(Math.min(DURACION_MAX, Math.max(DURACION_MIN, ancho / PIXELES_POR_SEGUNDO)))
+      setDuracion(Math.max(DURACION_MINIMA, ancho / PIXELES_POR_SEGUNDO))
     }
 
     actualizarDuracion()

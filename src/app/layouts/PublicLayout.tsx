@@ -1,14 +1,23 @@
+import { ChevronDown } from 'lucide-react'
 import { memo, useCallback, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { Footer } from '@/shared/ui/Footer'
 import { brand } from '@/config/brand'
 
-const navItems = [
+const navPrincipal = [
   { to: '/', label: 'Inicio' },
+  { to: '/reservar', label: 'Turnos' },
   { to: '/torneos', label: 'Torneos' },
   { to: '/ranking', label: 'Ranking' },
-  { to: '/reservar', label: 'Reservar' },
-  { to: '/login', label: 'Admin' },
+  { to: '/precios', label: 'Precios' },
+]
+
+const navMas = [
+  { to: '/la-sede', label: 'Servicios y galería' },
+  { to: '/reglas', label: 'Reglas' },
+  { to: '/contacto', label: 'Contacto' },
+  { to: '/terminos', label: 'Términos' },
+  { to: '/privacidad', label: 'Privacidad' },
 ]
 
 const PublicNavbar = memo(function PublicNavbar({
@@ -32,7 +41,7 @@ const PublicNavbar = memo(function PublicNavbar({
         </NavLink>
 
         <div className="nlinks">
-          {navItems.slice(0, 4).map((item) => (
+          {navPrincipal.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -42,6 +51,24 @@ const PublicNavbar = memo(function PublicNavbar({
               {item.label}
             </NavLink>
           ))}
+
+          <div className="nl-dropdown">
+            <button type="button" className="nl nl-more" aria-haspopup="true">
+              Más
+              <ChevronDown size={14} />
+            </button>
+            <div className="nl-menu">
+              {navMas.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  className={({ isActive }) => `nl-menu-item ${isActive ? 'on' : ''}`}
+                >
+                  {item.label}
+                </NavLink>
+              ))}
+            </div>
+          </div>
         </div>
 
         <NavLink to="/login" className="nav-cta">
@@ -59,7 +86,7 @@ const PublicNavbar = memo(function PublicNavbar({
 
       {mobileOpen && (
         <div className="mobile-nav-overlay">
-          {navItems.map((item) => (
+          {[...navPrincipal, ...navMas, { to: '/login', label: 'Admin' }].map((item) => (
             <NavLink
               key={item.to}
               to={item.to}

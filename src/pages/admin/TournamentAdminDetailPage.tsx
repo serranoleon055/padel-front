@@ -1,14 +1,13 @@
-import { ArrowLeft, CalendarDays, ClipboardList, MapPin, Settings, Shuffle, Trophy, Users } from 'lucide-react'
+import { ArrowLeft, ClipboardList, Settings, Shuffle } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { NavLink, useParams } from 'react-router-dom'
+import { NavLink, useParams, useSearchParams } from 'react-router-dom'
 
 import { categoriesApi } from '@/features/catalog/catalogApi'
 import { playersApi } from '@/features/players/playersApi'
 import { tournamentsApi } from '@/features/tournaments/tournamentsApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
 import { useToast } from '@/shared/ui/Toast'
-import { formatearFecha, formatearFechaHora, formatearEnum, formatearEtapaPartido, formatearPareja, formatearMoneda } from '@/shared/lib/formatters'
-import { validarMarcador } from '@/shared/lib/score'
+import { formatearFecha, formatearEnum, formatearEtapaPartido, formatearPareja, formatearMoneda } from '@/shared/lib/formatters'
 import type {
     CategoriaResponse,
     CrucePreviewResponse,
@@ -48,8 +47,14 @@ export default function TournamentAdminDetailPage() {
     const [error, setError] = useState<string | null>(null)
     const [errorAccion, setErrorAccion] = useState<string | null>(null)
 
-    const [pestana, setPestana] = useState<'parejas' | 'partidos' | 'grupos'>('parejas')
-    const [nombreCategoriaSeleccionada, setNombreCategoriaSeleccionada] = useState('')
+    const [searchParams] = useSearchParams()
+    const [pestana, setPestana] = useState<'resumen' | 'parejas' | 'partidos' | 'grupos'>(() => {
+        const forzada = searchParams.get('vista')
+        if (forzada === 'resumen' || forzada === 'parejas' || forzada === 'partidos' || forzada === 'grupos') return forzada
+        const guardada = localStorage.getItem(`rp-admin-torneo-${id}-pestana`)
+        return guardada === 'parejas' || guardada === 'partidos' || guardada === 'grupos' ? guardada : 'resumen'
+    })
+    const [nombreCategoriaSeleccionada, setNombreCategoriaSeleccionada] = useState(() => localStorage.getItem(`rp-admin-torneo-${id}-categoria`) ?? '')
     const [cambiandoEstado, setCambiandoEstado] = useState(false)
     const [retrocediendo, setRetrocediendo] = useState(false)
     const [confirmarSorteo, setConfirmarSorteo] = useState(false)
@@ -65,18 +70,6 @@ export default function TournamentAdminDetailPage() {
     const [parejaARetirar, setParejaARetirar] = useState<{ id: number; name: string } | null>(null)
     const [retirandoPareja, setRetirandoPareja] = useState(false)
 
-    const [resultadoAbierto, setResultadoAbierto] = useState(false)
-    const [partidoResultado, setPartidoResultado] = useState<PartidoResponse | null>(null)
-    const [marcador, setMarcador] = useState('')
-    const [errorResultado, setErrorResultado] = useState<string | null>(null)
-    const [guardandoResultado, setGuardandoResultado] = useState(false)
-
-    const [programacionAbierta, setProgramacionAbierta] = useState(false)
-    const [partidoProgramacion, setPartidoProgramacion] = useState<PartidoResponse | null>(null)
-    const [fechaProgramacion, setFechaProgramacion] = useState('')
-    const [errorProgramacion, setErrorProgramacion] = useState<string | null>(null)
-    const [guardandoProgramacion, setGuardandoProgramacion] = useState(false)
-
     const [woAbierto, setWoAbierto] = useState(false)
     const [partidoWo, setPartidoWo] = useState<PartidoResponse | null>(null)
     const [woGanadorId, setWoGanadorId] = useState<number>(0)
@@ -85,7 +78,6 @@ export default function TournamentAdminDetailPage() {
     const [errorWo, setErrorWo] = useState<string | null>(null)
     const [guardandoWo, setGuardandoWo] = useState(false)
 
-    const [gruposExpandidos, setGruposExpandidos] = useState<Set<number>>(new Set())
     const [cruces, setCruces] = useState<CrucePreviewResponse[]>([])
     const { success: avisoExito } = useToast()
 
@@ -124,6 +116,11 @@ export default function TournamentAdminDetailPage() {
         tournamentsApi.getCuadroPreview(id, categoria.id).then(setCruces).catch(() => setCruces([]))
     }, [id, nombreCategoriaSeleccionada, detalle])
 
+    useEffect(() => { localStorage.setItem(`rp-admin-torneo-${id}-pestana`, pestana) }, [id, pestana])
+    useEffect(() => {
+        if (nombreCategoriaSeleccionada) localStorage.setItem(`rp-admin-torneo-${id}-categoria`, nombreCategoriaSeleccionada)
+    }, [id, nombreCategoriaSeleccionada])
+
     async function manejarCambioEstado() {
         if (!detalle) return
         const siguiente = ESTADO_SIGUIENTE[detalle.torneo.estado]
@@ -151,7 +148,7 @@ export default function TournamentAdminDetailPage() {
         finally { setSorteando(false) }
     }
 
-    async function manejarGuardarPareja() {
+    async function manejarGuardarPareja(continuar = false) {
         if (!formularioPareja.jugador1Id || !formularioPareja.jugador2Id || !formularioPareja.categoriaId) { setErrorPareja('Seleccioná ambos jugadores y la categoría.'); return }
         if (formularioPareja.jugador1Id === formularioPareja.jugador2Id) { setErrorPareja('Los jugadores deben ser distintos.'); return }
         setGuardandoPareja(true); setErrorPareja(null)
@@ -163,7 +160,13 @@ export default function TournamentAdminDetailPage() {
                 await tournamentsApi.addPair(id, formularioPareja)
                 avisoExito('Pareja inscripta')
             }
-            setParejaAbierta(false); setParejaEditandoId(null); setFormularioPareja(PAREJA_VACIA); recargarDetalle()
+            recargarDetalle()
+            if (continuar && parejaEditandoId == null) {
+                setFormularioPareja((f) => ({ ...f, jugador1Id: 0, jugador2Id: 0, esCabezaDeSerie: false }))
+                setErrorPareja(null)
+            } else {
+                setParejaAbierta(false); setParejaEditandoId(null); setFormularioPareja(PAREJA_VACIA)
+            }
         }
         catch (e: unknown) { setErrorPareja(obtenerMensajeErrorApi(e)) }
         finally { setGuardandoPareja(false) }
@@ -183,36 +186,23 @@ export default function TournamentAdminDetailPage() {
         catch (e: unknown) { setErrorAccion(obtenerMensajeErrorApi(e)) }
     }, [id])
 
-    async function manejarGuardarResultado() {
-        if (!partidoResultado || !marcador.trim()) { setErrorResultado('El marcador es obligatorio.'); return }
-        const errorMarcador = validarMarcador(marcador, detalle?.torneo.mejorDeSets ?? 3)
-        if (errorMarcador) { setErrorResultado(errorMarcador); return }
-        setGuardandoResultado(true); setErrorResultado(null)
-        try { await tournamentsApi.loadResult(id, partidoResultado.id, { marcador: marcador.trim() }); setResultadoAbierto(false); recargarDetalleYGrupos(); avisoExito('Resultado cargado') }
-        catch (e: unknown) { setErrorResultado(obtenerMensajeErrorApi(e)) }
-        finally { setGuardandoResultado(false) }
-    }
+    const manejarSubmitResultado = useCallback(async (partido: PartidoResponse, marcadorPartido: string) => {
+        await tournamentsApi.loadResult(id, partido.id, { marcador: marcadorPartido })
+        avisoExito('Resultado cargado')
+        recargarDetalleYGrupos()
+    }, [id])
 
-    const manejarCargarResultado = useCallback((partido: PartidoResponse) => {
-        setPartidoResultado(partido); setMarcador(''); setErrorResultado(null); setResultadoAbierto(true)
-    }, [])
+    const manejarCorregirResultado = useCallback(async (partido: PartidoResponse, marcadorPartido: string) => {
+        await tournamentsApi.correctResult(id, partido.id, { marcador: marcadorPartido })
+        avisoExito('Resultado corregido')
+        recargarDetalleYGrupos()
+    }, [id])
 
-    async function manejarGuardarProgramacion() {
-        if (!partidoProgramacion || !fechaProgramacion) { setErrorProgramacion('La fecha y hora son obligatorias.'); return }
-        setGuardandoProgramacion(true); setErrorProgramacion(null)
-        try {
-            await tournamentsApi.scheduleMatch(id, partidoProgramacion.id, { fechaHora: fechaProgramacion })
-            setProgramacionAbierta(false); recargarDetalle(); avisoExito('Partido programado')
-        } catch (e: unknown) { setErrorProgramacion(obtenerMensajeErrorApi(e)) }
-        finally { setGuardandoProgramacion(false) }
-    }
-
-    const manejarProgramarPartido = useCallback((partido: PartidoResponse) => {
-        setPartidoProgramacion(partido)
-        setFechaProgramacion(partido.fechaHoraProgramada ? partido.fechaHoraProgramada.slice(0, 16) : '')
-        setErrorProgramacion(null)
-        setProgramacionAbierta(true)
-    }, [])
+    const manejarProgramarPartido = useCallback(async (partido: PartidoResponse, fechaHora: string) => {
+        await tournamentsApi.scheduleMatch(id, partido.id, { fechaHora })
+        avisoExito('Partido programado')
+        recargarDetalle()
+    }, [id])
 
     async function manejarGuardarWo() {
         if (!partidoWo || !woGanadorId) { setErrorWo('Seleccioná la pareja ganadora.'); return }
@@ -235,14 +225,6 @@ export default function TournamentAdminDetailPage() {
 
     const categoriaSeleccionada = todasCategorias.find((categoria) => categoria.id === formularioPareja.categoriaId)
 
-    function alternarGrupoExpandido(grupoId: number) {
-        setGruposExpandidos((previo) => {
-            const siguiente = new Set(previo)
-            if (siguiente.has(grupoId)) siguiente.delete(grupoId); else siguiente.add(grupoId)
-            return siguiente
-        })
-    }
-
     const datosDetalle = detalle
     const torneo = datosDetalle?.torneo ?? null
     const parejas = datosDetalle?.parejas ?? []
@@ -259,17 +241,21 @@ export default function TournamentAdminDetailPage() {
     const puedeInscribir = torneo?.estado === 'INSCRIPCION'
     const mostrarSorteo = torneo ? puedeSortear(torneo.estado, parejas.length, partidos.length) : false
     const mostrarResultados = torneo ? puedeCargarResultados(torneo.estado, pendientes.length) : false
+    const puedeEditarResultados = torneo?.estado === 'EN_CURSO'
     const puedeProgramar = torneo ? (torneo.estado === 'SORTEADO' || torneo.estado === 'EN_CURSO') : false
-    const errorMarcadorVivo = marcador.trim() ? validarMarcador(marcador, torneo?.mejorDeSets ?? 3) : null
     const categoriasTorneo = torneo ? todasCategorias.filter((categoria) => torneo.categorias.some((tc) => tc.id === categoria.id)) : []
 
     const infoSorteo = useMemo(() => {
         if (!mostrarSorteo || !torneo) return null
-        const info = categoriasTorneo.map((categoria) => {
+        return categoriasTorneo.map((categoria) => {
             const cantidad = parejas.filter((pareja) => pareja.categoriaNombre === categoria.nombre).length
-            return `${categoria.nombre}: ${cantidad} parejas`
+            const cupo = torneo.cuposPorCategoria?.[categoria.id] ?? null
+            let detalle = ''
+            if (cantidad < 2) detalle = ' — ⚠ faltan parejas (mínimo 2 para sortear)'
+            else if (cupo && cantidad < cupo) detalle = ` — de ${cupo} del cupo (se juega igual, con BYE si hace falta)`
+            else if (cupo && cantidad >= cupo) detalle = ' — cupo completo'
+            return `${categoria.nombre}: ${cantidad} parejas${detalle}`
         })
-        return info
     }, [mostrarSorteo, categoriasTorneo, parejas, torneo])
 
     const jugadoresPorGenero = useMemo(
@@ -295,17 +281,6 @@ export default function TournamentAdminDetailPage() {
                     <span className="text-xs font-bold text-rp-muted">{formatearEnum(torneo.formato)}</span>
                     </div>
                     <h1 className="mt-2 text-2xl font-black text-rp-text sm:text-3xl">{torneo.nombre}</h1>
-                    <div className="mt-2 flex flex-wrap gap-4 text-sm text-rp-muted">
-                    <span className="flex items-center gap-1"><MapPin size={13} />{torneo.lugarNombre ?? 'Sin lugar'}</span>
-                    <span className="flex items-center gap-1"><CalendarDays size={13} />{formatearFecha(torneo.fechaInicio)}</span>
-                    {torneo.fechaFin && <span className="flex items-center gap-1"><CalendarDays size={13} />→ {formatearFecha(torneo.fechaFin)}</span>}
-                    <span className="flex items-center gap-1"><Users size={13} />{parejas.length} parejas</span>
-                    <span className="flex items-center gap-1"><Trophy size={13} />{partidos.length} partidos</span>
-                    {torneo.premioAcumulado ? <span className="flex items-center gap-1"><Trophy size={13} />{formatearMoneda(torneo.premioAcumulado)} en premios</span> : null}
-                    </div>
-                    {torneo.temporadaNombre && (
-                    <p className="mt-1 text-xs text-rp-muted">Temporada: <strong className="text-rp-text">{torneo.temporadaNombre}</strong></p>
-                    )}
                 </div>
                 <div className="flex flex-wrap gap-2">
                     {ESTADO_SIGUIENTE[torneo.estado] && (
@@ -332,20 +307,6 @@ export default function TournamentAdminDetailPage() {
                 </div>
                 </div>
                 {errorAccion && <p className="mt-4 rounded-md border border-rp-danger/40 bg-rp-danger/10 px-3 py-2 text-sm font-bold text-rp-danger">{errorAccion}</p>}
-
-                <div className="mt-4 flex flex-wrap gap-2">
-                {torneo.categorias.map((categoria) => (
-                    <StatusBadge key={categoria.id} tone="neutral">{categoria.nombre}</StatusBadge>
-                ))}
-                {torneo.sumaPuntosRanking && <StatusBadge tone="warning">Suma ranking</StatusBadge>}
-                </div>
-            </div>
-
-            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <TarjetaDato label={`Parejas ${categoriaActiva ? `(${categoriaActiva})` : ''}`} value={parejasSeleccionadas.length} />
-                <TarjetaDato label={`Partidos ${categoriaActiva ? `(${categoriaActiva})` : ''}`} value={partidosSeleccionados.length} />
-                <TarjetaDato label="Pendientes" value={pendientes.length} />
-                <TarjetaDato label="Finalizados" value={finalizados.length} />
             </div>
 
             {nombresCategorias.length > 0 && (
@@ -356,40 +317,93 @@ export default function TournamentAdminDetailPage() {
                 </div>
             )}
 
-            {torneo.estado === 'FINALIZADO' && (
-                <div className="mt-4 rounded-lg border border-rp-border bg-rp-surface/82 p-4">
-                    <p className="text-xs font-black uppercase tracking-[0.12em] text-rp-accent">Resultado final de {categoriaActiva}</p>
-                    <div className="mt-2 grid gap-2 text-sm sm:grid-cols-2">
-                        <span className="font-bold text-rp-text">Campeón: {campeonCategoria?.campeonaNombre ?? 'Sin dato'}</span>
-                        <span className="font-bold text-rp-muted">Subcampeón: {campeonCategoria?.subcampeonaNombre ?? 'Sin dato'}</span>
-                    </div>
-                </div>
-            )}
-
-            {cruces.length > 0 && (
-                <div className="mt-4 rounded-lg border border-rp-border bg-rp-surface/82 p-4">
-                    <p className="text-xs font-black uppercase tracking-[0.12em] text-rp-accent">Cómo se arma el cuadro · {categoriaActiva}</p>
-                    <p className="mt-1 text-xs text-rp-muted">Al terminar la fase de grupos, los clasificados se cruzan así. La posición de cada pareja depende de cómo quede la tabla.</p>
-                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                        {cruces.map((cruce, i) => (
-                            <div key={i} className="flex items-center justify-between gap-2 rounded-md border border-rp-border bg-rp-bg/55 px-3 py-2 text-sm">
-                                <span className="font-bold text-rp-text">{cruce.local}</span>
-                                <span className="text-xs font-black uppercase text-rp-muted">vs</span>
-                                <span className="font-bold text-rp-text">{cruce.visitante}</span>
-                            </div>
-                        ))}
-                    </div>
-                    <p className="mt-2 text-xs text-rp-muted">{cruces[0].ronda} · los ganadores avanzan hasta la final.</p>
-                </div>
-            )}
-
             <div className="mt-6 flex gap-1 rounded-lg border border-rp-border bg-rp-surface/82 p-1">
-                {(['parejas', 'partidos', 'grupos'] as const).map((p) => (
+                {(['resumen', 'parejas', 'partidos', 'grupos'] as const).map((p) => (
                 <button key={p} onClick={() => setPestana(p)} className={`flex-1 rounded-md py-2 text-sm font-bold transition ${pestana === p ? 'bg-rp-surface-2 text-rp-accent' : 'text-rp-muted hover:text-rp-text'}`}>
-                    {p === 'parejas' ? `Parejas (${parejasSeleccionadas.length})` : p === 'partidos' ? `Partidos (${partidosSeleccionados.length})` : `Grupos (${gruposSeleccionados.length})`}
+                    {p === 'resumen' ? 'Resumen' : p === 'parejas' ? 'Parejas' : p === 'partidos' ? 'Partidos' : 'Grupos'}
                 </button>
                 ))}
             </div>
+
+            {pestana === 'resumen' && (
+                <div className="mt-4 flex flex-col gap-4">
+                    <div className="rounded-lg border border-rp-border bg-rp-surface/82 p-5">
+                        <div className="grid gap-x-8 gap-y-1 sm:grid-cols-2">
+                            <FilaResumen emoji="📊" clave="Estado" valor={formatearEnum(torneo.estado)} />
+                            <FilaResumen emoji="🎾" clave="Formato" valor={formatearEnum(torneo.formato)} />
+                            <FilaResumen emoji="📍" clave="Lugar" valor={torneo.lugarNombre ?? 'Sin lugar'} />
+                            <FilaResumen emoji="📅" clave="Inicio" valor={formatearFecha(torneo.fechaInicio)} />
+                            {torneo.fechaFin ? <FilaResumen emoji="🏁" clave="Fin" valor={formatearFecha(torneo.fechaFin)} /> : null}
+                            <FilaResumen emoji="👥" clave="Parejas" valor={String(parejas.length)} />
+                            <FilaResumen emoji="⚔️" clave="Partidos" valor={String(partidos.length)} />
+                            {torneo.premioAcumulado ? <FilaResumen emoji="🏆" clave="Premio" valor={formatearMoneda(torneo.premioAcumulado)} /> : null}
+                            {torneo.temporadaNombre ? <FilaResumen emoji="🗓️" clave="Temporada" valor={torneo.temporadaNombre} /> : null}
+                            <FilaResumen emoji="⭐" clave="Suma ranking" valor={torneo.sumaPuntosRanking ? 'Sí' : 'No'} />
+                        </div>
+                        <div className="mt-4 flex flex-wrap items-center gap-2">
+                            <span className="text-sm">🏅</span>
+                            {torneo.categorias.map((categoria) => (
+                                <StatusBadge key={categoria.id} tone="neutral">{categoria.nombre}</StatusBadge>
+                            ))}
+                        </div>
+                    </div>
+
+                    {(torneo.configuracionesCategoria ?? []).length > 0 && (
+                        <div className="rounded-lg border border-rp-border bg-rp-surface/82 p-5">
+                            <p className="text-xs font-black uppercase tracking-[0.12em] text-rp-accent">Formato por categoría</p>
+                            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                                {(torneo.configuracionesCategoria ?? []).map((config) => (
+                                    <div key={config.categoriaId} className="rounded-md border border-rp-border bg-rp-bg/55 px-3 py-2">
+                                        <p className="text-sm font-bold text-rp-text">{config.categoriaNombre ?? `Categoría ${config.categoriaId}`}</p>
+                                        <p className="mt-1 text-xs text-rp-muted">
+                                            {formatearEnum(config.formato)} · {formatearEnum(config.tipoSorteo)} · al mejor de {config.mejorDeSets ?? 3}
+                                            {config.cupo ? ` · cupo ${config.cupo}` : ''}
+                                        </p>
+                                        <p className="text-xs text-rp-muted">
+                                            {config.incluyeFaseGrupos ? 'Con grupos' : 'Sin grupos'} · {config.incluyeEliminacion ? 'con eliminación' : 'sin eliminación'}
+                                            {config.plantillaPuntosNombre ? ` · puntos: ${config.plantillaPuntosNombre}` : ''}
+                                        </p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                        <TarjetaDato label={`Parejas ${categoriaActiva ? `(${categoriaActiva})` : ''}`} value={parejasSeleccionadas.length} />
+                        <TarjetaDato label={`Partidos ${categoriaActiva ? `(${categoriaActiva})` : ''}`} value={partidosSeleccionados.length} />
+                        <TarjetaDato label="Pendientes" value={pendientes.length} />
+                        <TarjetaDato label="Finalizados" value={finalizados.length} />
+                    </div>
+
+                    {torneo.estado === 'FINALIZADO' && (
+                        <div className="rounded-lg border border-rp-border bg-rp-surface/82 p-4">
+                            <p className="text-xs font-black uppercase tracking-[0.12em] text-rp-accent">Resultado final de {categoriaActiva}</p>
+                            <div className="mt-2 grid gap-2 text-sm sm:grid-cols-2">
+                                <span className="font-bold text-rp-text">Campeón: {campeonCategoria?.campeonaNombre ?? 'Sin dato'}</span>
+                                <span className="font-bold text-rp-muted">Subcampeón: {campeonCategoria?.subcampeonaNombre ?? 'Sin dato'}</span>
+                            </div>
+                        </div>
+                    )}
+
+                    {cruces.length > 0 && (
+                        <div className="rounded-lg border border-rp-border bg-rp-surface/82 p-4">
+                            <p className="text-xs font-black uppercase tracking-[0.12em] text-rp-accent">Cómo se arma el cuadro · {categoriaActiva}</p>
+                            <p className="mt-1 text-xs text-rp-muted">Al terminar la fase de grupos, los clasificados se cruzan así. La posición de cada pareja depende de cómo quede la tabla.</p>
+                            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                                {cruces.map((cruce, i) => (
+                                    <div key={i} className="flex items-center justify-between gap-2 rounded-md border border-rp-border bg-rp-bg/55 px-3 py-2 text-sm">
+                                        <span className="font-bold text-rp-text">{cruce.local}</span>
+                                        <span className="text-xs font-black uppercase text-rp-muted">vs</span>
+                                        <span className="font-bold text-rp-text">{cruce.visitante}</span>
+                                    </div>
+                                ))}
+                            </div>
+                            <p className="mt-2 text-xs text-rp-muted">{cruces[0].ronda} · los ganadores avanzan hasta la final.</p>
+                        </div>
+                    )}
+                </div>
+            )}
 
             {pestana === 'parejas' && (
                 <ParejasTab
@@ -416,12 +430,17 @@ export default function TournamentAdminDetailPage() {
             {pestana === 'partidos' && (
                 <div className="mt-4">
                     <PartidosTab
+                        key={categoriaActiva}
                         partidos={partidosSeleccionados}
+                        parejas={parejasSeleccionadas}
+                        torneo={torneo}
                         mostrarSorteo={mostrarSorteo}
                         showResults={mostrarResultados}
                         canSchedule={puedeProgramar}
+                        canEditResult={puedeEditarResultados}
                         onStartMatch={manejarIniciarPartido}
-                        onLoadResult={manejarCargarResultado}
+                        onSubmitResult={manejarSubmitResultado}
+                        onCorrectResult={manejarCorregirResultado}
                         onSchedule={manejarProgramarPartido}
                         onDeclareWo={manejarDeclararWo}
                     />
@@ -430,15 +449,15 @@ export default function TournamentAdminDetailPage() {
 
             {pestana === 'grupos' && (
                 <div className="mt-4">
-                    <GruposTab grupos={gruposSeleccionados} expandidos={gruposExpandidos} onToggle={alternarGrupoExpandido} />
+                    <GruposTab grupos={gruposSeleccionados} />
                 </div>
             )}
 
             <ConfirmDialog isOpen={confirmarSorteo} onClose={() => setConfirmarSorteo(false)} onConfirm={manejarSorteo}
                 title="Generar sorteo" description={
-                    `¿Generás el sorteo para "${torneo.nombre}"?\n${infoSorteo?.join('\n') ?? ''}\n\nSe crearán los partidos automáticamente.`
+                    `¿Generás el sorteo para "${torneo.nombre}"?\n${infoSorteo?.join('\n') ?? ''}\n\nSe crearán los partidos automáticamente. Si una categoría no llegó al cupo, el torneo se juega igual con las parejas anotadas.`
                 }
-                confirmLabel="Generar" isLoading={sorteando} />
+                confirmLabel="Generar" tono="normal" loadingLabel="Generando..." isLoading={sorteando} />
 
             <ConfirmDialog isOpen={Boolean(parejaAEliminar)} onClose={() => setParejaAEliminar(null)} onConfirm={manejarEliminarPareja}
                 title="Eliminar pareja" description={`¿Eliminás la pareja "${parejaAEliminar?.name}" del torneo?`} isLoading={eliminandoPareja} />
@@ -478,7 +497,7 @@ export default function TournamentAdminDetailPage() {
                     value={formularioPareja.jugador2Id}
                     onChange={(idJugador) => setFormularioPareja((f) => ({ ...f, jugador2Id: idJugador }))}
                 />
-                {torneo?.tipoSorteo === 'CABEZAS_SERIE' || torneo?.tipoSorteo === 'COMBINADO' ? (
+                {torneo?.tipoSorteo === 'CABEZAS_SERIE' ? (
                     <label className="flex cursor-pointer items-center gap-2 text-sm font-bold text-rp-muted">
                         <input type="checkbox" checked={formularioPareja.esCabezaDeSerie} onChange={(e) => setFormularioPareja((f) => ({ ...f, esCabezaDeSerie: e.target.checked }))} className="size-4 accent-rp-accent" />
                         Cabeza de serie
@@ -487,61 +506,12 @@ export default function TournamentAdminDetailPage() {
                 {errorPareja && <p className="rounded-md border border-rp-danger/40 bg-rp-danger/10 px-3 py-2 text-sm font-bold text-rp-danger">{errorPareja}</p>}
                 <div className="flex justify-end gap-2 pt-2">
                     <Button variant="ghost" size="sm" onClick={() => { setParejaAbierta(false); setParejaEditandoId(null) }} disabled={guardandoPareja}>Cancelar</Button>
-                    <Button size="sm" onClick={manejarGuardarPareja} disabled={guardandoPareja}>{guardandoPareja ? 'Guardando...' : parejaEditandoId != null ? 'Guardar cambios' : 'Inscribir'}</Button>
+                    <Button variant={parejaEditandoId == null ? 'subtle' : 'primary'} size="sm" onClick={() => manejarGuardarPareja(false)} disabled={guardandoPareja}>{guardandoPareja ? 'Guardando...' : parejaEditandoId != null ? 'Guardar cambios' : 'Inscribir'}</Button>
+                    {parejaEditandoId == null && (
+                    <Button size="sm" onClick={() => manejarGuardarPareja(true)} disabled={guardandoPareja}>{guardandoPareja ? 'Guardando...' : 'Inscribir y agregar otra'}</Button>
+                    )}
                 </div>
                 </div>
-            </Modal>
-
-            <Modal isOpen={resultadoAbierto} onClose={() => setResultadoAbierto(false)} onSubmit={manejarGuardarResultado} title="Cargar resultado" size="sm">
-                {partidoResultado && (
-                <div className="flex flex-col gap-4">
-                    <div className="rounded-lg border border-rp-border bg-rp-bg/55 p-3 text-sm">
-                    <p className="text-xs font-black uppercase tracking-[0.12em] text-rp-muted">{formatearEtapaPartido(partidoResultado)} · {partidoResultado.categoriaNombre}</p>
-                    <div className="mt-2 flex items-center gap-2">
-                        <span className="rounded bg-rp-accent/15 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-rp-accent">Local</span>
-                        <span className="font-bold text-rp-text">{formatearPareja(partidoResultado, 'local')}</span>
-                    </div>
-                    <p className="my-0.5 text-xs text-rp-muted">vs</p>
-                    <div className="flex items-center gap-2">
-                        <span className="rounded bg-rp-surface-2 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-rp-muted">Visitante</span>
-                        <span className="font-bold text-rp-text">{formatearPareja(partidoResultado, 'visitante')}</span>
-                    </div>
-                    {partidoResultado.fechaHora && <p className="mt-1 text-xs text-rp-muted">{formatearFechaHora(partidoResultado.fechaHora)}</p>}
-                    </div>
-                    <Input label='Marcador (ej: "6-3 / 4-6 / 7-5")' value={marcador} onChange={(e) => setMarcador(e.target.value)} placeholder="6-3 / 4-6 / 7-5" error={errorMarcadorVivo} />
-                    <p className="text-xs text-rp-muted">Sets separados por / (ej: 6-3 / 4-6 / 7-5). El marcador se escribe desde la <strong className="text-rp-text">pareja local</strong> (arriba): gana quien gane más sets.</p>
-                    {errorResultado && !errorMarcadorVivo && <p className="rounded-md border border-rp-danger/40 bg-rp-danger/10 px-3 py-2 text-sm font-bold text-rp-danger">{errorResultado}</p>}
-                    <div className="flex justify-end gap-2 pt-2">
-                    <Button variant="ghost" size="sm" onClick={() => setResultadoAbierto(false)} disabled={guardandoResultado}>Cancelar</Button>
-                    <Button type="submit" size="sm" disabled={guardandoResultado || !marcador.trim() || Boolean(errorMarcadorVivo)}>{guardandoResultado ? 'Guardando...' : 'Guardar resultado'}</Button>
-                    </div>
-                </div>
-                )}
-            </Modal>
-
-            <Modal isOpen={programacionAbierta} onClose={() => setProgramacionAbierta(false)} onSubmit={manejarGuardarProgramacion} title="Programar partido" size="sm">
-                {partidoProgramacion && (
-                <div className="flex flex-col gap-4">
-                    <div className="rounded-lg border border-rp-border bg-rp-bg/55 p-3 text-sm">
-                    <p className="text-xs font-black uppercase tracking-[0.12em] text-rp-muted">{formatearEtapaPartido(partidoProgramacion)} · {partidoProgramacion.categoriaNombre}</p>
-                    <p className="mt-2 font-bold text-rp-text">{formatearPareja(partidoProgramacion, 'local')} vs {formatearPareja(partidoProgramacion, 'visitante')}</p>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                    <label className="text-xs font-bold text-rp-muted">Fecha y hora</label>
-                    <input
-                        type="datetime-local"
-                        value={fechaProgramacion}
-                        onChange={(e) => setFechaProgramacion(e.target.value)}
-                        className="rounded-md border border-rp-border bg-rp-bg px-3 py-2 text-sm text-rp-text focus:border-rp-accent focus:outline-none"
-                    />
-                    </div>
-                    {errorProgramacion && <p className="rounded-md border border-rp-danger/40 bg-rp-danger/10 px-3 py-2 text-sm font-bold text-rp-danger">{errorProgramacion}</p>}
-                    <div className="flex justify-end gap-2 pt-2">
-                    <Button variant="ghost" size="sm" onClick={() => setProgramacionAbierta(false)} disabled={guardandoProgramacion}>Cancelar</Button>
-                    <Button type="submit" size="sm" disabled={guardandoProgramacion}>{guardandoProgramacion ? 'Guardando...' : 'Guardar programación'}</Button>
-                    </div>
-                </div>
-                )}
             </Modal>
 
             <Modal isOpen={woAbierto} onClose={() => setWoAbierto(false)} onSubmit={manejarGuardarWo} title="Declarar W.O. / Retiro" size="sm">
@@ -570,5 +540,14 @@ export default function TournamentAdminDetailPage() {
                 )}
             </Modal>
         </section>
+    )
+}
+
+function FilaResumen({ emoji, clave, valor }: { emoji: string; clave: string; valor: string }) {
+    return (
+        <div className="flex items-center justify-between gap-3 border-b border-rp-border/50 py-2">
+            <span className="flex items-center gap-2 text-sm text-rp-muted"><span>{emoji}</span>{clave}</span>
+            <span className="text-right text-sm font-bold text-rp-text">{valor}</span>
+        </div>
     )
 }

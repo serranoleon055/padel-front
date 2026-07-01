@@ -1,15 +1,16 @@
 import './RankingPage.css'
 import { Search, Trophy, Users } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 
 import { brand } from '@/config/brand'
-import { categoriesApi } from '@/features/catalog/catalogApi'
+import { categoriesApi, seasonsApi } from '@/features/catalog/catalogApi'
 import { rankingApi } from '@/features/ranking/rankingApi'
 import { resolveApiAssetUrl } from '@/shared/api/apiClient'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
 import type { CategoriaResponse, RankingResponse } from '@/shared/types/api'
 import { Pagination } from '@/shared/ui/Pagination'
+import { SegmentedToggle } from '@/shared/ui/SegmentedToggle'
 import { StatusMessage } from '@/shared/ui/StatusMessage'
 import { TickerBar } from '@/pages/public/components/TickerBar'
 
@@ -39,15 +40,28 @@ function AvatarJugador({ entrada }: { entrada: RankingResponse }) {
 
 export default function RankingPage() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const categoriaParam = searchParams.get('categoria') ?? ''
+  const generoParam = searchParams.get('genero') === 'FEMENINO' ? 'FEMENINO' : 'MASCULINO'
   const [ranking, setRanking] = useState<RankingResponse[]>([])
   const [rankingGeneral, setRankingGeneral] = useState<RankingResponse[]>([])
   const [categorias, setCategorias] = useState<CategoriaResponse[]>([])
   const [busqueda, setBusqueda] = useState('')
-  const [genero, setGenero] = useState<'MASCULINO' | 'FEMENINO'>('MASCULINO')
-  const [categoriaId, setCategoriaId] = useState('')
+  const [genero, setGenero] = useState<'MASCULINO' | 'FEMENINO'>(generoParam)
+  const [categoriaId, setCategoriaId] = useState(categoriaParam)
+  const categoriaPorGenero = useRef<Record<string, string>>({})
   const [pagina, setPagina] = useState(1)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [temporadaActiva, setTemporadaActiva] = useState<string | null>(null)
+
+  useEffect(() => {
+    let montado = true
+    seasonsApi.getAll()
+      .then((temporadas) => { if (montado) setTemporadaActiva(temporadas.find((t) => t.activa)?.nombre ?? null) })
+      .catch(() => { if (montado) setTemporadaActiva(null) })
+    return () => { montado = false }
+  }, [])
 
   useEffect(() => {
     let montado = true
@@ -56,6 +70,8 @@ export default function RankingPage() {
       .then((listaCategorias) => {
         if (!montado) return
         setCategorias(listaCategorias)
+        const categoriaUrl = categoriaParam ? listaCategorias.find((c) => c.id.toString() === categoriaParam) : undefined
+        if (categoriaUrl) setGenero(categoriaUrl.genero)
         const ordenadas = [...listaCategorias].sort((a, b) => a.nivel - b.nivel || a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }))
         const categoriaPorDefecto = ordenadas.find((c) => c.genero === 'MASCULINO') ?? ordenadas[0]
         setCategoriaId((actual) => actual || categoriaPorDefecto?.id.toString() || '')
@@ -119,6 +135,20 @@ export default function RankingPage() {
     }
   }, [categoriaId])
 
+  useEffect(() => {
+    if (categoriaId) categoriaPorGenero.current[genero] = categoriaId
+  }, [categoriaId, genero])
+
+  useEffect(() => {
+    setSearchParams((previo) => {
+      const siguiente = new URLSearchParams(previo)
+      siguiente.set('genero', genero)
+      if (categoriaId) siguiente.set('categoria', categoriaId)
+      else siguiente.delete('categoria')
+      return siguiente
+    }, { replace: true })
+  }, [genero, categoriaId, setSearchParams])
+
   const rankingFiltrado = useMemo(() => {
     const busquedaNormalizada = busqueda.trim().toLowerCase()
     if (!busquedaNormalizada) return ranking
@@ -153,6 +183,11 @@ export default function RankingPage() {
   function cambiarGenero(nuevoGenero: 'MASCULINO' | 'FEMENINO') {
     setGenero(nuevoGenero)
     setPagina(1)
+    const recordada = categoriaPorGenero.current[nuevoGenero]
+    if (recordada && categorias.some((c) => c.id.toString() === recordada && c.genero === nuevoGenero)) {
+      setCategoriaId(recordada)
+      return
+    }
     const primera = categorias
       .filter((c) => c.genero === nuevoGenero)
       .sort((a, b) => a.nivel - b.nivel || a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }))[0]
@@ -167,12 +202,17 @@ export default function RankingPage() {
     return { categoriaSeleccionada, mayorGanador, mejorRacha }
   }, [categoriaId, ranking, categoriasDelGenero])
 
-  const elementosTicker = useMemo(() => [
-    { label: 'Temporada 2026', text: 'ranking por categoría' },
-    { label: 'Mejor nivel', text: '1ra categoría primero' },
-    { label: 'Líderes', text: 'competencia abierta' },
-    { label: 'Top 10', text: 'paginado por categoría' },
-  ], [])
+  const elementosTicker = useMemo(() => {
+    const top = ranking.slice(0, 10)
+    if (top.length === 0) return []
+    return [
+      { label: `Top 10 · ${top[0].categoriaNombre}`, text: 'ranking de la categoría' },
+      ...top.map((entrada) => ({
+        label: `${entrada.posicion}. ${entrada.jugadorNombre}`,
+        text: `${entrada.puntosTotales} pts`,
+      })),
+    ]
+  }, [ranking])
 
   return (
     <>
@@ -180,11 +220,13 @@ export default function RankingPage() {
         <div className="hero-inner">
           <div className="eyebrow">
             <Trophy size={13} />
-            TEMPORADA 2026
+            {temporadaActiva ? temporadaActiva.toUpperCase() : 'SIN TEMPORADA ACTIVA'}
           </div>
           <h1 className="rank-title">Ranking oficial <span>{brand.name}</span></h1>
           <p className="rank-lead">
-            Posiciones actualizadas por categoría, rendimiento y participación en torneos del circuito provincial.
+            {temporadaActiva
+              ? `Posiciones de la temporada ${temporadaActiva}, por categoría, rendimiento y participación en torneos del circuito.`
+              : 'El ranking se muestra por temporada. Cuando se active una temporada vas a ver las posiciones acá.'}
           </p>
 
           <div className="hero-metrics">
@@ -209,16 +251,14 @@ export default function RankingPage() {
 
           <div className="rank-shell">
             <div className="rank-toolbar">
-              <label className="rank-category-filter">
+              <div className="rank-category-filter">
                 <span>Género</span>
-                <select
-                  value={genero}
-                  onChange={(event) => cambiarGenero(event.target.value as 'MASCULINO' | 'FEMENINO')}
-                >
-                  <option value="MASCULINO">Masculino</option>
-                  <option value="FEMENINO">Femenino</option>
-                </select>
-              </label>
+                <SegmentedToggle
+                  opciones={[{ valor: 'MASCULINO', label: 'Masculino' }, { valor: 'FEMENINO', label: 'Femenino' }]}
+                  valor={genero}
+                  onChange={cambiarGenero}
+                />
+              </div>
 
               <label className="rank-category-filter">
                 <span>Categoría</span>

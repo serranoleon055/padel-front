@@ -31,6 +31,7 @@ export default function SeasonsPage() {
     const [guardando, setGuardando] = useState(false)
     const [objetivoEliminar, setObjetivoEliminar] = useState<TemporadaResponse | null>(null)
     const [eliminando, setEliminando] = useState(false)
+    const [confirmarActivar, setConfirmarActivar] = useState(false)
 
     const [idsSeleccionados, setIdsSeleccionados] = useState<Set<number>>(new Set())
     const [eliminarLoteAbierto, setEliminarLoteAbierto] = useState(false)
@@ -71,14 +72,22 @@ export default function SeasonsPage() {
     function abrirEditar(temporada: TemporadaResponse) { setObjetivoEdicion(temporada); setFormulario({ nombre: temporada.nombre, fechaInicio: temporada.fechaInicio, fechaFin: temporada.fechaFin ?? null, activa: temporada.activa }); setErrorFormulario(null); setModalAbierto(true) }
     function cerrarModal() { setModalAbierto(false); setErrorFormulario(null) }
 
+    const temporadaActivaActual = useMemo(() => elementos.find((temporada) => temporada.activa) ?? null, [elementos])
+
     async function manejarGuardar() {
         if (!formulario.nombre.trim() || !formulario.fechaInicio) { setErrorFormulario('Nombre y fecha de inicio son obligatorios.'); return }
+        const activaOtra = temporadaActivaActual && temporadaActivaActual.id !== objetivoEdicion?.id
+        if (formulario.activa && activaOtra) { setConfirmarActivar(true); return }
+        await guardarTemporada()
+    }
+
+    async function guardarTemporada() {
         setGuardando(true); setErrorFormulario(null)
         try {
         if (objetivoEdicion) await seasonsApi.update(objetivoEdicion.id, formulario)
         else await seasonsApi.create(formulario)
         avisoExito(objetivoEdicion ? 'Temporada actualizada' : 'Temporada creada')
-        cerrarModal(); cargar()
+        setConfirmarActivar(false); cerrarModal(); cargar()
         } catch (e: unknown) { setErrorFormulario(obtenerMensajeErrorApi(e)) }
         finally { setGuardando(false) }
     }
@@ -168,6 +177,10 @@ export default function SeasonsPage() {
                 title="Eliminar temporada" description={`¿Eliminás la temporada "${objetivoEliminar?.nombre}"?`} isLoading={eliminando} />
             <ConfirmDialog isOpen={eliminarLoteAbierto} onClose={() => setEliminarLoteAbierto(false)} onConfirm={manejarEliminarLote}
                 title="Eliminar seleccionadas" description={`¿Eliminás ${idsSeleccionados.size} temporada(s)?`} isLoading={eliminandoLote} />
+            <ConfirmDialog isOpen={confirmarActivar} onClose={() => setConfirmarActivar(false)} onConfirm={guardarTemporada}
+                title="Activar temporada"
+                description={`Esto desactiva la temporada actual${temporadaActivaActual ? ` ("${temporadaActivaActual.nombre}")` : ''}; el ranking pasará a mostrar la nueva desde cero.`}
+                isLoading={guardando} />
         </section>
     )
 }

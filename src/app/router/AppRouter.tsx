@@ -4,6 +4,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { AdminLayout } from '@/app/layouts/AdminLayout'
 import { PublicLayout } from '@/app/layouts/PublicLayout'
 import { ProtectedRoute } from '@/app/router/ProtectedRoute'
+import { ScrollToTop } from '@/app/router/ScrollToTop'
 
 const AdminDashboardPage = lazy(() => import('@/pages/admin/AdminDashboardPage'))
 const HomePage = lazy(() => import('@/pages/public/HomePage'))
@@ -11,10 +12,16 @@ const LoginPage = lazy(() => import('@/pages/public/LoginPage'))
 const RankingPage = lazy(() => import('@/pages/public/RankingPage'))
 const PlayerProfilePage = lazy(() => import('@/pages/public/PlayerProfilePage'))
 const PlayerMatchesPage = lazy(() => import('@/pages/public/PlayerMatchesPage'))
+const PlayerTournamentsPage = lazy(() => import('@/pages/public/PlayerTournamentsPage'))
 const TournamentDetailPage = lazy(() => import('@/pages/public/TournamentDetailPage'))
 const TournamentsPage = lazy(() => import('@/pages/public/TournamentsPage'))
 const CampeonesPage = lazy(() => import('@/pages/public/CampeonesPage'))
+const ReglasPage = lazy(() => import('@/pages/public/ReglasPage'))
+const ResultadosPage = lazy(() => import('@/pages/public/ResultadosPage'))
+const ResultadosTorneoPage = lazy(() => import('@/pages/public/ResultadosTorneoPage'))
 const ContactoPage = lazy(() => import('@/pages/public/legal/ContactoPage'))
+const PreciosPage = lazy(() => import('@/pages/public/PreciosPage'))
+const SedePage = lazy(() => import('@/pages/public/SedePage'))
 const TerminosPage = lazy(() => import('@/pages/public/legal/TerminosPage'))
 const PrivacidadPage = lazy(() => import('@/pages/public/legal/PrivacidadPage'))
 const PlayersPage = lazy(() => import('@/pages/admin/PlayersPage'))
@@ -32,6 +39,7 @@ const TurnosAdminPage = lazy(() => import('@/pages/admin/TurnosAdminPage'))
 const InscribirmePage = lazy(() => import('@/pages/public/InscribirmePage'))
 const PagoResultadoPage = lazy(() => import('@/pages/public/PagoResultadoPage'))
 const InscripcionesAdminPage = lazy(() => import('@/pages/admin/InscripcionesAdminPage'))
+const ConfiguracionSedePage = lazy(() => import('@/pages/admin/ConfiguracionSedePage'))
 
 function PageFallback() {
   return (
@@ -47,19 +55,26 @@ function PageFallback() {
 export function AppRouter() {
   return (
     <Suspense fallback={<PageFallback />}>
+      <ScrollToTop />
       <Routes>
         <Route element={<PublicLayout />}>
           <Route index element={<HomePage />} />
           <Route path="torneos" element={<TournamentsPage />} />
           <Route path="torneos/:torneoId" element={<TournamentDetailPage />} />
+          <Route path="torneos/:torneoId/resultados" element={<ResultadosTorneoPage />} />
           <Route path="torneos/:torneoId/inscribirme" element={<InscribirmePage />} />
           <Route path="torneos/:torneoId/pago/resultado" element={<PagoResultadoPage />} />
           <Route path="ranking" element={<RankingPage />} />
           <Route path="campeones" element={<CampeonesPage />} />
+          <Route path="reglas" element={<ReglasPage />} />
+          <Route path="resultados" element={<ResultadosPage />} />
           <Route path="reservar" element={<ReservarPage />} />
           <Route path="reservar/pago/resultado" element={<PagoResultadoPage />} />
+          <Route path="precios" element={<PreciosPage />} />
+          <Route path="la-sede" element={<SedePage />} />
           <Route path="jugadores/:jugadorId" element={<PlayerProfilePage />} />
           <Route path="jugadores/:jugadorId/partidos" element={<PlayerMatchesPage />} />
+          <Route path="jugadores/:jugadorId/torneos" element={<PlayerTournamentsPage />} />
           <Route path="contacto" element={<ContactoPage />} />
           <Route path="terminos" element={<TerminosPage />} />
           <Route path="privacidad" element={<PrivacidadPage />} />
@@ -81,6 +96,7 @@ export function AppRouter() {
           <Route path="plantillas-formato" element={<FormatTemplatesPage />} />
           <Route path="plantillas-puntos" element={<PointTemplatesPage />} />
           <Route path="usuarios-admin" element={<AdminUsersPage />} />
+          <Route path="configuracion" element={<ConfiguracionSedePage />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

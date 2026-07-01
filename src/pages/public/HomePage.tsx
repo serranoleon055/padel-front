@@ -4,20 +4,32 @@ import { useEffect, useMemo, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 
 import { brand } from '@/config/brand'
+import { seasonsApi } from '@/features/catalog/catalogApi'
 import { homeApi } from '@/features/home/homeApi'
 import { resolveApiAssetUrl } from '@/shared/api/apiClient'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
 import { ordenarCategorias } from '@/shared/lib/categorias'
-import { fechaCompacta, formatearFecha, formatearEnum, formatearEtapaPartido, formatearPareja } from '@/shared/lib/formatters'
+import { fechaCompacta, formatearFecha, formatearEnum, formatearPareja } from '@/shared/lib/formatters'
 import type { HomeResponse, TorneoResponse } from '@/shared/types/api'
 import { StatusMessage } from '@/shared/ui/StatusMessage'
 import { ResultMatchCard } from '@/pages/public/components/ResultMatchCard'
+import { ParejaCampeona } from '@/pages/public/components/ParejaCampeona'
+import { BloqueReserva } from '@/pages/public/components/BloqueReserva'
 import { TickerBar } from '@/pages/public/components/TickerBar'
 
 export default function HomePage() {
   const [datos, setDatos] = useState<HomeResponse | null>(null)
+  const [temporadaActiva, setTemporadaActiva] = useState<string | null>(null)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let montado = true
+    seasonsApi.getAll()
+      .then((temporadas) => { if (montado) setTemporadaActiva(temporadas.find((t) => t.activa)?.nombre ?? null) })
+      .catch(() => { if (montado) setTemporadaActiva(null) })
+    return () => { montado = false }
+  }, [])
 
   useEffect(() => {
     let montado = true
@@ -46,20 +58,20 @@ export default function HomePage() {
   const elementosTicker = useMemo(() => {
     if (!datos) return []
 
-    return [
-      ...datos.partidosEnVivo.map((partido) => ({
-        label: partido.torneoNombre ?? 'En vivo',
-        text: `${formatearEtapaPartido(partido)} en curso`,
-      })),
-      ...datos.proximosTorneos.map((torneo) => ({
-        label: torneo.nombre,
-        text: `${formatearEnum(torneo.estado)} - ${formatearFecha(torneo.fechaInicio)}`,
-      })),
-      ...datos.ultimosResultados.map((partido) => ({
-        label: partido.torneoNombre ?? 'Resultado',
-        text: `${formatearPareja(partido, 'local')} vs ${formatearPareja(partido, 'visitante')}`,
-      })),
-    ].slice(0, 10)
+    const enVivo = datos.partidosEnVivo.slice(0, 4).map((partido) => ({
+      label: partido.torneoNombre ?? 'En vivo',
+      text: `${formatearPareja(partido, 'local')} vs ${formatearPareja(partido, 'visitante')} · en vivo`,
+    }))
+    const proximos = datos.proximosTorneos.slice(0, 4).map((torneo) => ({
+      label: torneo.nombre,
+      text: `${formatearEnum(torneo.estado)} · ${formatearFecha(torneo.fechaInicio)}`,
+    }))
+    const resultados = datos.ultimosResultados.slice(0, 6).map((partido) => ({
+      label: partido.torneoNombre ?? 'Resultado',
+      text: `${formatearPareja(partido, 'local')} vs ${formatearPareja(partido, 'visitante')}`,
+    }))
+
+    return [...enVivo, ...proximos, ...resultados].slice(0, 12)
   }, [datos])
 
   if (cargando) {
@@ -86,6 +98,7 @@ export default function HomePage() {
   const resultadosVisibles = datos.ultimosResultados.slice(0, 6)
   const campeonesVisibles = datos.ultimosCampeones.slice(0, 5)
   const torneoFotoUrl = resolveApiAssetUrl(torneo?.imagenUrl)
+  const etiquetaTemporada = temporadaActiva ? temporadaActiva.toUpperCase() : 'TEMPORADA'
 
   return (
     <main className="homepage">
@@ -95,7 +108,7 @@ export default function HomePage() {
           <div className="hero-headline">
             <div className="hero-eyebrow">
               <Users size={14} />
-              TEMPORADA 2026
+              {etiquetaTemporada}
             </div>
             <h1 className="hero-title">
               {brand.name}
@@ -109,12 +122,12 @@ export default function HomePage() {
           <div className="hp-tag">RANKING PROVINCIAL</div>
           <h2 className="hp-headline">Resultados, torneos y rankings en tiempo real</h2>
           <p className="hp-desc">
-            Toda la actividad competitiva del circuito provincial conectada en tiempo real con tu base de datos.
+            Seguí los torneos, resultados y el ranking del club, siempre al día.
           </p>
 
           <div className="hero-stats">
             <TarjetaDato icon={Users} value={datos.summary.jugadoresRegistrados} label="Jugadores activos" />
-            <TarjetaDato icon={Trophy} value={datos.summary.torneosActivos} label="Torneos en 2026" />
+            <TarjetaDato icon={Trophy} value={datos.summary.torneosActivos} label="Torneos activos" />
             <TarjetaDato icon={Check} value={datos.summary.partidosFinalizados} label="Partidos finalizados" />
             <TarjetaDato icon={Grid2X2} value={datos.summary.categoriasActivas} label="Categorías activas" />
           </div>
@@ -132,6 +145,8 @@ export default function HomePage() {
       </section>
 
       <TickerBar items={elementosTicker} />
+
+      <BloqueReserva />
 
       <section className="torneo-section">
         <div className="torneo-grid">
@@ -227,14 +242,14 @@ export default function HomePage() {
             <div className="tp-photo-glass">
               <h2 className="tp-photo-title">{torneo?.nombre ?? 'Próximo torneo'}</h2>
               <div className="date-glass">
-                <span className="dg-day">{torneo?.fechaInicio ? new Date(torneo.fechaInicio).getDate() : '--'}</span>
+                <span className="dg-day">{torneo?.fechaInicio ? new Date(`${torneo.fechaInicio}T00:00:00`).getDate() : '--'}</span>
                 <div className="dg-right">
                   <div className="dg-month">
                     {torneo?.fechaInicio
-                      ? new Date(torneo.fechaInicio).toLocaleDateString('es-AR', { month: 'short' }).toUpperCase().replace('.', '')
+                      ? new Date(`${torneo.fechaInicio}T00:00:00`).toLocaleDateString('es-AR', { month: 'short' }).toUpperCase().replace('.', '')
                       : '---'}
                   </div>
-                  <div className="dg-year">{torneo?.fechaInicio ? new Date(torneo.fechaInicio).getFullYear() : ''}</div>
+                  <div className="dg-year">{torneo?.fechaInicio ? new Date(`${torneo.fechaInicio}T00:00:00`).getFullYear() : ''}</div>
                 </div>
               </div>
             </div>
@@ -268,9 +283,9 @@ export default function HomePage() {
             <div className="section-header">
               <div className="sh-left">
                 <div className="section-title">Últimos resultados</div>
-                <div className="section-sub">TEMPORADA 2026</div>
+                <div className="section-sub">{etiquetaTemporada}</div>
               </div>
-              <NavLink to="/torneos" className="see-all">
+              <NavLink to="/resultados" className="see-all">
                 Ver todos los resultados
                 <ArrowRight size={15} />
               </NavLink>
@@ -290,7 +305,7 @@ export default function HomePage() {
                 <div className="ch-icon"><Trophy size={22} /></div>
                 <div>
                   <div className="ch-title">Campeones</div>
-                  <div className="ch-sub">ÚLTIMOS 5 TORNEOS - TEMPORADA 2026</div>
+                  <div className="ch-sub">ÚLTIMOS 5 TORNEOS · {etiquetaTemporada}</div>
                 </div>
               </div>
               <div className="ch-badge">HISTÓRICO</div>
@@ -313,19 +328,25 @@ export default function HomePage() {
                     <tr key={`${item.torneoId}-${item.categoriaId}`}>
                       <td><div className="ct-num">{String(index + 1).padStart(2, '0')}</div></td>
                       <td>
-                        <div className="ct-torneo">{item.torneoNombre ?? 'Torneo'}</div>
+                        <div className="ct-torneo"><NavLink to={`/torneos/${item.torneoId}`} style={{ color: 'inherit', textDecoration: 'none' }}>{item.torneoNombre ?? 'Torneo'}</NavLink></div>
                         <div className="ct-fecha">{`${fechaCompacta(item.fecha)} - ${item.lugarNombre ?? 'Sede a confirmar'}`}</div>
                       </td>
                       <td>
                         <div className="ct-pair">
                           <div className="ct-trophy"><Trophy size={20} /></div>
-                          <div className="ct-names">{item.campeonaNombre ?? 'Sin dato'}</div>
+                          <div className="ct-names">
+                            <ParejaCampeona j1Id={item.campeonaJugador1Id} j1Nombre={item.campeonaJugador1Nombre} j2Id={item.campeonaJugador2Id} j2Nombre={item.campeonaJugador2Nombre} fallback={item.campeonaNombre} />
+                          </div>
                         </div>
                       </td>
                       <td>
                         <div className="ct-score">{item.marcadorFinal ?? 'Campeón de liga'}</div>
                       </td>
-                      <td className="ct-cat"><span className="ct-pill">{item.categoriaNombre ?? 'Categoría'}</span></td>
+                      <td className="ct-cat">
+                        {item.categoriaId
+                          ? <NavLink to={`/ranking?categoria=${item.categoriaId}`} className="ct-pill hover:underline">{item.categoriaNombre ?? 'Categoría'}</NavLink>
+                          : <span className="ct-pill">{item.categoriaNombre ?? 'Categoría'}</span>}
+                      </td>
                     </tr>
                 ))}
               </tbody>
@@ -337,7 +358,7 @@ export default function HomePage() {
                   <div className="champ-card-row">
                     <div className="champ-card-num">{String(index + 1).padStart(2, '0')}</div>
                     <div className="champ-card-info">
-                      <div className="champ-card-torneo">{item.torneoNombre ?? 'Torneo'}</div>
+                      <div className="champ-card-torneo"><NavLink to={`/torneos/${item.torneoId}`} style={{ color: 'inherit', textDecoration: 'none' }}>{item.torneoNombre ?? 'Torneo'}</NavLink></div>
                       <div className="champ-card-fecha">
                         {`${fechaCompacta(item.fecha)} - ${item.lugarNombre ?? 'Sede a confirmar'} - ${item.categoriaNombre ?? 'Categoría'}`}
                       </div>
@@ -346,7 +367,9 @@ export default function HomePage() {
                   <div className="champ-card-winner">
                     <div className="ct-trophy"><Trophy size={20} /></div>
                     <div>
-                      <div className="champ-card-names">{item.campeonaNombre ?? 'Sin dato'}</div>
+                      <div className="champ-card-names">
+                        <ParejaCampeona j1Id={item.campeonaJugador1Id} j1Nombre={item.campeonaJugador1Nombre} j2Id={item.campeonaJugador2Id} j2Nombre={item.campeonaJugador2Nombre} fallback={item.campeonaNombre} />
+                      </div>
                       <div className="champ-card-score">{item.marcadorFinal ?? 'Campeón de liga'}</div>
                     </div>
                   </div>

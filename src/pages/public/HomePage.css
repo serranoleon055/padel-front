@@ -2,6 +2,95 @@
   background: var(--rp-cream);
 }
 
+.reserva-band {
+  position: relative;
+  padding: 56px 40px;
+  background:
+    linear-gradient(105deg, rgba(7, 17, 10, .95) 30%, rgba(16, 35, 22, .78) 70%, rgba(16, 35, 22, .6)),
+    url('/images/fondo cancha.jpg') center / cover no-repeat;
+}
+
+.reserva-band-inner {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr minmax(0, 320px);
+  align-items: center;
+  gap: 40px;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.reserva-band-title {
+  margin: 10px 0 0;
+  color: #fff;
+  font-size: 34px;
+  font-weight: 900;
+  line-height: 1.05;
+}
+
+.reserva-band-horarios ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.reserva-band-horarios li {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, .12);
+}
+
+.reserva-band-horarios li span {
+  color: rgba(255, 255, 255, .78);
+  font-size: 13px;
+}
+
+.reserva-band-horarios li strong {
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.reserva-band-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--rp-gold);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+}
+
+.reserva-band-desc {
+  margin: 6px 0 18px;
+  color: rgba(255, 255, 255, .8);
+  font-size: 15px;
+  max-width: 52ch;
+}
+
+.reserva-band-slots-title {
+  margin-bottom: 10px;
+  color: rgba(255, 255, 255, .7);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+@media (max-width: 860px) {
+  .reserva-band {
+    padding: 24px 16px;
+  }
+
+  .reserva-band-inner {
+    grid-template-columns: 1fr;
+  }
+}
+
 .hp-loading {
   min-height: calc(100svh - var(--rp-nav-height));
   padding: 80px 20px;
@@ -112,14 +201,6 @@
   color: var(--rp-green-600);
   font-size: 9px;
   font-weight: 800;
-}
-
-.hp-tag::before {
-  width: 28px;
-  height: 2px;
-  border-radius: 2px;
-  background: var(--rp-green-600);
-  content: "";
 }
 
 .hp-headline {
@@ -244,6 +325,7 @@
   min-height: 100svh;
   flex-direction: column;
   justify-content: center;
+  padding-block: 56px;
 }
 
 .torneo-grid {
@@ -936,6 +1018,21 @@
 .ct-names {
   color: var(--rp-green-800);
   font-weight: 900;
+}
+
+.pareja-campeona {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 14px;
+  row-gap: 2px;
+}
+
+.pareja-campeona > :not(:first-child)::before {
+  content: "·";
+  margin-right: 14px;
+  color: var(--rp-muted-light);
+  font-weight: 700;
 }
 
 .ct-fecha,

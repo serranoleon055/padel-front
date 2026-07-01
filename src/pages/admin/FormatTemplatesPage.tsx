@@ -23,10 +23,10 @@ const VACIO: PlantillaFormatoRequest = {
   descripcion: '',
   formatoTorneo: 'MINITORNEO',
   tipoSorteo: 'ALEATORIO',
-  cantidadParejasObjetivo: 12,
-  cantidadGrupos: 4,
-  parejasPorGrupo: 3,
-  avanzanPorGrupo: 2,
+  cantidadParejasObjetivo: null,
+  cantidadGrupos: null,
+  parejasPorGrupo: null,
+  avanzanPorGrupo: null,
   incluyeFaseGrupos: true,
   incluyeEliminacion: true,
   activo: true,
@@ -51,13 +51,13 @@ function normalizarFormulario(formulario: PlantillaFormatoRequest): PlantillaFor
 
 function presetFormato(formatoTorneo: FormatoTorneo): PlantillaFormatoRequest {
   if (formatoTorneo === 'ELIMINACION_DIRECTA') {
-    return { ...VACIO, formatoTorneo, cantidadParejasObjetivo: 16, cantidadGrupos: null, parejasPorGrupo: null, avanzanPorGrupo: null, incluyeFaseGrupos: false, incluyeEliminacion: true }
+    return { ...VACIO, formatoTorneo, incluyeFaseGrupos: false, incluyeEliminacion: true }
   }
   if (formatoTorneo === 'LIGA') {
-    return { ...VACIO, formatoTorneo, cantidadParejasObjetivo: null, cantidadGrupos: 1, parejasPorGrupo: null, avanzanPorGrupo: null, incluyeFaseGrupos: true, incluyeEliminacion: false }
+    return { ...VACIO, formatoTorneo, incluyeFaseGrupos: true, incluyeEliminacion: false }
   }
   if (formatoTorneo === 'TORNEO_LARGO') {
-    return { ...VACIO, formatoTorneo, cantidadParejasObjetivo: null, cantidadGrupos: null, parejasPorGrupo: null, avanzanPorGrupo: 2, incluyeFaseGrupos: true, incluyeEliminacion: true }
+    return { ...VACIO, formatoTorneo, incluyeFaseGrupos: true, incluyeEliminacion: true }
   }
   return { ...VACIO, formatoTorneo }
 }
@@ -173,6 +173,16 @@ export default function FormatTemplatesPage() {
     <section>
       <AdminPageHeader title="Plantillas de formato" action={<Button size="sm" onClick={abrirCrear}><Plus size={16} />Nueva plantilla</Button>} />
 
+      <div className="mt-4 rounded-lg border border-rp-border bg-rp-surface/82 p-3 text-xs leading-relaxed text-rp-muted">
+        <p className="font-black text-rp-accent">Qué define cada cosa</p>
+        <ul className="mt-1 list-disc space-y-0.5 pl-4">
+          <li><strong className="text-rp-text">Formato:</strong> Liga (todos contra todos por fechas), Minitorneo / Torneo largo (grupos + eliminación), Eliminación directa (solo llave).</li>
+          <li><strong className="text-rp-text">Tipo de sorteo · Aleatorio:</strong> reparto al azar, sin mirar el ranking.</li>
+          <li><strong className="text-rp-text">Tipo de sorteo · Cabezas de serie:</strong> las parejas con más puntos en esa categoría se siembran como cabezas (una por grupo) para no cruzarse temprano.</li>
+        </ul>
+        <p className="mt-1">La cantidad de grupos y de rondas se ajusta sola a la cantidad de parejas inscriptas.</p>
+      </div>
+
       <div className="mt-4 w-full sm:w-64">
         <Input placeholder="Buscar por nombre..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
       </div>
@@ -191,6 +201,7 @@ export default function FormatTemplatesPage() {
         <div className="grid gap-4">
           <Input label="Nombre" value={formulario.nombre} onChange={(e) => setFormulario((f) => ({ ...f, nombre: e.target.value }))} placeholder="12 parejas - 4 grupos" />
           <Input label="Descripción" value={formulario.descripcion ?? ''} onChange={(e) => setFormulario((f) => ({ ...f, descripcion: e.target.value }))} placeholder="Fase de grupos y eliminación posterior" />
+
           <div className="grid gap-4 sm:grid-cols-2">
             <Select label="Formato" value={formulario.formatoTorneo} onChange={(e) => setFormulario((f) => ({ ...presetFormato(e.target.value as FormatoTorneo), nombre: f.nombre, descripcion: f.descripcion, tipoSorteo: f.tipoSorteo, activo: f.activo }))}>
               <option value="MINITORNEO">Minitorneo</option>
@@ -201,19 +212,19 @@ export default function FormatTemplatesPage() {
             <Select label="Tipo de sorteo" value={formulario.tipoSorteo} onChange={(e) => setFormulario((f) => ({ ...f, tipoSorteo: e.target.value as TipoSorteo }))}>
               <option value="ALEATORIO">Aleatorio</option>
               <option value="CABEZAS_SERIE">Cabezas de serie</option>
-              <option value="COMBINADO">Combinado</option>
             </Select>
           </div>
 
           <div className="rounded-lg border border-rp-border bg-rp-bg/55 p-4">
             <p className="text-xs font-black uppercase tracking-[0.12em] text-rp-accent">Estructura del formato</p>
+            <p className="mt-1 text-xs text-rp-muted">La fase de grupos y la eliminación quedan determinadas por el formato elegido.</p>
             <div className="mt-3 grid gap-3 sm:grid-cols-3">
               <label className="flex items-center gap-3 text-sm font-bold text-rp-muted">
-                <input type="checkbox" checked={formulario.incluyeFaseGrupos} disabled={formulario.formatoTorneo === 'ELIMINACION_DIRECTA'} onChange={(e) => setFormulario((f) => normalizarFormulario({ ...f, incluyeFaseGrupos: e.target.checked }))} className="size-4 accent-rp-accent" />
+                <input type="checkbox" checked={formulario.incluyeFaseGrupos} disabled readOnly className="size-4 accent-rp-accent" />
                 Fase de grupos
               </label>
               <label className="flex items-center gap-3 text-sm font-bold text-rp-muted">
-                <input type="checkbox" checked={formulario.incluyeEliminacion} disabled={formulario.formatoTorneo === 'ELIMINACION_DIRECTA'} onChange={(e) => setFormulario((f) => normalizarFormulario({ ...f, incluyeEliminacion: e.target.checked }))} className="size-4 accent-rp-accent" />
+                <input type="checkbox" checked={formulario.incluyeEliminacion} disabled readOnly className="size-4 accent-rp-accent" />
                 Eliminación
               </label>
               <label className="flex items-center gap-3 text-sm font-bold text-rp-muted">

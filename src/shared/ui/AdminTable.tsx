@@ -37,7 +37,7 @@ function AdminTableInner<T extends { id: number }>({ columns, rows, getRowKey, i
                 {columns.map((col) => <span key={col.key} className={col.className}>{col.label}</span>)}
                 {actions ? <span className="text-right">Acciones</span> : null}
             </div>
-            <div className="divide-y divide-rp-border">
+            <div className="divide-y divide-rp-border max-md:flex max-md:flex-col max-md:gap-2.5 max-md:divide-y-0 max-md:p-2.5">
                 {isLoading ? (
                     <div className="p-4"><StatusMessage type="loading" title="Cargando datos..." /></div>
                 ) : error ? (
@@ -46,7 +46,7 @@ function AdminTableInner<T extends { id: number }>({ columns, rows, getRowKey, i
                     <div className="p-4"><StatusMessage type="empty" title={emptyTitle} description={emptyDescription} /></div>
                 ) : (
                     rows.map((item) => (
-                    <div key={getRowKey(item)} className="flex flex-col gap-2.5 px-4 py-3.5 md:grid md:items-center md:gap-3 md:py-3" style={{ gridTemplateColumns: colTemplate }}>
+                    <div key={getRowKey(item)} className="flex flex-col gap-2.5 px-4 py-3.5 max-md:rounded-lg max-md:border max-md:border-rp-border max-md:bg-rp-bg/40 md:grid md:items-center md:gap-3 md:py-3" style={{ gridTemplateColumns: colTemplate }}>
                         {showCheckbox && (
                             <label className="flex items-center gap-2 text-xs font-bold text-rp-muted md:contents">
                                 <input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => onToggleSelect(item.id)} className="size-4 accent-rp-accent" />

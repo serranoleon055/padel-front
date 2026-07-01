@@ -47,4 +47,9 @@ export const pagosApi = {
     const { data } = await apiClient.get<PagoResponse>(`/api/pagos/${id}`)
     return data
   },
+
+  async cancelarPagoReserva(id: number) {
+    const { data } = await apiClient.post<PagoResponse>(`/api/pagos/${id}/cancelar`)
+    return data
+  },
 }

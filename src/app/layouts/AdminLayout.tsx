@@ -1,4 +1,4 @@
-import { CalendarClock, CalendarDays, Layers, LayoutDashboard, LogOut, MapPin, Menu, ShieldCheck, Sigma, Tag, Trophy, UserCog, Users, X } from 'lucide-react'
+import { CalendarClock, CalendarDays, Layers, LayoutDashboard, LogOut, MapPin, Menu, Settings, ShieldCheck, Sigma, Tag, Trophy, UserCog, Users, X } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 
@@ -19,6 +19,7 @@ const NAV = [
   { to: '/admin/plantillas-formato', label: 'Plantillas formato', icon: Layers, end: false },
   { to: '/admin/plantillas-puntos', label: 'Plantillas puntos', icon: Sigma, end: false },
   { to: '/admin/usuarios-admin', label: 'Usuarios admin', icon: UserCog, end: false },
+  { to: '/admin/configuracion', label: 'Configuración sede', icon: Settings, end: false },
 ]
 
 export function AdminLayout() {

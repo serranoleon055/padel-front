@@ -1,0 +1,85 @@
+.td-bracket-v2 {
+  display: flex;
+  gap: 36px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 2px 2px 16px;
+}
+
+.td-bcol {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 248px;
+  min-width: 0;
+}
+
+.td-bcol-label {
+  color: var(--rp-faint);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.td-bcol-slots {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.td-bslot {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  min-height: 64px;
+  padding: 6px 0;
+}
+
+.td-bslot > article,
+.td-bslot > div {
+  width: 100%;
+}
+
+.td-bconn-in {
+  position: absolute;
+  left: -18px;
+  width: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 2px;
+  background: var(--rp-gold);
+  display: block;
+}
+
+.td-bconn {
+  position: absolute;
+  right: -18px;
+  width: 18px;
+  display: block;
+}
+
+.bconn-top {
+  top: 50%;
+  height: 50%;
+  border-top: 2px solid var(--rp-gold);
+  border-right: 2px solid var(--rp-gold);
+  border-radius: 0 4px 0 0;
+}
+
+.bconn-bot {
+  bottom: 50%;
+  height: 50%;
+  border-bottom: 2px solid var(--rp-gold);
+  border-right: 2px solid var(--rp-gold);
+  border-radius: 0 0 4px 0;
+}
+
+@media (max-width: 640px) {
+  .td-bcol {
+    flex: 0 0 232px;
+  }
+}

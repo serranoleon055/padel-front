@@ -21,6 +21,7 @@ export function CanchasLugarModal({ lugar, onClose }: { lugar: LugarResponse | n
   const [descripcion, setDescripcion] = useState('')
   const [precioPorHora, setPrecioPorHora] = useState('')
   const [seniaPorcentaje, setSeniaPorcentaje] = useState('')
+  const [seniaObligatoria, setSeniaObligatoria] = useState(true)
   const [editando, setEditando] = useState<CanchaResponse | null>(null)
   const [guardando, setGuardando] = useState(false)
   const [aArchivar, setAArchivar] = useState<CanchaResponse | null>(null)
@@ -39,6 +40,7 @@ export function CanchasLugarModal({ lugar, onClose }: { lugar: LugarResponse | n
     setDescripcion('')
     setPrecioPorHora('')
     setSeniaPorcentaje('')
+    setSeniaObligatoria(true)
     setEditando(null)
     setError(null)
     cargar(lugar.id)
@@ -50,6 +52,7 @@ export function CanchasLugarModal({ lugar, onClose }: { lugar: LugarResponse | n
     setDescripcion(cancha.descripcion ?? '')
     setPrecioPorHora(cancha.precioPorHora != null ? String(cancha.precioPorHora) : '')
     setSeniaPorcentaje(cancha.seniaPorcentaje != null ? String(cancha.seniaPorcentaje) : '')
+    setSeniaObligatoria(cancha.seniaObligatoria)
   }
 
   function limpiarFormulario() {
@@ -58,6 +61,7 @@ export function CanchasLugarModal({ lugar, onClose }: { lugar: LugarResponse | n
     setDescripcion('')
     setPrecioPorHora('')
     setSeniaPorcentaje('')
+    setSeniaObligatoria(true)
   }
 
   async function guardar() {
@@ -74,6 +78,7 @@ export function CanchasLugarModal({ lugar, onClose }: { lugar: LugarResponse | n
         lugarId: lugar.id,
         precioPorHora: precioPorHora ? Number(precioPorHora) : null,
         seniaPorcentaje: seniaPorcentaje ? Number(seniaPorcentaje) : null,
+        seniaObligatoria,
       }
       if (editando) {
         await canchasApi.update(editando.id, payload)
@@ -140,6 +145,10 @@ export function CanchasLugarModal({ lugar, onClose }: { lugar: LugarResponse | n
               <Input label="Precio por hora (opcional)" type="number" min={0} value={precioPorHora} onChange={(e) => setPrecioPorHora(e.target.value)} placeholder="8000" />
               <Input label="Seña (%, por defecto 50)" type="number" min={1} max={100} value={seniaPorcentaje} onChange={(e) => setSeniaPorcentaje(e.target.value)} placeholder="50" />
             </div>
+            <label className="flex cursor-pointer items-start gap-2 text-sm font-bold text-rp-muted">
+              <input type="checkbox" checked={seniaObligatoria} onChange={(e) => setSeniaObligatoria(e.target.checked)} className="mt-0.5 size-4 accent-rp-accent" />
+              <span>Exige seña online<span className="block text-xs font-normal text-rp-muted">Si está activo, el turno se libera apenas falla o se cancela el pago. Si no, queda pendiente para confirmar en el club.</span></span>
+            </label>
             <div className="flex justify-end gap-2">
               {editando && <Button variant="ghost" size="sm" onClick={limpiarFormulario} disabled={guardando}>Cancelar</Button>}
               <Button type="submit" size="sm" disabled={guardando}>
