@@ -3,6 +3,7 @@ import type { IntegranteInscripcion } from '@/features/inscripciones/inscripcion
 
 export interface PagoCreadoResponse {
   pagoId: number
+  referencia: string
   initPoint: string
 }
 
@@ -43,13 +44,13 @@ export const pagosApi = {
     return data
   },
 
-  async obtenerPago(id: number) {
-    const { data } = await apiClient.get<PagoResponse>(`/api/pagos/${id}`)
+  async obtenerPago(referencia: string) {
+    const { data } = await apiClient.get<PagoResponse>(`/api/pagos/${referencia}`)
     return data
   },
 
-  async cancelarPagoReserva(id: number) {
-    const { data } = await apiClient.post<PagoResponse>(`/api/pagos/${id}/cancelar`)
+  async cancelarPagoReserva(referencia: string) {
+    const { data } = await apiClient.post<PagoResponse>(`/api/pagos/${referencia}/cancelar`)
     return data
   },
 }

@@ -141,9 +141,8 @@ export default function ReservarPage() {
     const pendiente = sessionStorage.getItem('rp-pago-pendiente')
     if (!pendiente) return
     sessionStorage.removeItem('rp-pago-pendiente')
-    const id = Number(pendiente)
-    pagosApi.obtenerPago(id)
-      .then((pago) => (pago.estado === 'APROBADO' ? null : pagosApi.cancelarPagoReserva(id)))
+    pagosApi.obtenerPago(pendiente)
+      .then((pago) => (pago.estado === 'APROBADO' ? null : pagosApi.cancelarPagoReserva(pendiente)))
       .catch(() => {})
       .finally(() => setRecarga((n) => n + 1))
   }, [])
@@ -286,14 +285,14 @@ export default function ReservarPage() {
     setEnviando(true)
     setErrorFormulario(null)
     try {
-      const { pagoId, initPoint } = await pagosApi.crearPagoReserva({
+      const { referencia, initPoint } = await pagosApi.crearPagoReserva({
         canchaId,
         fecha,
         horarios: horariosElegidos,
         clienteNombre: nombre.trim(),
         clienteTelefono: telefono.trim(),
       })
-      sessionStorage.setItem('rp-pago-pendiente', String(pagoId))
+      sessionStorage.setItem('rp-pago-pendiente', referencia)
       window.location.href = initPoint
     } catch (e: unknown) {
       setErrorFormulario(obtenerMensajeErrorApi(e))

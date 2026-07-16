@@ -11,7 +11,7 @@ const INTERVALO_REINTENTO_MS = 2500
 
 export default function PagoResultadoPage() {
   const [searchParams] = useSearchParams()
-  const pagoId = searchParams.get('pagoId')
+  const referenciaPago = searchParams.get('pago')
   const [pago, setPago] = useState<PagoResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [cargando, setCargando] = useState(true)
@@ -21,16 +21,17 @@ export default function PagoResultadoPage() {
   const pagoFallido = ['rejected', 'failure', 'cancelled', 'cancel', 'null'].includes(estadoMercadoPago)
 
   useEffect(() => {
-    if (!pagoId) {
+    if (!referenciaPago) {
       setError('No se encontró el pago.')
       setCargando(false)
       return
     }
+    const referencia = referenciaPago
     let activo = true
     let temporizador: ReturnType<typeof setTimeout> | null = null
 
     function consultar() {
-      pagosApi.obtenerPago(Number(pagoId))
+      pagosApi.obtenerPago(referencia)
         .then((datos) => {
           if (!activo) return
           setPago(datos)
@@ -51,14 +52,14 @@ export default function PagoResultadoPage() {
 
     async function iniciar() {
       if (pagoFallido) {
-        try { await pagosApi.cancelarPagoReserva(Number(pagoId)) } catch { /* el turno se libera igual al expirar */ }
+        try { await pagosApi.cancelarPagoReserva(referencia) } catch { /* el turno se libera igual al expirar */ }
       }
       if (activo) consultar()
     }
 
     iniciar()
     return () => { activo = false; if (temporizador) clearTimeout(temporizador) }
-  }, [pagoId, pagoFallido])
+  }, [referenciaPago, pagoFallido])
 
   const esReserva = pago?.concepto === 'RESERVA'
 
