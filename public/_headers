@@ -1,0 +1,10 @@
+# Headers para Cloudflare Pages (Vercel ignora este archivo).
+# CSP: scripts solo propios; estilos propios + inline (React usa style attrs);
+# imágenes propias/https (Cloudinary); conexiones https (API backend);
+# iframes solo Google Maps (embed de la sede).
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; font-src 'self'; connect-src 'self' https:; frame-src https://www.google.com https://*.google.com; object-src 'none'; base-uri 'self'; form-action 'self'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  X-Frame-Options: DENY
