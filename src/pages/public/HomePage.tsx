@@ -1,5 +1,5 @@
 import './HomePage.css'
-import { ArrowRight, CalendarDays, Check, Grid2X2, MapPin, Medal, NotebookPen, Radio, Trophy, Users } from 'lucide-react'
+import { ArrowRight, CalendarClock, CalendarDays, Check, Grid2X2, MapPin, Medal, NotebookPen, Radio, Trophy, Users } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 
@@ -9,12 +9,12 @@ import { homeApi } from '@/features/home/homeApi'
 import { resolveApiAssetUrl } from '@/shared/api/apiClient'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
 import { ordenarCategorias } from '@/shared/lib/categorias'
-import { fechaCompacta, formatearFecha, formatearEnum, formatearPareja } from '@/shared/lib/formatters'
+import { elementosTickerInicio } from '@/shared/lib/ticker'
+import { fechaCompacta, formatearFecha, formatearEnum } from '@/shared/lib/formatters'
 import type { HomeResponse, TorneoResponse } from '@/shared/types/api'
 import { StatusMessage } from '@/shared/ui/StatusMessage'
 import { ResultMatchCard } from '@/pages/public/components/ResultMatchCard'
 import { ParejaCampeona } from '@/pages/public/components/ParejaCampeona'
-import { BloqueReserva } from '@/pages/public/components/BloqueReserva'
 import { TickerBar } from '@/pages/public/components/TickerBar'
 
 export default function HomePage() {
@@ -55,24 +55,7 @@ export default function HomePage() {
     }
   }, [])
 
-  const elementosTicker = useMemo(() => {
-    if (!datos) return []
-
-    const enVivo = datos.partidosEnVivo.slice(0, 4).map((partido) => ({
-      label: partido.torneoNombre ?? 'En vivo',
-      text: `${formatearPareja(partido, 'local')} vs ${formatearPareja(partido, 'visitante')} · en vivo`,
-    }))
-    const proximos = datos.proximosTorneos.slice(0, 4).map((torneo) => ({
-      label: torneo.nombre,
-      text: `${formatearEnum(torneo.estado)} · ${formatearFecha(torneo.fechaInicio)}`,
-    }))
-    const resultados = datos.ultimosResultados.slice(0, 6).map((partido) => ({
-      label: partido.torneoNombre ?? 'Resultado',
-      text: `${formatearPareja(partido, 'local')} vs ${formatearPareja(partido, 'visitante')}`,
-    }))
-
-    return [...enVivo, ...proximos, ...resultados].slice(0, 12)
-  }, [datos])
+  const elementosTicker = useMemo(() => elementosTickerInicio(datos), [datos])
 
   if (cargando) {
     return <section className="hp-loading"><StatusMessage title="Cargando..." type="loading" /></section>
@@ -133,20 +116,21 @@ export default function HomePage() {
           </div>
 
           <div className="hero-cta-row">
-            <NavLink to="/torneos" className="btn-primary">
-              <Trophy size={17} />
+            <NavLink to="/reservar" className="btn-primary">
+              <CalendarClock size={17} />
+              Reservar cancha
+            </NavLink>
+            <NavLink to="/torneos" className="btn-secondary">
               Ver torneos
             </NavLink>
             <NavLink to="/ranking" className="btn-secondary">
-              Ver ranking oficial
+              Ver ranking
             </NavLink>
           </div>
         </div>
       </section>
 
       <TickerBar items={elementosTicker} />
-
-      <BloqueReserva />
 
       <section className="torneo-section">
         <div className="torneo-grid">

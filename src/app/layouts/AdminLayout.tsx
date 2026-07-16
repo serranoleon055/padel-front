@@ -1,4 +1,4 @@
-import { CalendarClock, CalendarDays, Layers, LayoutDashboard, LogOut, MapPin, Menu, Settings, ShieldCheck, Sigma, Tag, Trophy, UserCog, Users, X } from 'lucide-react'
+import { BarChart3, CalendarClock, CalendarDays, Layers, LayoutDashboard, LogOut, MapPin, Menu, Settings, ShieldCheck, Sigma, Tag, Trophy, UserCog, Users, X } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 
@@ -10,6 +10,7 @@ import type { TemporadaResponse } from '@/shared/types/api'
 
 const NAV = [
   { to: '/admin', label: 'Panel', icon: LayoutDashboard, end: true },
+  { to: '/admin/estadisticas', label: 'Estadísticas', icon: BarChart3, end: false },
   { to: '/admin/jugadores', label: 'Jugadores', icon: Users, end: false },
   { to: '/admin/categorias', label: 'Categorías', icon: Tag, end: false },
   { to: '/admin/lugares', label: 'Lugares', icon: MapPin, end: false },

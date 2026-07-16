@@ -179,7 +179,7 @@ export default function TournamentsPage() {
   )
 
   if (cargando) {
-    return seccion(<StatusMessage title="Cargando torneos desde la API" type="loading" />)
+    return seccion(<StatusMessage title="Cargando torneos..." type="loading" />)
   }
 
   if (error) {

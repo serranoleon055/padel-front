@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react'
 import { useParams, NavLink } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, CalendarDays, Trophy, Medal, TrendingUp, Users } from 'lucide-react'
 
+import { categoriesApi } from '@/features/catalog/catalogApi'
 import { playersApi } from '@/features/players/playersApi'
 import { resolveApiAssetUrl } from '@/shared/api/apiClient'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
 import { formatearFecha, formatearEnum } from '@/shared/lib/formatters'
-import type { JugadorHistorialResponse } from '@/shared/types/api'
+import type { CategoriaResponse, JugadorHistorialResponse } from '@/shared/types/api'
 import { StatusMessage } from '@/shared/ui/StatusMessage'
 import { TarjetaPartidoJugador } from '@/pages/public/components/TarjetaPartidoJugador'
 
@@ -15,6 +16,7 @@ export default function PlayerProfilePage() {
   const id = Number(jugadorId)
 
   const [historial, setHistorial] = useState<JugadorHistorialResponse | null>(null)
+  const [categorias, setCategorias] = useState<CategoriaResponse[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -26,6 +28,10 @@ export default function PlayerProfilePage() {
       .catch((e: unknown) => setError(obtenerMensajeErrorApi(e)))
       .finally(() => setCargando(false))
   }, [id])
+
+  useEffect(() => {
+    categoriesApi.getAll().then(setCategorias).catch(() => {})
+  }, [])
 
   if (cargando) return (
     <div className="flex min-h-[60svh] items-center justify-center">
@@ -85,10 +91,15 @@ export default function PlayerProfilePage() {
     .sort((a, b) => b.jugados - a.jugados)
     .slice(0, 5)
 
+  const nivelPorCategoria = new Map(categorias.map((categoria) => [categoria.id, categoria.nivel]))
+  const rankingOrdenado = [...ranking].sort(
+    (a, b) => (nivelPorCategoria.get(a.categoriaId) ?? 99) - (nivelPorCategoria.get(b.categoriaId) ?? 99),
+  )
+
   const fotoUrl = resolveApiAssetUrl(jugador.fotoUrl)
 
   return (
-    <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
+    <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
       {/* Encabezado */}
       <NavLink to="/ranking" className="mb-6 flex items-center gap-2 text-sm" style={{ color: 'var(--rp-muted-light)' }}>
         <ArrowLeft size={15} /> Volver al ranking
@@ -130,6 +141,47 @@ export default function PlayerProfilePage() {
         ))}
       </div>
 
+      {/* Ranking actual */}
+      {ranking.length > 0 && (
+        <section className="mb-8">
+          <h2 className="mb-3 flex items-center gap-2 text-base font-black uppercase tracking-wider" style={{ color: 'var(--rp-green-700)' }}>
+            <TrendingUp size={16} /> Ranking actual
+          </h2>
+          <div className="overflow-x-auto rounded-lg border" style={{ borderColor: 'var(--rp-border-light)' }}>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-left text-xs" style={{ borderColor: 'var(--rp-border-light)', background: 'var(--rp-green-800)', color: 'var(--rp-pale)' }}>
+                  <th className="px-4 py-2">Categoría</th>
+                  <th className="px-4 py-2 text-center">Pos.</th>
+                  <th className="px-4 py-2 text-center">Puntos</th>
+                  <th className="px-4 py-2 text-center">Torneos</th>
+                  <th className="px-4 py-2 text-center">V-D</th>
+                  <th className="px-4 py-2 text-center">Tendencia</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rankingOrdenado.map((r) => (
+                  <tr key={r.categoriaId} className="border-b last:border-0" style={{ borderColor: 'var(--rp-border-light)', background: '#fff' }}>
+                    <td className="px-4 py-3 font-bold" style={{ color: 'var(--rp-green-800)' }}>{r.categoriaNombre}</td>
+                    <td className="px-4 py-3 text-center font-black" style={{ color: 'var(--rp-gold)' }}>#{r.posicion}</td>
+                    <td className="px-4 py-3 text-center font-bold" style={{ color: 'var(--rp-ink)' }}>{r.puntosTotales}</td>
+                    <td className="px-4 py-3 text-center" style={{ color: 'var(--rp-muted-light)' }}>{r.torneosJugados}</td>
+                    <td className="px-4 py-3 text-center font-bold" style={{ color: 'var(--rp-ink)' }}>{r.victorias}-{r.derrotas}</td>
+                    <td className="px-4 py-3 text-center text-sm font-bold">
+                      <span style={{ color: r.tendencia.startsWith('+') ? 'var(--rp-green-600)' : r.tendencia.startsWith('-') ? '#c0392b' : 'var(--rp-muted-light)' }}>
+                        {r.tendencia}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      <div className="grid gap-x-8 lg:grid-cols-2 lg:items-start">
+      <div className="flex flex-col">
       {/* Agenda: próximos torneos */}
       {agenda.length > 0 && (
         <section className="mb-8">
@@ -150,69 +202,6 @@ export default function PlayerProfilePage() {
                 </span>
               </NavLink>
             ))}
-          </div>
-        </section>
-      )}
-
-      {/* Ranking actual */}
-      {ranking.length > 0 && (
-        <section className="mb-8">
-          <h2 className="mb-3 flex items-center gap-2 text-base font-black uppercase tracking-wider" style={{ color: 'var(--rp-green-700)' }}>
-            <TrendingUp size={16} /> Ranking actual
-          </h2>
-          <div className="overflow-x-auto rounded-lg border" style={{ borderColor: 'var(--rp-border-light)' }}>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b text-left text-xs" style={{ borderColor: 'var(--rp-border-light)', background: 'var(--rp-green-800)', color: 'var(--rp-pale)' }}>
-                  <th className="px-4 py-2">Categoría</th>
-                  <th className="px-4 py-2 text-center">Pos.</th>
-                  <th className="px-4 py-2 text-center">Puntos</th>
-                  <th className="px-4 py-2 text-center">Torneos</th>
-                  <th className="px-4 py-2 text-center">V-D</th>
-                  <th className="px-4 py-2 text-center">Tendencia</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ranking.map((r) => (
-                  <tr key={r.categoriaId} className="border-b last:border-0" style={{ borderColor: 'var(--rp-border-light)', background: '#fff' }}>
-                    <td className="px-4 py-3 font-bold" style={{ color: 'var(--rp-green-800)' }}>{r.categoriaNombre}</td>
-                    <td className="px-4 py-3 text-center font-black" style={{ color: 'var(--rp-gold)' }}>#{r.posicion}</td>
-                    <td className="px-4 py-3 text-center font-bold" style={{ color: 'var(--rp-ink)' }}>{r.puntosTotales}</td>
-                    <td className="px-4 py-3 text-center" style={{ color: 'var(--rp-muted-light)' }}>{r.torneosJugados}</td>
-                    <td className="px-4 py-3 text-center font-bold" style={{ color: 'var(--rp-ink)' }}>{r.victorias}-{r.derrotas}</td>
-                    <td className="px-4 py-3 text-center text-sm font-bold">
-                      <span style={{ color: r.tendencia.startsWith('+') ? 'var(--rp-green-600)' : r.tendencia.startsWith('-') ? '#c0392b' : 'var(--rp-muted-light)' }}>
-                        {r.tendencia}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
-
-      {/* Compañeros frecuentes */}
-      {companeros.length > 0 && (
-        <section className="mb-8">
-          <h2 className="mb-3 flex items-center gap-2 text-base font-black uppercase tracking-wider" style={{ color: 'var(--rp-green-700)' }}>
-            <Users size={16} /> Compañeros frecuentes
-          </h2>
-          <div className="space-y-2">
-            {companeros.map((companero) => {
-              const porcentaje = companero.jugados > 0 ? Math.round((companero.ganados / companero.jugados) * 100) : 0
-              return (
-                <div key={companero.id} className="flex items-center justify-between rounded-lg border px-4 py-3 transition-transform hover:-translate-y-0.5" style={{ borderColor: 'var(--rp-border-light)', background: '#fff' }}>
-                  <NavLink to={`/jugadores/${companero.id}`} className="font-bold" style={{ color: 'var(--rp-green-800)' }}>{companero.nombre}</NavLink>
-                  <div className="flex items-center gap-4 text-sm">
-                    <span style={{ color: 'var(--rp-muted-light)' }}>{companero.jugados} {companero.jugados === 1 ? 'partido' : 'partidos'}</span>
-                    <span className="font-black" style={{ color: 'var(--rp-green-600)' }}>{companero.ganados}V · {companero.jugados - companero.ganados}D</span>
-                    <span className="font-black" style={{ color: 'var(--rp-gold)' }}>{porcentaje}%</span>
-                  </div>
-                </div>
-              )
-            })}
           </div>
         </section>
       )}
@@ -256,6 +245,32 @@ export default function PlayerProfilePage() {
           )}
         </section>
       )}
+      </div>
+      <div className="flex flex-col">
+
+      {/* Compañeros frecuentes */}
+      {companeros.length > 0 && (
+        <section className="mb-8">
+          <h2 className="mb-3 flex items-center gap-2 text-base font-black uppercase tracking-wider" style={{ color: 'var(--rp-green-700)' }}>
+            <Users size={16} /> Compañeros frecuentes
+          </h2>
+          <div className="space-y-2">
+            {companeros.map((companero) => {
+              const porcentaje = companero.jugados > 0 ? Math.round((companero.ganados / companero.jugados) * 100) : 0
+              return (
+                <div key={companero.id} className="flex items-center justify-between rounded-lg border px-4 py-3 transition-transform hover:-translate-y-0.5" style={{ borderColor: 'var(--rp-border-light)', background: '#fff' }}>
+                  <NavLink to={`/jugadores/${companero.id}`} className="font-bold" style={{ color: 'var(--rp-green-800)' }}>{companero.nombre}</NavLink>
+                  <div className="flex items-center gap-4 text-sm">
+                    <span style={{ color: 'var(--rp-muted-light)' }}>{companero.jugados} {companero.jugados === 1 ? 'partido' : 'partidos'}</span>
+                    <span className="font-black" style={{ color: 'var(--rp-green-600)' }}>{companero.ganados}V · {companero.jugados - companero.ganados}D</span>
+                    <span className="font-black" style={{ color: 'var(--rp-gold)' }}>{porcentaje}%</span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </section>
+      )}
 
       {/* Últimos partidos */}
       {partidos.length > 0 && (
@@ -280,6 +295,8 @@ export default function PlayerProfilePage() {
           )}
         </section>
       )}
+      </div>
+      </div>
 
       {torneos.length === 0 && partidos.length === 0 && (
         <StatusMessage type="empty" title="Sin historial" description="Este jugador todavía no tiene partidos registrados." />

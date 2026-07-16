@@ -141,7 +141,7 @@ export function CanchasLugarModal({ lugar, onClose }: { lugar: LugarResponse | n
           <div className="mt-2 flex flex-col gap-2">
             <Input label="Nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Cancha 1" />
             <Input label="Descripción (opcional)" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Cristal / muro / techada" />
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid items-end gap-2 sm:grid-cols-2">
               <Input label="Precio por hora (opcional)" type="number" min={0} value={precioPorHora} onChange={(e) => setPrecioPorHora(e.target.value)} placeholder="8000" />
               <Input label="Seña (%, por defecto 50)" type="number" min={1} max={100} value={seniaPorcentaje} onChange={(e) => setSeniaPorcentaje(e.target.value)} placeholder="50" />
             </div>

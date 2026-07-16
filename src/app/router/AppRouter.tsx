@@ -7,6 +7,7 @@ import { ProtectedRoute } from '@/app/router/ProtectedRoute'
 import { ScrollToTop } from '@/app/router/ScrollToTop'
 
 const AdminDashboardPage = lazy(() => import('@/pages/admin/AdminDashboardPage'))
+const EstadisticasPage = lazy(() => import('@/pages/admin/EstadisticasPage'))
 const HomePage = lazy(() => import('@/pages/public/HomePage'))
 const LoginPage = lazy(() => import('@/pages/public/LoginPage'))
 const RankingPage = lazy(() => import('@/pages/public/RankingPage'))
@@ -83,6 +84,7 @@ export function AppRouter() {
 
         <Route path="admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
           <Route index element={<AdminDashboardPage />} />
+          <Route path="estadisticas" element={<EstadisticasPage />} />
           <Route path="jugadores" element={<PlayersPage />} />
           <Route path="categorias" element={<CategoriesPage />} />
           <Route path="lugares" element={<PlacesPage />} />

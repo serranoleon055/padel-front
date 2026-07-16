@@ -5,10 +5,12 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 
 import { brand } from '@/config/brand'
 import { categoriesApi, seasonsApi } from '@/features/catalog/catalogApi'
+import { homeApi } from '@/features/home/homeApi'
 import { rankingApi } from '@/features/ranking/rankingApi'
+import { elementosTickerInicio } from '@/shared/lib/ticker'
 import { resolveApiAssetUrl } from '@/shared/api/apiClient'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
-import type { CategoriaResponse, RankingResponse } from '@/shared/types/api'
+import type { CategoriaResponse, HomeResponse, RankingResponse } from '@/shared/types/api'
 import { Pagination } from '@/shared/ui/Pagination'
 import { SegmentedToggle } from '@/shared/ui/SegmentedToggle'
 import { StatusMessage } from '@/shared/ui/StatusMessage'
@@ -54,6 +56,15 @@ export default function RankingPage() {
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [temporadaActiva, setTemporadaActiva] = useState<string | null>(null)
+  const [datosInicio, setDatosInicio] = useState<HomeResponse | null>(null)
+
+  useEffect(() => {
+    let montado = true
+    homeApi.getHome()
+      .then((datos) => { if (montado) setDatosInicio(datos) })
+      .catch(() => { if (montado) setDatosInicio(null) })
+    return () => { montado = false }
+  }, [])
 
   useEffect(() => {
     let montado = true
@@ -202,17 +213,7 @@ export default function RankingPage() {
     return { categoriaSeleccionada, mayorGanador, mejorRacha }
   }, [categoriaId, ranking, categoriasDelGenero])
 
-  const elementosTicker = useMemo(() => {
-    const top = ranking.slice(0, 10)
-    if (top.length === 0) return []
-    return [
-      { label: `Top 10 · ${top[0].categoriaNombre}`, text: 'ranking de la categoría' },
-      ...top.map((entrada) => ({
-        label: `${entrada.posicion}. ${entrada.jugadorNombre}`,
-        text: `${entrada.puntosTotales} pts`,
-      })),
-    ]
-  }, [ranking])
+  const elementosTicker = useMemo(() => elementosTickerInicio(datosInicio), [datosInicio])
 
   return (
     <>

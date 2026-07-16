@@ -265,7 +265,7 @@ export default function TournamentAdminDetailPage() {
 
     if (cargando) return <section className="py-8"><StatusMessage type="loading" title="Cargando torneo..." /></section>
     if (error || !detalle) return <section className="py-8"><StatusMessage type="error" title="No se pudo cargar el torneo" description={error ?? undefined} /></section>
-    if (!torneo) return <section className="py-8"><StatusMessage type="error" title="No se pudo cargar el torneo" description="La API no devolvió los datos principales." /></section>
+    if (!torneo) return <section className="py-8"><StatusMessage type="error" title="No se pudo cargar el torneo" description="No se pudieron obtener los datos del torneo. Probá recargar la página." /></section>
 
     return (
         <section>

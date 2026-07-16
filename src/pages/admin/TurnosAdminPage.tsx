@@ -1,10 +1,10 @@
-import { CalendarClock, Check, ChevronLeft, ChevronRight, MapPin, Settings, X } from 'lucide-react'
+import { CalendarClock, Check, ChevronLeft, ChevronRight, MapPin, Plus, Settings, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
 import { canchasApi, placesApi } from '@/features/catalog/catalogApi'
-import { horariosCanchaApi, reservasApi, type HorarioCanchaRequest, type ReservaResponse } from '@/features/reservas/reservasApi'
+import { horariosCanchaApi, reservasApi, type HorarioCanchaRequest, type ReservaResponse, type SlotDisponibilidad } from '@/features/reservas/reservasApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
-import { formatearEnum } from '@/shared/lib/formatters'
+import { formatearEnum, formatearFecha } from '@/shared/lib/formatters'
 import type { CanchaResponse, LugarResponse } from '@/shared/types/api'
 import { AdminPageHeader } from '@/shared/ui/AdminPageHeader'
 import { AdminTable, type Column } from '@/shared/ui/AdminTable'
@@ -83,6 +83,20 @@ export default function TurnosAdminPage() {
   const [horario, setHorario] = useState<HorarioCanchaRequest>(HORARIO_VACIO)
   const [guardandoHorario, setGuardandoHorario] = useState(false)
   const [errorHorario, setErrorHorario] = useState<string | null>(null)
+
+  const [nuevoAbierto, setNuevoAbierto] = useState(false)
+  const [slotsNuevo, setSlotsNuevo] = useState<SlotDisponibilidad[]>([])
+  const [horarioNuevo, setHorarioNuevo] = useState('')
+  const [duracionNuevo, setDuracionNuevo] = useState<1 | 2>(1)
+  const [nombreNuevo, setNombreNuevo] = useState('')
+  const [telefonoNuevo, setTelefonoNuevo] = useState('')
+  const [guardandoNuevo, setGuardandoNuevo] = useState(false)
+  const [errorNuevo, setErrorNuevo] = useState<string | null>(null)
+
+  const slotConsecutivoNuevo = useMemo(() => {
+    const seleccionado = slotsNuevo.find((slot) => slot.horaInicio === horarioNuevo)
+    return seleccionado ? slotsNuevo.find((slot) => slot.horaInicio === seleccionado.horaFin) ?? null : null
+  }, [slotsNuevo, horarioNuevo])
 
   useEffect(() => {
     Promise.all([placesApi.getAll(), canchasApi.getAll()])
@@ -224,6 +238,50 @@ export default function TurnosAdminPage() {
     }
   }
 
+  function abrirNuevo() {
+    if (canchaId == null) return
+    setNombreNuevo('')
+    setTelefonoNuevo('')
+    setHorarioNuevo('')
+    setDuracionNuevo(1)
+    setErrorNuevo(null)
+    setSlotsNuevo([])
+    setNuevoAbierto(true)
+    reservasApi.getDisponibilidad(canchaId, fecha)
+      .then((datos) => setSlotsNuevo(datos.filter((slot) => slot.disponible)))
+      .catch((e: unknown) => setErrorNuevo(obtenerMensajeErrorApi(e)))
+  }
+
+  async function guardarNuevo() {
+    if (canchaId == null) return
+    if (!nombreNuevo.trim() || !telefonoNuevo.trim() || !horarioNuevo) {
+      setErrorNuevo('Completá cliente, teléfono y horario.')
+      return
+    }
+    setGuardandoNuevo(true)
+    setErrorNuevo(null)
+    try {
+      const horarios = duracionNuevo === 2 && slotConsecutivoNuevo
+        ? [horarioNuevo, slotConsecutivoNuevo.horaInicio]
+        : [horarioNuevo]
+      const reservas = await reservasApi.solicitarLote({
+        canchaId,
+        fecha,
+        horarios,
+        clienteNombre: nombreNuevo.trim(),
+        clienteTelefono: telefonoNuevo.trim(),
+      })
+      await Promise.all(reservas.map((reserva) => reservasApi.confirmar(reserva.id)))
+      avisoExito('Turno asignado')
+      setNuevoAbierto(false)
+      cargarReservas(canchaId, fecha)
+    } catch (e: unknown) {
+      setErrorNuevo(obtenerMensajeErrorApi(e))
+    } finally {
+      setGuardandoNuevo(false)
+    }
+  }
+
   const columnas = useMemo(() => [
     { key: 'horario', label: 'Horario', render: (fila: FilaReserva) => <span className="text-sm font-bold text-rp-text">{hhmm(fila.horaInicio)} - {hhmm(fila.horaFin)}</span> },
     { key: 'cliente', label: 'Cliente', render: (fila: FilaReserva) => <div><p className="text-sm font-bold text-rp-text">{fila.clienteNombre}</p><p className="text-xs text-rp-muted">{fila.clienteTelefono}</p></div> },
@@ -246,7 +304,10 @@ export default function TurnosAdminPage() {
 
   return (
     <section>
-      <AdminPageHeader title={<><CalendarClock size={26} />Turnos</>} action={<Button size="sm" variant="subtle" onClick={abrirHorario}><Settings size={16} />Configurar horario</Button>} />
+      <AdminPageHeader title={<><CalendarClock size={26} />Turnos</>} action={<>
+        <Button size="sm" onClick={abrirNuevo} disabled={canchaId == null}><Plus size={16} />Nuevo turno</Button>
+        <Button size="sm" variant="subtle" onClick={abrirHorario}><Settings size={16} />Configurar horario</Button>
+      </>} />
 
       <div className="mt-4 grid gap-3 sm:max-w-md sm:grid-cols-2">
         <Select label="Sucursal" value={lugarId ?? ''} onChange={(e) => elegirLugar(e.target.value ? Number(e.target.value) : null)}>
@@ -327,6 +388,68 @@ export default function TurnosAdminPage() {
           )}
         />
       </div>
+
+      <Modal isOpen={nuevoAbierto} onClose={() => setNuevoAbierto(false)} onSubmit={guardarNuevo} title="Asignar turno" size="sm">
+        <div className="flex flex-col gap-4">
+          <p className="text-xs text-rp-muted">{lugares.find((l) => l.id === lugarId)?.nombre} · {canchasDelLugar.find((c) => c.id === canchaId)?.nombre} · {formatearFecha(fecha)}</p>
+          {slotsNuevo.length === 0 ? (
+            <p className="text-sm text-rp-muted">No hay horarios libres para esta cancha en esta fecha.</p>
+          ) : (
+            <div>
+              <span className="text-xs font-black uppercase tracking-[0.14em] text-rp-muted">Horario</span>
+              <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4">
+                {slotsNuevo.map((slot) => (
+                  <button
+                    key={slot.horaInicio}
+                    type="button"
+                    onClick={() => { setHorarioNuevo(slot.horaInicio); setDuracionNuevo(1) }}
+                    className={horarioNuevo === slot.horaInicio
+                      ? 'rounded-md border border-rp-accent bg-rp-accent px-2 py-1.5 text-sm font-black text-white'
+                      : 'rounded-md border border-rp-accent/50 bg-rp-accent/10 px-2 py-1.5 text-sm font-bold text-rp-text hover:bg-rp-accent/20'}
+                  >
+                    {hhmm(slot.horaInicio)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {horarioNuevo && (
+            <div>
+              <span className="text-xs font-black uppercase tracking-[0.14em] text-rp-muted">Duración</span>
+              <div className="mt-2 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setDuracionNuevo(1)}
+                  className={duracionNuevo === 1
+                    ? 'flex-1 rounded-md border border-rp-accent bg-rp-accent px-3 py-2 text-sm font-black text-white'
+                    : 'flex-1 rounded-md border border-rp-border bg-rp-surface px-3 py-2 text-sm font-bold text-rp-text hover:border-rp-accent'}
+                >
+                  1 hora
+                </button>
+                <button
+                  type="button"
+                  disabled={!slotConsecutivoNuevo}
+                  onClick={() => setDuracionNuevo(2)}
+                  className={!slotConsecutivoNuevo
+                    ? 'flex-1 cursor-not-allowed rounded-md border border-rp-border bg-rp-surface-2 px-3 py-2 text-sm font-bold text-rp-muted/50'
+                    : duracionNuevo === 2
+                      ? 'flex-1 rounded-md border border-rp-accent bg-rp-accent px-3 py-2 text-sm font-black text-white'
+                      : 'flex-1 rounded-md border border-rp-border bg-rp-surface px-3 py-2 text-sm font-bold text-rp-text hover:border-rp-accent'}
+                >
+                  2 horas
+                </button>
+              </div>
+            </div>
+          )}
+          <Input label="Cliente" value={nombreNuevo} onChange={(e) => setNombreNuevo(e.target.value)} placeholder="Nombre del cliente" />
+          <Input label="Teléfono" type="tel" value={telefonoNuevo} onChange={(e) => setTelefonoNuevo(e.target.value)} placeholder="385..." />
+          {errorNuevo && <p className="rounded-md border border-rp-danger/40 bg-rp-danger/10 px-3 py-2 text-sm font-bold text-rp-danger">{errorNuevo}</p>}
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="ghost" size="sm" onClick={() => setNuevoAbierto(false)} disabled={guardandoNuevo}>Cancelar</Button>
+            <Button type="submit" size="sm" disabled={guardandoNuevo || slotsNuevo.length === 0}>{guardandoNuevo ? 'Asignando...' : 'Asignar turno'}</Button>
+          </div>
+        </div>
+      </Modal>
 
       <Modal isOpen={horarioAbierto} onClose={() => setHorarioAbierto(false)} onSubmit={guardarHorario} title={`Horario de ${lugares.find((l) => l.id === lugarId)?.nombre ?? 'la sucursal'}`} size="sm">
         <div className="flex flex-col gap-4">

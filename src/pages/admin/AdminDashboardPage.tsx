@@ -1,6 +1,6 @@
 import { CalendarClock, CalendarDays, ClipboardList, Clock, LayoutGrid, Sparkles, Trophy, Users, Wallet } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 
 import { placesApi } from '@/features/catalog/catalogApi'
 import { homeApi } from '@/features/home/homeApi'
@@ -26,6 +26,7 @@ function hoyISO() {
 type ReservaPendiente = AdminDashboardResponse['reservasPendientesLista'][number]
 
 export default function AdminDashboardPage() {
+  const navigate = useNavigate()
   const [lugares, setLugares] = useState<LugarResponse[]>([])
   const [lugarId, setLugarId] = useState<number | null>(null)
   const [panel, setPanel] = useState<AdminDashboardResponse | null>(null)
@@ -182,8 +183,9 @@ export default function AdminDashboardPage() {
       )}
       <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <TarjetaMetrica icon={ClipboardList} label="Inscripciones pendientes" value={panel.solicitudesPendientes} onClick={() => setModalInscripciones(true)} />
-        <TarjetaMetrica icon={Trophy} label="Torneos activos" value={resumen.torneosActivos} />
-        <TarjetaMetrica icon={Users} label="Jugadores" value={resumen.jugadoresRegistrados} />
+        <TarjetaMetrica icon={ClipboardList} label="Torneos en inscripción" value={panel.torneosEnInscripcion} onClick={() => navigate('/admin/torneos?estado=INSCRIPCION')} />
+        <TarjetaMetrica icon={Trophy} label="Torneos finalizados" value={panel.torneosFinalizados} onClick={() => navigate('/admin/torneos?estado=FINALIZADO')} />
+        <TarjetaMetrica icon={Users} label="Jugadores" value={resumen.jugadoresRegistrados} onClick={() => navigate('/admin/jugadores')} />
       </div>
 
       <div className="mt-5">

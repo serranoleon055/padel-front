@@ -1,6 +1,6 @@
 import { ChevronRight, Plus, Settings, Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useSearchParams } from 'react-router-dom'
 
 import { tournamentsApi } from '@/features/tournaments/tournamentsApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
@@ -38,8 +38,9 @@ export default function TournamentsAdminPage() {
     const [idCambiando, setIdCambiando] = useState<number | null>(null)
     const [objetivoEliminar, setObjetivoEliminar] = useState<TorneoResponse | null>(null)
     const [eliminando, setEliminando] = useState(false)
+    const [searchParams] = useSearchParams()
     const [busqueda, setBusqueda] = useState('')
-    const [filtroEstado, setFiltroEstado] = useState<EstadoTorneo | ''>('')
+    const [filtroEstado, setFiltroEstado] = useState<EstadoTorneo | ''>((searchParams.get('estado') as EstadoTorneo | null) ?? '')
     const [filtroFormato, setFiltroFormato] = useState<FormatoTorneo | ''>('')
     const [filtroCategoria, setFiltroCategoria] = useState<string>('')
     const [pagina, setPagina] = useState(1)

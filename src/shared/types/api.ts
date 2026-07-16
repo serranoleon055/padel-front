@@ -518,11 +518,24 @@ export type AdminDashboardResponse = {
   reservasHoy: number
   reservasPendientes: number
   solicitudesPendientes: number
+  torneosFinalizados: number
+  torneosEnInscripcion: number
   ingresoEstimadoHoy: number | null
   turnosPorDiaSemana: number[]
   proximosTurnosHoy: TurnoResumenResponse[]
   reservasPendientesLista: ReservaPendienteResumen[]
   solicitudesPendientesLista: SolicitudPendienteResumen[]
+}
+
+export type EstadisticasResponse = {
+  heatmap: { diaSemana: number; hora: number; cantidad: number }[]
+  canchasMasUsadas: { canchaNombre: string; reservas: number }[]
+  ingresosPorMes: { mes: string; turnos: number; inscripciones: number }[]
+  reservasTotales: number
+  reservasCanceladas: number
+  tasaCancelacion: number
+  embudoTorneos: { torneoId: number; torneoNombre: string; inscriptos: number; cupo: number | null; ingresos: number }[]
+  categoriasDemandadas: { categoriaNombre: string; inscriptos: number }[]
 }
 
 export type PagedResponse<T> = {
