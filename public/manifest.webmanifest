@@ -1,0 +1,19 @@
+{
+  "name": "RankPadel — Ranking y torneos de pádel",
+  "short_name": "RankPadel",
+  "description": "Turnos, torneos, resultados y ranking del club.",
+  "lang": "es-AR",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f5f2ea",
+  "theme_color": "#155c2e",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

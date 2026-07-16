@@ -187,6 +187,24 @@ body {
   to { transform: translateX(-50%); }
 }
 
+/* Usuarios sensibles al movimiento: frenar toda animación continua */
+@media (prefers-reduced-motion: reduce) {
+  .ticker-inner {
+    animation-play-state: paused;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .ticker-inner {
+    animation: none;
+  }
+}
+
 .ticker-item {
   display: flex;
   flex: 0 0 auto;

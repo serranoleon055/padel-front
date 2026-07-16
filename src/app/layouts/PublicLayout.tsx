@@ -32,7 +32,7 @@ const PublicNavbar = memo(function PublicNavbar({
   return (
     <>
       <nav className="nav">
-        <NavLink to="/" className="nlogo">
+        <NavLink to="/" className="nlogo" aria-label={`${brand.name} — inicio`}>
           <div className="nlogo-icon" aria-hidden="true" />
           <div>
             <div className="nlogo-name">{brand.name}</div>

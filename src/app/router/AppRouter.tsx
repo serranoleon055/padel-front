@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Route, Routes } from 'react-router-dom'
 
 import { AdminLayout } from '@/app/layouts/AdminLayout'
 import { PublicLayout } from '@/app/layouts/PublicLayout'
@@ -41,6 +41,7 @@ const InscribirmePage = lazy(() => import('@/pages/public/InscribirmePage'))
 const PagoResultadoPage = lazy(() => import('@/pages/public/PagoResultadoPage'))
 const InscripcionesAdminPage = lazy(() => import('@/pages/admin/InscripcionesAdminPage'))
 const ConfiguracionSedePage = lazy(() => import('@/pages/admin/ConfiguracionSedePage'))
+const NotFoundPage = lazy(() => import('@/pages/public/NotFoundPage'))
 
 function PageFallback() {
   return (
@@ -80,6 +81,7 @@ export function AppRouter() {
           <Route path="terminos" element={<TerminosPage />} />
           <Route path="privacidad" element={<PrivacidadPage />} />
           <Route path="login" element={<LoginPage />} />
+          <Route path="*" element={<NotFoundPage />} />
         </Route>
 
         <Route path="admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
@@ -101,7 +103,6 @@ export function AppRouter() {
           <Route path="configuracion" element={<ConfiguracionSedePage />} />
         </Route>
 
-        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>
   )

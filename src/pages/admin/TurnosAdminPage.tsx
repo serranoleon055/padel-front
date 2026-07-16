@@ -348,6 +348,8 @@ export default function TurnosAdminPage() {
               const sel = iso === fecha
               return (
                 <button key={iso} onClick={() => setFecha(iso)}
+                  aria-label={dia.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                  aria-pressed={sel}
                   className={sel
                     ? 'flex flex-col items-center gap-0.5 rounded-md border border-rp-accent bg-rp-accent/20 px-1 py-2 text-rp-text'
                     : 'flex flex-col items-center gap-0.5 rounded-md border border-rp-border bg-rp-surface px-1 py-2 text-rp-muted hover:border-rp-accent'}>

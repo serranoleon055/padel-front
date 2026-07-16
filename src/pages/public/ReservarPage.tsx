@@ -341,6 +341,8 @@ export default function ReservarPage() {
                   key={iso}
                   disabled={esPasado}
                   onClick={() => setFecha(iso)}
+                  aria-label={dia.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                  aria-pressed={seleccionado}
                   className={
                     seleccionado
                       ? 'flex flex-col items-center gap-0.5 rounded-md border border-rp-accent bg-rp-accent px-1 py-2 text-white'

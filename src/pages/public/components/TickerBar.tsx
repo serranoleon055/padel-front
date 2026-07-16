@@ -58,7 +58,10 @@ function BarraTickerInterna({ items, label = 'NOVEDADES', variant = 'default' }:
       <div className="ticker-track">
         <div className="ticker-inner" style={estiloTicker}>
           <div ref={refGrupo} className="ticker-group">
-            {elementosBase.map((elemento, i) => <EntradaTicker key={`${elemento.label}-${i}`} elemento={elemento} />)}
+            {/* Solo la primera pasada es legible para lectores de pantalla; el relleno del loop se oculta */}
+            {elementosBase.map((elemento, i) => (
+              <EntradaTicker key={`${elemento.label}-${i}`} elemento={elemento} ocultoParaLector={i >= items.length} />
+            ))}
           </div>
           <div className="ticker-group" aria-hidden="true">
             {elementosBase.map((elemento, i) => <EntradaTicker key={`copy-${elemento.label}-${i}`} elemento={elemento} />)}
@@ -69,9 +72,9 @@ function BarraTickerInterna({ items, label = 'NOVEDADES', variant = 'default' }:
   )
 }
 
-function EntradaTicker({ elemento }: { elemento: ElementoTicker }) {
+function EntradaTicker({ elemento, ocultoParaLector = false }: { elemento: ElementoTicker; ocultoParaLector?: boolean }) {
   return (
-    <span className="ticker-item">
+    <span className="ticker-item" aria-hidden={ocultoParaLector || undefined}>
       <CircleDot size={14} />
       <strong>{elemento.label}</strong>
       <span>{elemento.text}</span>

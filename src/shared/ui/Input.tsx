@@ -15,7 +15,7 @@ export const Input = memo(function Input({ label, error, className, id, ...props
             <input
                 id={inputId}
                 className={cn(
-                'h-11 w-full min-w-0 max-w-full rounded-md border bg-rp-surface px-3 text-sm text-rp-text outline-none transition',
+                'h-11 w-full min-w-0 max-w-full rounded-md border bg-rp-surface px-3 text-base text-rp-text outline-none transition sm:text-sm',
                 error ? 'border-rp-danger' : 'border-rp-border focus:border-rp-accent',
                 className,
                 )}
