@@ -1,4 +1,4 @@
-import { CalendarClock, Check, ChevronLeft, ChevronRight, MapPin, Plus, Settings, Undo2, UserX, Wallet, X } from 'lucide-react'
+import { CalendarClock, Check, ChevronLeft, ChevronRight, MapPin, Plus, Settings, Tag, Undo2, UserX, Wallet, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
 import { cajaApi, MEDIOS, type MedioCobro } from '@/features/caja/cajaApi'
@@ -16,6 +16,7 @@ import { Modal } from '@/shared/ui/Modal'
 import { SegmentedToggle } from '@/shared/ui/SegmentedToggle'
 import { Select } from '@/shared/ui/Select'
 import { StatusBadge } from '@/shared/ui/StatusBadge'
+import { TarifasCanchaModal } from '@/pages/admin/TarifasCanchaModal'
 import { useToast } from '@/shared/ui/Toast'
 
 const NOMBRES_DIA = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
@@ -94,6 +95,7 @@ export default function TurnosAdminPage() {
   const [guardandoHorario, setGuardandoHorario] = useState(false)
   const [errorHorario, setErrorHorario] = useState<string | null>(null)
 
+  const [tarifasAbiertas, setTarifasAbiertas] = useState(false)
   const [filaCobro, setFilaCobro] = useState<FilaReserva | null>(null)
   const [formCobro, setFormCobro] = useState<{ monto: string; medio: MedioCobro; notas: string }>({ monto: '', medio: 'EFECTIVO', notas: '' })
   const [cobrando, setCobrando] = useState(false)
@@ -413,6 +415,7 @@ export default function TurnosAdminPage() {
       <AdminPageHeader title={<><CalendarClock size={26} />Turnos</>} action={<>
         <Button size="sm" onClick={abrirNuevo} disabled={canchaId == null}><Plus size={16} />Nuevo turno</Button>
         <Button size="sm" variant="subtle" onClick={abrirHorario}><Settings size={16} />Configurar horario</Button>
+        <Button size="sm" variant="subtle" onClick={() => setTarifasAbiertas(true)} disabled={canchaId == null}><Tag size={16} />Tarifas</Button>
       </>} />
 
       <div className="mt-4 grid gap-3 sm:max-w-md sm:grid-cols-2">
@@ -588,6 +591,13 @@ export default function TurnosAdminPage() {
           </div>
         </div>
       </Modal>
+
+      <TarifasCanchaModal
+        canchaId={tarifasAbiertas ? canchaId : null}
+        canchaNombre={canchasDelLugar.find((c) => c.id === canchaId)?.nombre ?? ''}
+        precioBase={canchasDelLugar.find((c) => c.id === canchaId)?.precioPorHora ?? null}
+        onClose={() => { setTarifasAbiertas(false); if (canchaId != null) cargarReservas(canchaId, fecha) }}
+      />
 
       <Modal isOpen={Boolean(filaCobro)} onClose={() => setFilaCobro(null)} onSubmit={cobrar} title="Cobrar saldo" size="sm">
         {filaCobro && (

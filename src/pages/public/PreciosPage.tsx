@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 
 import { useConfiguracionSede } from '@/app/providers/ConfiguracionSedeContext'
 import { canchasApi, placesApi } from '@/features/catalog/catalogApi'
+import { describirDias, tarifasApi, type TarifaCanchaResponse } from '@/features/catalog/tarifasApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
 import { formatearMoneda } from '@/shared/lib/formatters'
 import type { CanchaResponse, LugarResponse } from '@/shared/types/api'
@@ -14,6 +15,7 @@ export default function PreciosPage() {
   const [lugares, setLugares] = useState<LugarResponse[]>([])
   const [lugarId, setLugarId] = useState<number | null>(null)
   const [canchas, setCanchas] = useState<CanchaResponse[]>([])
+  const [tarifas, setTarifas] = useState<Record<number, TarifaCanchaResponse[]>>({})
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -35,7 +37,18 @@ export default function PreciosPage() {
     let montado = true
     setCargando(true)
     canchasApi.getAll(lugarId)
-      .then((datos) => { if (montado) { setCanchas(datos.filter((cancha) => cancha.activo)); setError(null) } })
+      .then(async (datos) => {
+        if (!montado) return
+        const activas = datos.filter((cancha) => cancha.activo)
+        setCanchas(activas)
+        setError(null)
+        // Las franjas de todas las canchas en paralelo: si alguna falla, esa cancha
+        // muestra su tarifa plana en vez de romper la página entera.
+        const porCancha = await Promise.all(
+          activas.map(async (cancha) => [cancha.id, await tarifasApi.getAll(cancha.id).catch(() => [])] as const),
+        )
+        if (montado) setTarifas(Object.fromEntries(porCancha))
+      })
       .catch((e: unknown) => { if (montado) setError(obtenerMensajeErrorApi(e)) })
       .finally(() => { if (montado) setCargando(false) })
     return () => { montado = false }
@@ -68,10 +81,30 @@ export default function PreciosPage() {
             {canchas.map((cancha) => (
               <article key={cancha.id} className="rounded-lg border border-rp-border bg-rp-surface/82 p-4">
                 <h3 className="text-sm font-black text-rp-text">{cancha.nombre}</h3>
-                <p className="mt-2 text-2xl font-black text-rp-accent">
-                  {cancha.precioPorHora != null ? formatearMoneda(cancha.precioPorHora) : 'A consultar'}
-                  {cancha.precioPorHora != null && <span className="text-sm font-bold text-rp-muted"> /hora</span>}
-                </p>
+                {(tarifas[cancha.id]?.length ?? 0) > 0 ? (
+                  <div className="mt-2 flex flex-col gap-1.5">
+                    {tarifas[cancha.id].filter((t) => t.activo).map((tarifa) => (
+                      <div key={tarifa.id} className="flex items-baseline justify-between gap-2">
+                        <span className="text-xs text-rp-muted">
+                          {describirDias(tarifa.diasSemana)} · {tarifa.horaDesde.slice(0, 5)} a {tarifa.horaHasta.slice(0, 5)}
+                        </span>
+                        <span className="shrink-0 text-lg font-black text-rp-accent">{formatearMoneda(tarifa.precioPorHora)}</span>
+                      </div>
+                    ))}
+                    {cancha.precioPorHora != null && (
+                      <div className="flex items-baseline justify-between gap-2 border-t border-rp-border pt-1.5">
+                        <span className="text-xs text-rp-muted">Resto de los horarios</span>
+                        <span className="shrink-0 text-lg font-black text-rp-accent">{formatearMoneda(cancha.precioPorHora)}</span>
+                      </div>
+                    )}
+                    <p className="mt-1 text-[11px] text-rp-muted">Precios por hora.</p>
+                  </div>
+                ) : (
+                  <p className="mt-2 text-2xl font-black text-rp-accent">
+                    {cancha.precioPorHora != null ? formatearMoneda(cancha.precioPorHora) : 'A consultar'}
+                    {cancha.precioPorHora != null && <span className="text-sm font-bold text-rp-muted"> /hora</span>}
+                  </p>
+                )}
                 {cancha.descripcion && <p className="mt-1 text-xs text-rp-muted">{cancha.descripcion}</p>}
               </article>
             ))}
