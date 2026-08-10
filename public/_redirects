@@ -1,0 +1,3 @@
+# SPA: todas las rutas las resuelve react-router en el cliente.
+# Sin esto, recargar en /ranking o /admin/torneos da 404 en Cloudflare Pages.
+/*    /index.html   200
