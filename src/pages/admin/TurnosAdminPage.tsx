@@ -1,10 +1,11 @@
-import { CalendarClock, Check, ChevronLeft, ChevronRight, MapPin, Plus, Settings, X } from 'lucide-react'
+import { CalendarClock, Check, ChevronLeft, ChevronRight, MapPin, Plus, Settings, Undo2, UserX, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
 import { canchasApi, placesApi } from '@/features/catalog/catalogApi'
 import { horariosCanchaApi, reservasApi, type HorarioCanchaRequest, type ReservaResponse, type SlotDisponibilidad } from '@/features/reservas/reservasApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
 import { formatearEnum, formatearFecha } from '@/shared/lib/formatters'
+import { enlaceWhatsApp } from '@/shared/lib/whatsapp'
 import type { CanchaResponse, LugarResponse } from '@/shared/types/api'
 import { AdminPageHeader } from '@/shared/ui/AdminPageHeader'
 import { AdminTable, type Column } from '@/shared/ui/AdminTable'
@@ -28,6 +29,7 @@ type FilaReserva = {
   estado: string | null
   estadoPago: string | null
   codigo: string
+  turnoFijo: boolean
 }
 
 function toneReserva(estado: string | null): 'success' | 'neutral' | 'danger' | 'warning' {
@@ -36,9 +38,15 @@ function toneReserva(estado: string | null): 'success' | 'neutral' | 'danger' | 
     case 'FINALIZADA': return 'warning'
     case 'RECHAZADA':
     case 'CANCELADA':
+    case 'NO_SHOW':
     case 'EXPIRADA': return 'danger'
     default: return 'neutral'
   }
+}
+
+/** Un turno solo se puede marcar como ausente una vez que empezó. */
+function yaEmpezo(fecha: string, horaInicio: string) {
+  return new Date(`${fecha}T${horaInicio}`) <= new Date()
 }
 
 function aISO(fecha: Date) {
@@ -152,6 +160,7 @@ export default function TurnosAdminPage() {
           estado: reserva.estado,
           estadoPago: reserva.estadoPago ?? null,
           codigo: reserva.codigo,
+          turnoFijo: reserva.turnoFijo ?? false,
         })
       }
     }
@@ -284,17 +293,58 @@ export default function TurnosAdminPage() {
 
   const columnas = useMemo(() => [
     { key: 'horario', label: 'Horario', render: (fila: FilaReserva) => <span className="text-sm font-bold text-rp-text">{hhmm(fila.horaInicio)} - {hhmm(fila.horaFin)}</span> },
-    { key: 'cliente', label: 'Cliente', render: (fila: FilaReserva) => <div><p className="text-sm font-bold text-rp-text">{fila.clienteNombre}</p><p className="text-xs text-rp-muted">{fila.clienteTelefono}</p></div> },
-    { key: 'estado', label: 'Estado', render: (fila: FilaReserva) => <StatusBadge tone={toneReserva(fila.estado)}>{formatearEnum(fila.estado ?? '')}</StatusBadge> },
+    {
+      key: 'cliente',
+      label: 'Cliente',
+      render: (fila: FilaReserva) => {
+        const enlace = enlaceWhatsApp(
+          fila.clienteTelefono,
+          `Hola ${fila.clienteNombre}! Te escribo por tu turno de las ${hhmm(fila.horaInicio)} (código ${fila.codigo}).`,
+        )
+        return (
+          <div>
+            <p className="text-sm font-bold text-rp-text">{fila.clienteNombre}</p>
+            {enlace ? (
+              <a
+                href={enlace}
+                target="_blank"
+                rel="noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="text-xs text-rp-muted underline-offset-2 hover:text-rp-accent hover:underline"
+                title="Escribirle por WhatsApp"
+              >
+                {fila.clienteTelefono}
+              </a>
+            ) : (
+              <p className="text-xs text-rp-muted">{fila.clienteTelefono}</p>
+            )}
+          </div>
+        )
+      },
+    },
+    {
+      key: 'estado',
+      label: 'Estado',
+      render: (fila: FilaReserva) => (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <StatusBadge tone={toneReserva(fila.estado)}>{formatearEnum(fila.estado ?? '')}</StatusBadge>
+          {fila.turnoFijo && (
+            <span className="rounded-full bg-rp-surface-2 px-2 py-0.5 text-[10px] font-bold text-rp-muted" title="Viene de un turno fijo">Fijo</span>
+          )}
+        </div>
+      ),
+    },
     {
       key: 'pago',
       label: 'Pago',
       render: (fila: FilaReserva) => (
         fila.estadoPago === 'APROBADO'
           ? <span className="rounded-full bg-rp-accent/15 px-2 py-0.5 text-[10px] font-bold text-rp-accent">Seña pagada</span>
-          : fila.estadoPago === 'PENDIENTE'
-            ? <span className="text-xs text-rp-muted">Pago pendiente</span>
-            : <span className="text-xs text-rp-muted">En el club</span>
+          : fila.estadoPago === 'APROBADO_SIN_TURNO'
+            ? <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-[10px] font-bold text-red-400" title="El pago entró después de que venciera el turno. Hay que devolverle la seña al cliente.">Devolver seña</span>
+            : fila.estadoPago === 'PENDIENTE'
+              ? <span className="text-xs text-rp-muted">Pago pendiente</span>
+              : <span className="text-xs text-rp-muted">En el club</span>
       ),
     },
     { key: 'codigo', label: 'Código', render: (fila: FilaReserva) => <span className="text-xs text-rp-muted">{fila.codigo}{fila.reservas.length > 1 ? ` · ${fila.reservas.length} turnos` : ''}</span> },
@@ -385,6 +435,12 @@ export default function TurnosAdminPage() {
               )}
               {(fila.estado === 'PENDIENTE' || fila.estado === 'CONFIRMADA') && (
                 <button onClick={() => ejecutarAccionLote(fila.reservas, (id) => fila.estado === 'PENDIENTE' ? reservasApi.rechazar(id) : reservasApi.cancelar(id), fila.reservas.length > 1 ? 'Turnos liberados' : 'Turno liberado')} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger" aria-label="Rechazar o cancelar"><X size={15} /></button>
+              )}
+              {(fila.estado === 'CONFIRMADA' || fila.estado === 'FINALIZADA') && yaEmpezo(fecha, fila.horaInicio) && (
+                <button onClick={() => ejecutarAccionLote(fila.reservas, (id) => reservasApi.marcarNoShow(id), 'Marcado como ausente')} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger" aria-label="No vino" title="No vino"><UserX size={15} /></button>
+              )}
+              {fila.estado === 'NO_SHOW' && (
+                <button onClick={() => ejecutarAccionLote(fila.reservas, (id) => reservasApi.desmarcarNoShow(id), 'Ausencia deshecha')} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent" aria-label="Deshacer ausente" title="Deshacer: sí vino"><Undo2 size={15} /></button>
               )}
             </>
           )}

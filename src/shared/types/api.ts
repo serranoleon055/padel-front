@@ -534,6 +534,8 @@ export type EstadisticasResponse = {
   reservasTotales: number
   reservasCanceladas: number
   tasaCancelacion: number
+  reservasNoShow: number
+  tasaNoShow: number
   embudoTorneos: { torneoId: number; torneoNombre: string; inscriptos: number; cupo: number | null; ingresos: number }[]
   categoriasDemandadas: { categoriaNombre: string; inscriptos: number }[]
 }

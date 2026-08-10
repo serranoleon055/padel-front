@@ -116,6 +116,17 @@ export default function EstadisticasPage() {
               <div className="mt-3 h-2 overflow-hidden rounded-full bg-rp-surface-2">
                 <div className="h-full rounded-full bg-rp-danger" style={{ width: `${Math.min(100, datos.tasaCancelacion * 100)}%` }} />
               </div>
+
+              <div className="mt-5 border-t border-rp-border pt-4">
+                <p className="text-xs font-bold uppercase tracking-wide text-rp-muted">No vinieron</p>
+                <p className="mt-1 text-2xl font-black text-rp-text">
+                  {Math.round(datos.tasaNoShow * 100)}%
+                  <span className="ml-2 text-sm font-bold text-rp-muted">({datos.reservasNoShow} turnos)</span>
+                </p>
+                <p className="mt-1 text-xs text-rp-muted">
+                  Reservaron, no avisaron y la cancha quedó bloqueada.
+                </p>
+              </div>
             </div>
           </Panel>
 

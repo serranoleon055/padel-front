@@ -37,6 +37,8 @@ const FormatTemplatesPage = lazy(() => import('@/pages/admin/FormatTemplatesPage
 const PointTemplatesPage = lazy(() => import('@/pages/admin/PointTemplatesPage'))
 const ReservarPage = lazy(() => import('@/pages/public/ReservarPage'))
 const TurnosAdminPage = lazy(() => import('@/pages/admin/TurnosAdminPage'))
+const TurnosFijosPage = lazy(() => import('@/pages/admin/TurnosFijosPage'))
+const ClientesPage = lazy(() => import('@/pages/admin/ClientesPage'))
 const InscribirmePage = lazy(() => import('@/pages/public/InscribirmePage'))
 const PagoResultadoPage = lazy(() => import('@/pages/public/PagoResultadoPage'))
 const InscripcionesAdminPage = lazy(() => import('@/pages/admin/InscripcionesAdminPage'))
@@ -91,6 +93,8 @@ export function AppRouter() {
           <Route path="categorias" element={<CategoriesPage />} />
           <Route path="lugares" element={<PlacesPage />} />
           <Route path="turnos" element={<TurnosAdminPage />} />
+          <Route path="turnos-fijos" element={<TurnosFijosPage />} />
+          <Route path="clientes" element={<ClientesPage />} />
           <Route path="temporadas" element={<SeasonsPage />} />
           <Route path="torneos" element={<TournamentsAdminPage />} />
           <Route path="torneos/nuevo" element={<TournamentFormPage />} />

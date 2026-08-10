@@ -6,6 +6,7 @@ import { inscripcionesApi, type AprobarInscripcionRequest, type JugadorCandidato
 import { tournamentsApi } from '@/features/tournaments/tournamentsApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
 import { ordenarCategorias } from '@/shared/lib/categorias'
+import { enlaceWhatsApp } from '@/shared/lib/whatsapp'
 import type { CategoriaResponse } from '@/shared/types/api'
 import { AdminTable, type Column } from '@/shared/ui/AdminTable'
 import { Button } from '@/shared/ui/Button'
@@ -172,7 +173,16 @@ export default function InscripcionesAdminPage() {
   const columnas = useMemo(() => [
     { key: 'pareja', label: 'Pareja', render: (s: SolicitudInscripcionResponse) => <span className="text-sm font-bold text-rp-text">{s.jugador1} / {s.jugador2}</span> },
     { key: 'categoria', label: 'Categoría', render: (s: SolicitudInscripcionResponse) => <span className="text-sm text-rp-muted">{s.categoriaNombre}</span> },
-    { key: 'contacto', label: 'Contacto', render: (s: SolicitudInscripcionResponse) => <span className="text-xs text-rp-muted">{s.telefonoContacto ?? '-'}</span> },
+    {
+      key: 'contacto',
+      label: 'Contacto',
+      render: (s: SolicitudInscripcionResponse) => {
+        const enlace = enlaceWhatsApp(s.telefonoContacto, `Hola! Te escribo por la inscripción de ${s.jugador1} / ${s.jugador2} en ${s.categoriaNombre}.`)
+        return enlace
+          ? <a href={enlace} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="text-xs text-rp-muted underline-offset-2 hover:text-rp-accent hover:underline" title="Escribirle por WhatsApp">{s.telefonoContacto}</a>
+          : <span className="text-xs text-rp-muted">{s.telefonoContacto ?? '-'}</span>
+      },
+    },
     {
       key: 'pago',
       label: 'Pago',

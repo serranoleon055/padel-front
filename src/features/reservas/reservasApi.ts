@@ -36,6 +36,9 @@ export interface ReservaResponse {
   estadoPago?: string | null
   montoSenia?: number | null
   montoTotal?: number | null
+  precioAplicado?: number | null
+  /** true si la generó un turno fijo (abono). */
+  turnoFijo?: boolean
 }
 
 export interface HorarioCanchaRequest {
@@ -93,6 +96,14 @@ export const reservasApi = {
     return data
   },
 
+  async marcarNoShow(id: number) {
+    const { data } = await apiClient.patch<ReservaResponse>(`/api/reservas/${id}/no-show`)
+    return data
+  },
+  async desmarcarNoShow(id: number) {
+    const { data } = await apiClient.patch<ReservaResponse>(`/api/reservas/${id}/vino`)
+    return data
+  },
   async cancelar(id: number) {
     const { data } = await apiClient.patch<ReservaResponse>(`/api/reservas/${id}/cancelar`)
     return data
