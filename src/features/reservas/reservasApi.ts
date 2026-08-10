@@ -39,6 +39,10 @@ export interface ReservaResponse {
   precioAplicado?: number | null
   /** true si la generó un turno fijo (abono). */
   turnoFijo?: boolean
+  clienteId?: number | null
+  seniaPagada?: number | null
+  totalCobrado?: number | null
+  saldoPendiente?: number | null
 }
 
 export interface HorarioCanchaRequest {

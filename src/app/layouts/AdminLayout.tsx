@@ -1,4 +1,4 @@
-import { BarChart3, CalendarClock, CalendarDays, CalendarSync, Contact, Layers, LayoutDashboard, LogOut, MapPin, Menu, Settings, ShieldCheck, Sigma, Tag, Trophy, UserCog, Users, X } from 'lucide-react'
+import { Banknote, BarChart3, CalendarClock, CalendarDays, CalendarSync, Contact, Layers, LayoutDashboard, LogOut, MapPin, Menu, Settings, ShieldCheck, Sigma, Tag, Trophy, UserCog, Users, X } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 
@@ -17,6 +17,7 @@ const NAV = [
   { to: '/admin/turnos', label: 'Turnos', icon: CalendarClock, end: false },
   { to: '/admin/turnos-fijos', label: 'Turnos fijos', icon: CalendarSync, end: false },
   { to: '/admin/clientes', label: 'Clientes', icon: Contact, end: false },
+  { to: '/admin/caja', label: 'Caja', icon: Banknote, end: false },
   { to: '/admin/temporadas', label: 'Temporadas', icon: CalendarDays, end: false },
   { to: '/admin/torneos', label: 'Torneos', icon: Trophy, end: false },
   { to: '/admin/plantillas-formato', label: 'Plantillas formato', icon: Layers, end: false },

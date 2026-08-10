@@ -1,10 +1,11 @@
-import { CalendarClock, Check, ChevronLeft, ChevronRight, MapPin, Plus, Settings, Undo2, UserX, X } from 'lucide-react'
+import { CalendarClock, Check, ChevronLeft, ChevronRight, MapPin, Plus, Settings, Undo2, UserX, Wallet, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
+import { cajaApi, MEDIOS, type MedioCobro } from '@/features/caja/cajaApi'
 import { canchasApi, placesApi } from '@/features/catalog/catalogApi'
 import { horariosCanchaApi, reservasApi, type HorarioCanchaRequest, type ReservaResponse, type SlotDisponibilidad } from '@/features/reservas/reservasApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
-import { formatearEnum, formatearFecha } from '@/shared/lib/formatters'
+import { formatearEnum, formatearFecha, formatearMoneda } from '@/shared/lib/formatters'
 import { enlaceWhatsApp } from '@/shared/lib/whatsapp'
 import type { CanchaResponse, LugarResponse } from '@/shared/types/api'
 import { AdminPageHeader } from '@/shared/ui/AdminPageHeader'
@@ -30,6 +31,7 @@ type FilaReserva = {
   estadoPago: string | null
   codigo: string
   turnoFijo: boolean
+  saldoPendiente: number
 }
 
 function toneReserva(estado: string | null): 'success' | 'neutral' | 'danger' | 'warning' {
@@ -92,6 +94,11 @@ export default function TurnosAdminPage() {
   const [guardandoHorario, setGuardandoHorario] = useState(false)
   const [errorHorario, setErrorHorario] = useState<string | null>(null)
 
+  const [filaCobro, setFilaCobro] = useState<FilaReserva | null>(null)
+  const [formCobro, setFormCobro] = useState<{ monto: string; medio: MedioCobro; notas: string }>({ monto: '', medio: 'EFECTIVO', notas: '' })
+  const [cobrando, setCobrando] = useState(false)
+  const [errorCobro, setErrorCobro] = useState<string | null>(null)
+
   const [nuevoAbierto, setNuevoAbierto] = useState(false)
   const [slotsNuevo, setSlotsNuevo] = useState<SlotDisponibilidad[]>([])
   const [horarioNuevo, setHorarioNuevo] = useState('')
@@ -149,6 +156,7 @@ export default function TurnosAdminPage() {
       if (ultima && ultima.clienteTelefono === reserva.clienteTelefono && ultima.estado === reserva.estado && ultima.horaFin === reserva.horaInicio) {
         ultima.reservas.push(reserva)
         ultima.horaFin = reserva.horaFin
+        ultima.saldoPendiente += reserva.saldoPendiente ?? 0
       } else {
         filas.push({
           id: reserva.id,
@@ -161,6 +169,7 @@ export default function TurnosAdminPage() {
           estadoPago: reserva.estadoPago ?? null,
           codigo: reserva.codigo,
           turnoFijo: reserva.turnoFijo ?? false,
+          saldoPendiente: reserva.saldoPendiente ?? 0,
         })
       }
     }
@@ -207,6 +216,44 @@ export default function TurnosAdminPage() {
     } catch (e: unknown) {
       setError(obtenerMensajeErrorApi(e))
     }
+  }
+
+  function abrirCobro(fila: FilaReserva) {
+    setFilaCobro(fila)
+    setFormCobro({ monto: String(fila.saldoPendiente), medio: 'EFECTIVO', notas: '' })
+    setErrorCobro(null)
+  }
+
+  /**
+   * Un turno de dos horas son dos reservas pero un solo cobro para el cliente: el monto
+   * se reparte entre los horarios que todavía deben, hasta agotarlo.
+   */
+  async function cobrar() {
+    if (!filaCobro || canchaId == null) return
+    const monto = Number(formCobro.monto.replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.'))
+    if (!Number.isFinite(monto) || monto <= 0) { setErrorCobro('Ingresá un monto válido.'); return }
+    if (monto > filaCobro.saldoPendiente) { setErrorCobro(`El monto supera el saldo pendiente (${formatearMoneda(filaCobro.saldoPendiente)}).`); return }
+
+    setCobrando(true); setErrorCobro(null)
+    try {
+      let restante = monto
+      for (const reserva of filaCobro.reservas) {
+        const saldo = reserva.saldoPendiente ?? 0
+        if (saldo <= 0 || restante <= 0) continue
+        const aCobrar = Math.min(restante, saldo)
+        await cajaApi.cobrar(reserva.id, {
+          monto: aCobrar,
+          medio: formCobro.medio,
+          notas: formCobro.notas.trim() || null,
+        })
+        restante -= aCobrar
+      }
+      setFilaCobro(null)
+      avisoExito('Cobro registrado')
+      cargarReservas(canchaId, fecha)
+    } catch (e: unknown) {
+      setErrorCobro(obtenerMensajeErrorApi(e))
+    } finally { setCobrando(false) }
   }
 
   function abrirHorario() {
@@ -347,6 +394,15 @@ export default function TurnosAdminPage() {
               : <span className="text-xs text-rp-muted">En el club</span>
       ),
     },
+    {
+      key: 'saldo',
+      label: 'Saldo',
+      render: (fila: FilaReserva) => (
+        fila.saldoPendiente > 0
+          ? <span className="text-sm font-bold text-rp-danger">{formatearMoneda(fila.saldoPendiente)}</span>
+          : <span className="text-xs text-rp-muted">Pago</span>
+      ),
+    },
     { key: 'codigo', label: 'Código', render: (fila: FilaReserva) => <span className="text-xs text-rp-muted">{fila.codigo}{fila.reservas.length > 1 ? ` · ${fila.reservas.length} turnos` : ''}</span> },
   ] as Column<FilaReserva>[], [])
 
@@ -439,6 +495,9 @@ export default function TurnosAdminPage() {
               {(fila.estado === 'CONFIRMADA' || fila.estado === 'FINALIZADA') && yaEmpezo(fecha, fila.horaInicio) && (
                 <button onClick={() => ejecutarAccionLote(fila.reservas, (id) => reservasApi.marcarNoShow(id), 'Marcado como ausente')} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger" aria-label="No vino" title="No vino"><UserX size={15} /></button>
               )}
+              {fila.saldoPendiente > 0 && fila.estado !== 'PENDIENTE' && (
+                <button onClick={() => abrirCobro(fila)} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent" aria-label="Cobrar saldo" title="Cobrar saldo"><Wallet size={15} /></button>
+              )}
               {fila.estado === 'NO_SHOW' && (
                 <button onClick={() => ejecutarAccionLote(fila.reservas, (id) => reservasApi.desmarcarNoShow(id), 'Ausencia deshecha')} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent" aria-label="Deshacer ausente" title="Deshacer: sí vino"><Undo2 size={15} /></button>
               )}
@@ -528,6 +587,29 @@ export default function TurnosAdminPage() {
             <Button type="submit" size="sm" disabled={guardandoHorario}>{guardandoHorario ? 'Guardando...' : 'Guardar'}</Button>
           </div>
         </div>
+      </Modal>
+
+      <Modal isOpen={Boolean(filaCobro)} onClose={() => setFilaCobro(null)} onSubmit={cobrar} title="Cobrar saldo" size="sm">
+        {filaCobro && (
+          <div className="flex flex-col gap-4">
+            <div className="rounded-md border border-rp-border bg-rp-surface-2 px-3 py-2 text-sm">
+              <p className="font-bold text-rp-text">{filaCobro.clienteNombre}</p>
+              <p className="text-xs text-rp-muted">
+                {hhmm(filaCobro.horaInicio)} - {hhmm(filaCobro.horaFin)} · saldo {formatearMoneda(filaCobro.saldoPendiente)}
+              </p>
+            </div>
+            <Input label="Monto" value={formCobro.monto} onChange={(e) => setFormCobro((f) => ({ ...f, monto: e.target.value }))} />
+            <Select label="Cómo pagó" value={formCobro.medio} onChange={(e) => setFormCobro((f) => ({ ...f, medio: e.target.value as MedioCobro }))}>
+              {MEDIOS.map((medio) => <option key={medio.valor} value={medio.valor}>{medio.nombre}</option>)}
+            </Select>
+            <Input label="Notas (opcional)" value={formCobro.notas} onChange={(e) => setFormCobro((f) => ({ ...f, notas: e.target.value }))} />
+            {errorCobro && <p className="rounded-md border border-rp-danger/40 bg-rp-danger/10 px-3 py-2 text-sm font-bold text-rp-danger">{errorCobro}</p>}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="ghost" size="sm" onClick={() => setFilaCobro(null)} disabled={cobrando}>Cancelar</Button>
+              <Button type="submit" size="sm" disabled={cobrando}>{cobrando ? 'Registrando...' : 'Registrar cobro'}</Button>
+            </div>
+          </div>
+        )}
       </Modal>
     </section>
   )

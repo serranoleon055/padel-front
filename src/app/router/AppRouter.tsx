@@ -39,6 +39,7 @@ const ReservarPage = lazy(() => import('@/pages/public/ReservarPage'))
 const TurnosAdminPage = lazy(() => import('@/pages/admin/TurnosAdminPage'))
 const TurnosFijosPage = lazy(() => import('@/pages/admin/TurnosFijosPage'))
 const ClientesPage = lazy(() => import('@/pages/admin/ClientesPage'))
+const CajaPage = lazy(() => import('@/pages/admin/CajaPage'))
 const InscribirmePage = lazy(() => import('@/pages/public/InscribirmePage'))
 const PagoResultadoPage = lazy(() => import('@/pages/public/PagoResultadoPage'))
 const InscripcionesAdminPage = lazy(() => import('@/pages/admin/InscripcionesAdminPage'))
@@ -95,6 +96,7 @@ export function AppRouter() {
           <Route path="turnos" element={<TurnosAdminPage />} />
           <Route path="turnos-fijos" element={<TurnosFijosPage />} />
           <Route path="clientes" element={<ClientesPage />} />
+          <Route path="caja" element={<CajaPage />} />
           <Route path="temporadas" element={<SeasonsPage />} />
           <Route path="torneos" element={<TournamentsAdminPage />} />
           <Route path="torneos/nuevo" element={<TournamentFormPage />} />
