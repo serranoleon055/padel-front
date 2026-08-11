@@ -1,7 +1,7 @@
 import { CalendarClock, Check, ChevronLeft, ChevronRight, MapPin, Plus, Settings, Tag, Undo2, UserX, Wallet, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
-import { cajaApi, MEDIOS, type MedioCobro } from '@/features/caja/cajaApi'
+import { cajaApi, MEDIOS, type MedioPago } from '@/features/caja/cajaApi'
 import { canchasApi, placesApi } from '@/features/catalog/catalogApi'
 import { horariosCanchaApi, reservasApi, type HorarioCanchaRequest, type ReservaResponse, type SlotDisponibilidad } from '@/features/reservas/reservasApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
@@ -97,7 +97,7 @@ export default function TurnosAdminPage() {
 
   const [tarifasAbiertas, setTarifasAbiertas] = useState(false)
   const [filaCobro, setFilaCobro] = useState<FilaReserva | null>(null)
-  const [formCobro, setFormCobro] = useState<{ monto: string; medio: MedioCobro; notas: string }>({ monto: '', medio: 'EFECTIVO', notas: '' })
+  const [formCobro, setFormCobro] = useState<{ monto: string; medio: MedioPago; notas: string }>({ monto: '', medio: 'EFECTIVO', notas: '' })
   const [cobrando, setCobrando] = useState(false)
   const [errorCobro, setErrorCobro] = useState<string | null>(null)
 
@@ -609,7 +609,7 @@ export default function TurnosAdminPage() {
               </p>
             </div>
             <Input label="Monto" value={formCobro.monto} onChange={(e) => setFormCobro((f) => ({ ...f, monto: e.target.value }))} />
-            <Select label="Cómo pagó" value={formCobro.medio} onChange={(e) => setFormCobro((f) => ({ ...f, medio: e.target.value as MedioCobro }))}>
+            <Select label="Cómo pagó" value={formCobro.medio} onChange={(e) => setFormCobro((f) => ({ ...f, medio: e.target.value as MedioPago }))}>
               {MEDIOS.map((medio) => <option key={medio.valor} value={medio.valor}>{medio.nombre}</option>)}
             </Select>
             <Input label="Notas (opcional)" value={formCobro.notas} onChange={(e) => setFormCobro((f) => ({ ...f, notas: e.target.value }))} />

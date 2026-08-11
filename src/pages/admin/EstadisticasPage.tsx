@@ -53,7 +53,8 @@ export default function EstadisticasPage() {
   const maxCancha = useMemo(() => Math.max(1, ...(datos?.canchasMasUsadas.map((c) => c.reservas) ?? [1])), [datos])
   const maxCategoria = useMemo(() => Math.max(1, ...(datos?.categoriasDemandadas.map((c) => c.inscriptos) ?? [1])), [datos])
   const maxIngreso = useMemo(
-    () => Math.max(1, ...(datos?.ingresosPorMes.flatMap((m) => [m.turnos, m.inscripciones]) ?? [1])),
+    // Los gastos entran en la escala: si no, una barra de egresos alta se saldría del panel.
+    () => Math.max(1, ...(datos?.ingresosPorMes.flatMap((m) => [m.turnos, m.inscripciones, m.egresos]) ?? [1])),
     [datos],
   )
 
@@ -89,21 +90,36 @@ export default function EstadisticasPage() {
         <div className="mt-6"><StatusMessage type="error" title="Error al cargar" description={error} /></div>
       ) : !datos ? null : (
         <div className="mt-5 grid gap-4 lg:grid-cols-2">
-          <Panel titulo="Ingresos por mes" icono={TrendingUp}>
+          <Panel titulo="Ingresos y gastos por mes" icono={TrendingUp}>
             <div className="flex items-end gap-4" style={{ height: 160 }}>
               {datos.ingresosPorMes.map((mes) => (
                 <div key={mes.mes} className="flex h-full flex-1 flex-col items-center justify-end gap-1">
                   <div className="flex h-full w-full items-end justify-center gap-1">
-                    <div className="w-1/2 rounded-t bg-rp-accent/70" style={{ height: `${Math.max(2, (mes.turnos / maxIngreso) * 130)}px` }} title={`Turnos ${formatearMoneda(mes.turnos)}`} />
-                    <div className="w-1/2 rounded-t bg-rp-amber/70" style={{ height: `${Math.max(2, (mes.inscripciones / maxIngreso) * 130)}px` }} title={`Inscripciones ${formatearMoneda(mes.inscripciones)}`} />
+                    <div className="w-1/3 rounded-t bg-rp-accent/70" style={{ height: `${Math.max(2, (mes.turnos / maxIngreso) * 130)}px` }} title={`Turnos ${formatearMoneda(mes.turnos)}`} />
+                    <div className="w-1/3 rounded-t bg-rp-amber/70" style={{ height: `${Math.max(2, (mes.inscripciones / maxIngreso) * 130)}px` }} title={`Inscripciones ${formatearMoneda(mes.inscripciones)}`} />
+                    <div className="w-1/3 rounded-t bg-rp-danger/60" style={{ height: `${Math.max(2, (mes.egresos / maxIngreso) * 130)}px` }} title={`Gastos ${formatearMoneda(mes.egresos)}`} />
                   </div>
                   <span className="text-[10px] font-bold uppercase text-rp-muted">{etiquetaMes(mes.mes)}</span>
                 </div>
               ))}
             </div>
-            <div className="mt-3 flex gap-4 text-xs font-bold text-rp-muted">
+            <div className="mt-3 flex flex-wrap gap-4 text-xs font-bold text-rp-muted">
               <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded-sm bg-rp-accent/70" />Turnos</span>
               <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded-sm bg-rp-amber/70" />Inscripciones</span>
+              <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded-sm bg-rp-danger/60" />Gastos</span>
+            </div>
+
+            <div className="mt-4 border-t border-rp-border pt-3">
+              <p className="text-xs font-bold uppercase tracking-wide text-rp-muted">Resultado por mes</p>
+              <div className="mt-2 flex gap-4">
+                {datos.ingresosPorMes.map((mes) => (
+                  <div key={mes.mes} className="flex-1 text-center">
+                    <p className={`text-xs font-black ${mes.resultado < 0 ? 'text-rp-danger' : 'text-rp-text'}`}>
+                      {formatearMoneda(mes.resultado)}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
           </Panel>
 

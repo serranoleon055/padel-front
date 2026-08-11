@@ -530,7 +530,7 @@ export type AdminDashboardResponse = {
 export type EstadisticasResponse = {
   heatmap: { diaSemana: number; hora: number; cantidad: number }[]
   canchasMasUsadas: { canchaNombre: string; reservas: number }[]
-  ingresosPorMes: { mes: string; turnos: number; inscripciones: number }[]
+  ingresosPorMes: { mes: string; turnos: number; inscripciones: number; egresos: number; resultado: number }[]
   reservasTotales: number
   reservasCanceladas: number
   tasaCancelacion: number
