@@ -17,7 +17,7 @@ export function NavegadorFase({ etiqueta, indice, total, onAnterior, onSiguiente
                 onClick={onAnterior}
                 disabled={!hayVarias}
                 aria-label="Anterior"
-                className="flex size-8 shrink-0 items-center justify-center rounded-md text-rp-muted transition hover:bg-rp-surface-2 hover:text-rp-accent disabled:cursor-default disabled:opacity-30"
+                className="flex size-11 shrink-0 items-center justify-center rounded-md text-rp-muted transition hover:bg-rp-surface-2 hover:text-rp-accent disabled:cursor-default disabled:opacity-30 lg:size-8"
             >
                 <ChevronLeft size={18} />
             </button>
@@ -30,7 +30,7 @@ export function NavegadorFase({ etiqueta, indice, total, onAnterior, onSiguiente
                 onClick={onSiguiente}
                 disabled={!hayVarias}
                 aria-label="Siguiente"
-                className="flex size-8 shrink-0 items-center justify-center rounded-md text-rp-muted transition hover:bg-rp-surface-2 hover:text-rp-accent disabled:cursor-default disabled:opacity-30"
+                className="flex size-11 shrink-0 items-center justify-center rounded-md text-rp-muted transition hover:bg-rp-surface-2 hover:text-rp-accent disabled:cursor-default disabled:opacity-30 lg:size-8"
             >
                 <ChevronRight size={18} />
             </button>

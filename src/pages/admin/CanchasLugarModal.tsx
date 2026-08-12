@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 
 import { canchasApi } from '@/features/catalog/catalogApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
+import { porNombreDeCancha } from '@/shared/lib/canchas'
 import { formatearMoneda } from '@/shared/lib/formatters'
 import type { CanchaResponse, LugarResponse } from '@/shared/types/api'
 import { Button } from '@/shared/ui/Button'
@@ -29,7 +30,9 @@ export function CanchasLugarModal({ lugar, onClose }: { lugar: LugarResponse | n
   function cargar(lugarId: number) {
     setCargando(true)
     canchasApi.getAll(lugarId)
-      .then((datos) => { setCanchas(datos); setError(null) })
+      // Por número de cancha: el club las nombra y las mira así, y el orden en que
+      // vuelven de la API es el de creación.
+      .then((datos) => { setCanchas([...datos].sort(porNombreDeCancha((cancha) => cancha.nombre))); setError(null) })
       .catch((e: unknown) => setError(obtenerMensajeErrorApi(e)))
       .finally(() => setCargando(false))
   }
@@ -128,8 +131,8 @@ export function CanchasLugarModal({ lugar, onClose }: { lugar: LugarResponse | n
                   {cancha.precioPorHora != null && <p className="text-xs text-rp-muted">{formatearMoneda(cancha.precioPorHora)}/hora</p>}
                 </div>
                 <div className="flex gap-1">
-                  <button type="button" onClick={() => empezarEdicion(cancha)} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent" aria-label="Editar"><Pencil size={15} /></button>
-                  <button type="button" onClick={() => setAArchivar(cancha)} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger" aria-label="Archivar"><Trash2 size={15} /></button>
+                  <button type="button" onClick={() => empezarEdicion(cancha)} className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent" aria-label="Editar"><Pencil size={15} /></button>
+                  <button type="button" onClick={() => setAArchivar(cancha)} className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger" aria-label="Archivar"><Trash2 size={15} /></button>
                 </div>
               </div>
             ))
@@ -140,9 +143,9 @@ export function CanchasLugarModal({ lugar, onClose }: { lugar: LugarResponse | n
           <p className="text-xs font-black uppercase tracking-wide text-rp-accent">{editando ? 'Editar cancha' : 'Nueva cancha'}</p>
           <div className="mt-2 flex flex-col gap-2">
             <Input label="Nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Cancha 1" />
-            <Input label="Descripción (opcional)" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Cristal / muro / techada" />
+            <Input label="Descripción" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Cristal / muro / techada" />
             <div className="grid items-end gap-2 sm:grid-cols-2">
-              <Input label="Precio por hora (opcional)" type="number" min={0} value={precioPorHora} onChange={(e) => setPrecioPorHora(e.target.value)} placeholder="8000" />
+              <Input label="Precio por hora" type="number" min={0} value={precioPorHora} onChange={(e) => setPrecioPorHora(e.target.value)} placeholder="8000" />
               <Input label="Seña (%, por defecto 50)" type="number" min={1} max={100} value={seniaPorcentaje} onChange={(e) => setSeniaPorcentaje(e.target.value)} placeholder="50" />
             </div>
             <label className="flex cursor-pointer items-start gap-2 text-sm font-bold text-rp-muted">

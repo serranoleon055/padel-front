@@ -19,6 +19,16 @@ const formateadorMoneda = new Intl.NumberFormat('es-AR', {
   maximumFractionDigits: 0,
 })
 
+/**
+ * Fecha en formato aaaa-mm-dd tomada del huso local. `toISOString()` a secas devuelve
+ * UTC: en Argentina, a partir de las 21 hs adelanta un día y las pantallas del día
+ * abrían vacías justo cuando el club está trabajando.
+ */
+export function fechaISO(fecha: Date = new Date()) {
+  const local = new Date(fecha.getTime() - fecha.getTimezoneOffset() * 60000)
+  return local.toISOString().slice(0, 10)
+}
+
 export function formatearMoneda(valor: number | null | undefined) {
   if (valor == null) {
     return 'Sin definir'
@@ -142,6 +152,18 @@ export function formatearFechaPartido(partido: PartidoResponse): string {
   if (partido.fechaHora) return formatearFechaHora(partido.fechaHora)
   if (partido.fechaHoraProgramada) return `${formatearFechaHora(partido.fechaHoraProgramada)} (programado)`
   return 'Sin horario'
+}
+
+const formateadorFechaLarga = new Intl.DateTimeFormat('es-AR', {
+  weekday: 'long',
+  day: 'numeric',
+  month: 'long',
+})
+
+/** "jueves, 12 de agosto". La fecha que el que atiende necesita leer de un vistazo. */
+export function formatearFechaLarga(valor: string | null | undefined) {
+  if (!valor) return 'Sin fecha'
+  return formateadorFechaLarga.format(new Date(valor.includes('T') ? valor : `${valor}T00:00:00`))
 }
 
 const formateadorCompacto = new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'short' })

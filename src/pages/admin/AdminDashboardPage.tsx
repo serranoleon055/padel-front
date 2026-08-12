@@ -1,47 +1,119 @@
-import { CalendarClock, CalendarDays, ClipboardList, Clock, LayoutGrid, Sparkles, Trophy, Users, Wallet } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { CalendarClock, ClipboardList, LayoutGrid, Package, Plus, ShoppingCart, Sparkles, Trophy, Wallet } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { NavLink } from 'react-router-dom'
 
+import { cajaApi, MEDIOS, type MedioPago } from '@/features/caja/cajaApi'
 import { placesApi } from '@/features/catalog/catalogApi'
 import { homeApi } from '@/features/home/homeApi'
-import { reservasApi } from '@/features/reservas/reservasApi'
-import type { SlotDisponibilidad } from '@/features/reservas/reservasApi'
+import { inscripcionesApi } from '@/features/inscripciones/inscripcionesApi'
+import { reservasApi, type OpcionDuracion, type ReservaResponse, type SlotDisponibilidad } from '@/features/reservas/reservasApi'
+import { productosApi, type ProductoResponse } from '@/features/ventas/ventasApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
-import { formatearFecha, formatearMoneda } from '@/shared/lib/formatters'
-import type { AdminDashboardResponse, LugarResponse, TurnoResumenResponse } from '@/shared/types/api'
+import { porNombreDeCancha } from '@/shared/lib/canchas'
+import { fechaISO, formatearFechaLarga, formatearMoneda } from '@/shared/lib/formatters'
+import type { AdminDashboardResponse, LugarResponse, SolicitudPendienteResumen } from '@/shared/types/api'
+import { VentaRapidaModal } from '@/pages/admin/VentaRapidaModal'
 import { Button } from '@/shared/ui/Button'
+import { Input } from '@/shared/ui/Input'
 import { Modal } from '@/shared/ui/Modal'
 import { NavegadorFase } from '@/shared/ui/NavegadorFase'
+import { Pagination } from '@/shared/ui/Pagination'
+import { Select } from '@/shared/ui/Select'
 import { StatusBadge } from '@/shared/ui/StatusBadge'
 import { StatusMessage } from '@/shared/ui/StatusMessage'
+import { useToast } from '@/shared/ui/Toast'
 
-const DIAS_SEMANA = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
+const PRODUCTOS_POR_PAGINA = 6
 
-function hoyISO() {
-  const ahora = new Date()
-  const local = new Date(ahora.getTime() - ahora.getTimezoneOffset() * 60000)
-  return local.toISOString().slice(0, 10)
+type Detalle = 'canchas' | 'cobrar' | 'confirmar' | 'reponer' | 'disponibles' | 'inscripciones' | null
+
+function hora(valor: string) {
+  return valor.slice(0, 5)
 }
 
-type ReservaPendiente = AdminDashboardResponse['reservasPendientesLista'][number]
+/**
+ * Cuándo arranca de verdad el turno. Viene resuelto del backend porque pegar `fecha` con
+ * `horaInicio` miente en la madrugada: un turno de la 1 AM se guarda con la fecha del día
+ * anterior —es la sesión que arrancó esa noche— y la cuenta daba 24 horas antes.
+ */
+function inicioDe(turno: ReservaResponse) {
+  return new Date(turno.inicioReal ?? `${turno.fecha}T${turno.horaInicio}`)
+}
 
+function finDe(turno: ReservaResponse) {
+  return new Date(inicioDe(turno).getTime() + turno.duracionMin * 60000)
+}
+
+/**
+ * Del turno más temprano al más tarde **de la jornada**, no del reloj: se compara el
+ * inicio real, así un turno de la 1 AM queda al final de la noche y no arriba de todo.
+ */
+function porHorario(a: ReservaResponse, b: ReservaResponse) {
+  return inicioDe(a).getTime() - inicioDe(b).getTime()
+}
+
+export function duracionCorta(minutos: number) {
+  const horas = Math.floor(minutos / 60)
+  const resto = minutos % 60
+  if (horas === 0) return `${resto} min`
+  return resto === 0 ? `${horas} h` : `${horas} h ${resto}`
+}
+
+/**
+ * Agrupa por una clave conservando el orden en que aparecen y descartando los grupos
+ * vacíos. Es lo que alimenta a los navegadores de flecha: cada modal muestra una cancha
+ * (o un torneo) por vez, no todo mezclado.
+ */
+function agrupar<T>(items: T[], clave: (item: T) => string) {
+  const grupos = new Map<string, T[]>()
+  for (const item of items) {
+    const k = clave(item)
+    if (!grupos.has(k)) grupos.set(k, [])
+    grupos.get(k)!.push(item)
+  }
+  return [...grupos.entries()].map(([etiqueta, elementos]) => ({ etiqueta, elementos }))
+}
+
+/**
+ * El Panel es la pantalla del que está atendiendo, no un tablero de análisis.
+ *
+ * <p>Cada tarjeta es un número que se puede abrir: adentro está el detalle accionable
+ * —quién, hasta cuándo, cuánto debe— y los botones para resolverlo sin cambiar de
+ * pantalla. Los listados largos se recorren de a una cancha o un torneo por vez, porque
+ * en el celular una lista de seis canchas mezcladas no se lee.
+ */
 export default function AdminDashboardPage() {
-  const navigate = useNavigate()
+  const { success: avisoExito } = useToast()
+
   const [lugares, setLugares] = useState<LugarResponse[]>([])
   const [lugarId, setLugarId] = useState<number | null>(null)
   const [panel, setPanel] = useState<AdminDashboardResponse | null>(null)
+  const [turnos, setTurnos] = useState<ReservaResponse[]>([])
+  const [productos, setProductos] = useState<ProductoResponse[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [indiceCancha, setIndiceCancha] = useState(0)
-  const [indiceReserva, setIndiceReserva] = useState(0)
-  const [modalReservas, setModalReservas] = useState(false)
-  const [modalInscripciones, setModalInscripciones] = useState(false)
-  const [modalCanchas, setModalCanchas] = useState(false)
-  const [modalDisponibles, setModalDisponibles] = useState(false)
-  const [disponiblesPorCancha, setDisponiblesPorCancha] = useState<{ canchaNombre: string; slots: SlotDisponibilidad[] }[]>([])
-  const [indiceDisponible, setIndiceDisponible] = useState(0)
-  const [cargandoDisponibles, setCargandoDisponibles] = useState(false)
   const [accionando, setAccionando] = useState<number | null>(null)
+
+  const [detalle, setDetalle] = useState<Detalle>(null)
+  const [indiceGrupo, setIndiceGrupo] = useState(0)
+  const [paginaProductos, setPaginaProductos] = useState(1)
+
+  const [disponibles, setDisponibles] = useState<{ id: number; etiqueta: string; slots: SlotDisponibilidad[] }[]>([])
+  const [cargandoDisponibles, setCargandoDisponibles] = useState(false)
+
+  const [slotNuevo, setSlotNuevo] = useState<
+    { canchaId: number; canchaNombre: string; horaInicio: string; opciones: OpcionDuracion[] } | null
+  >(null)
+  const [formNuevo, setFormNuevo] = useState({ nombre: '', telefono: '', duracion: 60 })
+  const [guardandoNuevo, setGuardandoNuevo] = useState(false)
+  const [errorNuevo, setErrorNuevo] = useState<string | null>(null)
+
+  const [turnoVenta, setTurnoVenta] = useState<ReservaResponse | null>(null)
+  const [ventaSuelta, setVentaSuelta] = useState(false)
+  const [turnoCobro, setTurnoCobro] = useState<ReservaResponse | null>(null)
+  const [formCobro, setFormCobro] = useState<{ monto: string; medio: MedioPago }>({ monto: '', medio: 'EFECTIVO' })
+  const [cobrando, setCobrando] = useState(false)
+  const [errorCobro, setErrorCobro] = useState<string | null>(null)
 
   useEffect(() => {
     placesApi.getAll()
@@ -53,77 +125,212 @@ export default function AdminDashboardPage() {
       .catch(() => { setLugares([]); setCargando(false) })
   }, [])
 
-  async function cargarPanel(lugar: number) {
+  // Sin fecha: el backend responde la jornada que el club está atendiendo. Pedir "hoy"
+  // dejaba la pantalla vacía a la 1 AM, cuando lo que se juega es de la sesión de ayer.
+  const cargar = useCallback(async (lugar: number) => {
     setCargando(true)
     try {
-      const datos = await homeApi.getAdminDashboard(lugar)
-      setPanel(datos)
+      const [datosPanel, datosTurnos, datosProductos] = await Promise.all([
+        homeApi.getAdminDashboard(lugar),
+        reservasApi.delDia(),
+        productosApi.getAll(),
+      ])
+      setPanel(datosPanel)
+      setTurnos(datosTurnos)
+      setProductos(datosProductos)
       setError(null)
-      setIndiceCancha(0)
-      setIndiceReserva(0)
     } catch (e: unknown) {
       setError(obtenerMensajeErrorApi(e))
     } finally {
       setCargando(false)
     }
-  }
+  }, [])
 
-  useEffect(() => { if (lugarId != null) void cargarPanel(lugarId) }, [lugarId])
+  useEffect(() => { if (lugarId != null) void cargar(lugarId) }, [lugarId, cargar])
+  useEffect(() => { setIndiceGrupo(0); setPaginaProductos(1) }, [detalle])
 
-  const turnosPorCancha = useMemo(() => {
-    if (!panel) return [] as { canchaNombre: string; turnos: TurnoResumenResponse[] }[]
-    return panel.canchas.map((cancha) => ({
-      canchaNombre: cancha.nombre,
-      turnos: panel.proximosTurnosHoy.filter((turno) => turno.canchaId === cancha.id),
+  const canchasDelLugar = useMemo(
+    () => new Set((panel?.canchas ?? []).map((cancha) => cancha.id)),
+    [panel],
+  )
+
+  /**
+   * Reparte los turnos de la jornada en bloques que no se pisan y no dejan a ninguno
+   * afuera. Se clasifica **primero por el momento y recién después por la deuda**: un
+   * turno de las 21 que todavía no se pagó es un turno por venir, no un moroso, y
+   * mirando la deuda primero se iba al bloque de los que ya jugaron. La plata que debe
+   * igual se ve en su fila, así que no se pierde nada.
+   */
+  const { jugando, conDeuda, porVenir, porConfirmar, aCobrar } = useMemo(() => {
+    const ahora = new Date()
+    const jugando: ReservaResponse[] = []
+    const conDeuda: ReservaResponse[] = []
+    const porVenir: ReservaResponse[] = []
+    const porConfirmar: ReservaResponse[] = []
+    let aCobrar = 0
+
+    for (const turno of turnos) {
+      if (canchasDelLugar.size > 0 && !canchasDelLugar.has(turno.canchaId)) continue
+      const saldo = turno.saldoPendiente ?? 0
+      // Un turno sin confirmar no se cobra: primero hay que aprobarlo.
+      const cobrable = turno.estado !== 'PENDIENTE'
+      if (cobrable) aCobrar += saldo
+
+      if (!cobrable) porConfirmar.push(turno)
+      else if (inicioDe(turno) > ahora) porVenir.push(turno)
+      else if (ahora < finDe(turno)) jugando.push(turno)
+      else if (saldo > 0) conDeuda.push(turno)
+      // Los que ya se jugaron y están pagos no se muestran: no hay nada que hacer.
+    }
+    jugando.sort(porNombreDeCancha((t) => t.canchaNombre))
+    conDeuda.sort(porHorario)
+    return { jugando, conDeuda, porVenir, porConfirmar, aCobrar }
+  }, [turnos, canchasDelLugar])
+
+  /** Todo lo que falta cobrar de la jornada, se haya jugado ya o no. */
+  const deudores = useMemo(
+    () => turnos
+      .filter((t) => (canchasDelLugar.size === 0 || canchasDelLugar.has(t.canchaId))
+        && t.estado !== 'PENDIENTE' && (t.saldoPendiente ?? 0) > 0)
+      .sort(porHorario),
+    [turnos, canchasDelLugar],
+  )
+
+  const bajoMinimo = useMemo(
+    () => productos
+      .filter((p) => p.activo && p.controlaStock && p.stock <= p.stockMinimo)
+      .sort((a, b) => (a.stock - a.stockMinimo) - (b.stock - b.stockMinimo)),
+    [productos],
+  )
+
+  /** Qué está pasando en cada cancha ahora mismo: la cancha y su turno en curso. */
+  const estadoCanchas = useMemo(() => (panel?.canchas ?? [])
+    .map((cancha) => ({
+      ...cancha,
+      turno: jugando.find((t) => t.canchaId === cancha.id) ?? null,
     }))
-  }, [panel])
+    .sort(porNombreDeCancha((cancha) => cancha.nombre)), [panel, jugando])
 
-  const reservasPorCancha = useMemo(() => {
-    if (!panel) return [] as { canchaNombre: string; reservas: ReservaPendiente[] }[]
-    return panel.canchas
-      .map((cancha) => ({
-        canchaNombre: cancha.nombre,
-        reservas: panel.reservasPendientesLista.filter((reserva) => reserva.canchaId === cancha.id),
-      }))
-      .filter((grupo) => grupo.reservas.length > 0)
-  }, [panel])
+  const proximosPorCancha = useMemo(
+    () => agrupar([...porVenir].sort(porHorario), (t) => t.canchaNombre)
+      .sort(porNombreDeCancha((grupo) => grupo.etiqueta)),
+    [porVenir],
+  )
+  const porConfirmarPorCancha = useMemo(
+    () => agrupar([...porConfirmar].sort(porHorario), (t) => t.canchaNombre)
+      .sort(porNombreDeCancha((grupo) => grupo.etiqueta)),
+    [porConfirmar],
+  )
+  const inscripcionesPorTorneo = useMemo(
+    () => agrupar(panel?.solicitudesPendientesLista ?? [], (s) => s.torneoNombre ?? 'Sin torneo'),
+    [panel],
+  )
 
-  if (cargando && !panel) return <section className="py-8"><StatusMessage type="loading" title="Cargando panel..." /></section>
-  if (lugares.length === 0) return <section className="py-8"><StatusMessage type="empty" title="No hay lugares" description="Creá una sede en Lugares para ver el panel." /></section>
-  if (error) return <section className="py-8"><StatusMessage type="error" title="Error al cargar" description={error} /></section>
-  if (!panel) return <section className="py-8"><StatusMessage type="empty" title="Sin datos" /></section>
-
-  const { summary: resumen, temporadaActiva, ultimosTorneos } = panel
-  const torneosRecientes = ultimosTorneos.slice(0, 3)
-  const canchaActual = turnosPorCancha.length > 0 ? turnosPorCancha[Math.min(indiceCancha, turnosPorCancha.length - 1)] : undefined
-  const reservaCanchaActual = reservasPorCancha.length > 0 ? reservasPorCancha[Math.min(indiceReserva, reservasPorCancha.length - 1)] : undefined
-
-  async function abrirDisponibles() {
-    setModalDisponibles(true)
-    setIndiceDisponible(0)
+  const cargarDisponibles = useCallback(async () => {
+    if (!panel) return
     setCargandoDisponibles(true)
     try {
-      const hoy = hoyISO()
-      const resultados = await Promise.all(
-        panel!.canchas.map(async (cancha) => ({
-          canchaNombre: cancha.nombre,
-          slots: (await reservasApi.getDisponibilidad(cancha.id, hoy)).filter((slot) => slot.disponible),
-        })),
-      )
-      setDisponiblesPorCancha(resultados)
+      // La misma jornada que mide el resto del panel, y solo los horarios que todavía
+      // se pueden vender: los que ya pasaron no vienen en la respuesta.
+      const resultados = await Promise.all([...panel.canchas]
+        .sort(porNombreDeCancha((cancha) => cancha.nombre))
+        .map(async (cancha) => ({
+          id: cancha.id,
+          etiqueta: cancha.nombre,
+          slots: (await reservasApi.getDisponibilidad(cancha.id, panel.fechaJornada)).filter((s) => s.disponible),
+        })))
+      setDisponibles(resultados)
     } catch (e: unknown) {
       setError(obtenerMensajeErrorApi(e))
     } finally {
       setCargandoDisponibles(false)
     }
+  }, [panel])
+
+  function abrirDisponibles() {
+    setDetalle('disponibles')
+    void cargarDisponibles()
   }
 
-  async function operarReserva(id: number, accion: 'confirmar' | 'rechazar') {
-    setAccionando(id)
+  function abrirTurnoManual(cancha: { id: number; etiqueta: string }, slot: SlotDisponibilidad) {
+    setSlotNuevo({
+      canchaId: cancha.id,
+      canchaNombre: cancha.etiqueta,
+      horaInicio: slot.horaInicio,
+      opciones: slot.opciones,
+    })
+    // Se propone la duración más corta que el club vende en ese hueco: es la que casi
+    // siempre se pide y la que seguro entra.
+    setFormNuevo({ nombre: '', telefono: '', duracion: slot.opciones[0]?.minutos ?? 60 })
+    setErrorNuevo(null)
+  }
+
+  /**
+   * Cargar un turno a mano sobre un horario libre: el que llama por teléfono o se
+   * presenta en el mostrador. Se confirma en el acto —lo está tomando el club, no hay
+   * nada que aprobar después— y se recarga la disponibilidad para que el hueco
+   * desaparezca de la lista sin cerrar el modal.
+   */
+  async function guardarTurnoManual() {
+    if (!slotNuevo) return
+    if (!formNuevo.nombre.trim() || !formNuevo.telefono.trim()) {
+      setErrorNuevo('Completá el nombre y el teléfono.')
+      return
+    }
+    setGuardandoNuevo(true)
+    setErrorNuevo(null)
     try {
-      if (accion === 'confirmar') await reservasApi.confirmar(id)
-      else await reservasApi.rechazar(id)
-      if (lugarId != null) await cargarPanel(lugarId)
+      const reserva = await reservasApi.solicitar({
+        canchaId: slotNuevo.canchaId,
+        fecha: panel!.fechaJornada,
+        horaInicio: slotNuevo.horaInicio,
+        duracionMin: formNuevo.duracion,
+        clienteNombre: formNuevo.nombre.trim(),
+        clienteTelefono: formNuevo.telefono.trim(),
+      })
+      await reservasApi.confirmar(reserva.id)
+      avisoExito(`Turno cargado: ${slotNuevo.canchaNombre} a las ${hora(slotNuevo.horaInicio)}`)
+      setSlotNuevo(null)
+      recargar()
+      void cargarDisponibles()
+    } catch (e: unknown) {
+      setErrorNuevo(obtenerMensajeErrorApi(e))
+    } finally {
+      setGuardandoNuevo(false)
+    }
+  }
+
+  function abrirCobro(turno: ReservaResponse) {
+    setTurnoCobro(turno)
+    setFormCobro({ monto: String(turno.saldoPendiente ?? 0), medio: 'EFECTIVO' })
+    setErrorCobro(null)
+  }
+
+  const recargar = () => { if (lugarId != null) void cargar(lugarId) }
+
+  async function cobrar() {
+    if (!turnoCobro) return
+    const monto = Number(formCobro.monto.replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.'))
+    if (!Number.isFinite(monto) || monto <= 0) { setErrorCobro('Ingresá un monto válido.'); return }
+
+    setCobrando(true); setErrorCobro(null)
+    try {
+      await cajaApi.cobrar(turnoCobro.id, { monto, medio: formCobro.medio, notas: null })
+      avisoExito(`Cobrado ${formatearMoneda(monto)} a ${turnoCobro.clienteNombre}`)
+      setTurnoCobro(null)
+      recargar()
+    } catch (e: unknown) {
+      setErrorCobro(obtenerMensajeErrorApi(e))
+    } finally { setCobrando(false) }
+  }
+
+  async function resolverTurno(turno: ReservaResponse, accion: 'confirmar' | 'rechazar') {
+    setAccionando(turno.id)
+    try {
+      if (accion === 'confirmar') await reservasApi.confirmar(turno.id)
+      else await reservasApi.rechazar(turno.id)
+      avisoExito(accion === 'confirmar' ? 'Turno confirmado' : 'Turno rechazado')
+      recargar()
     } catch (e: unknown) {
       setError(obtenerMensajeErrorApi(e))
     } finally {
@@ -131,10 +338,44 @@ export default function AdminDashboardPage() {
     }
   }
 
+  async function resolverInscripcion(solicitud: SolicitudPendienteResumen, accion: 'aprobar' | 'rechazar') {
+    setAccionando(solicitud.id)
+    try {
+      if (accion === 'aprobar') await inscripcionesApi.aprobar(solicitud.id)
+      else await inscripcionesApi.rechazar(solicitud.id)
+      avisoExito(accion === 'aprobar' ? 'Inscripción aprobada' : 'Inscripción rechazada')
+      recargar()
+    } catch (e: unknown) {
+      setError(obtenerMensajeErrorApi(e))
+    } finally {
+      setAccionando(null)
+    }
+  }
+
+  if (cargando && !panel) return <section className="py-8"><StatusMessage type="loading" title="Cargando el día..." /></section>
+  if (lugares.length === 0) return <section className="py-8"><StatusMessage type="empty" title="No hay sedes" description="Creá una sede en Sedes y canchas para usar el panel." /></section>
+
+  // Cuando la jornada no es la fecha del calendario es porque ya pasó la medianoche y el
+  // club sigue abierto. Conviene que se lea, o el que atiende cree que la pantalla quedó
+  // colgada en el día de ayer.
+  const esJornadaDeAnoche = Boolean(panel && panel.fechaJornada !== fechaISO())
+
   return (
     <section className="admin-page">
       <p className="text-xs font-black uppercase tracking-[0.22em] text-rp-accent">Admin</p>
       <h1 className="mt-2 text-3xl font-black text-rp-text sm:text-5xl">Panel</h1>
+      {/* La fecha es la de la JORNADA, no la del calendario: a la 1 AM el club sigue
+          atendiendo la noche que arrancó ayer, y todos los números de esta pantalla son
+          de esa sesión. Decir "hoy" ahí sería mentir sobre lo que se está mirando. */}
+      <p className="mt-2 text-sm text-rp-muted">
+        <span className="font-bold capitalize text-rp-text">{formatearFechaLarga(panel?.fechaJornada)}</span>
+        {' · '}Lo que está pasando ahora en el club.
+        {esJornadaDeAnoche && (
+          <span className="mt-1 block text-xs text-rp-amber">
+            Sigue abierta la noche de ayer: los turnos de la madrugada son de esta jornada.
+          </span>
+        )}
+      </p>
 
       {lugares.length > 1 && (
         <div className="mt-4 flex flex-wrap gap-1 rounded-lg border border-rp-border bg-rp-surface/82 p-1">
@@ -143,7 +384,7 @@ export default function AdminDashboardPage() {
               key={lugar.id}
               type="button"
               onClick={() => setLugarId(lugar.id)}
-              className={`flex-1 whitespace-nowrap rounded-md px-3 py-2 text-sm font-bold transition ${lugarId === lugar.id ? 'bg-rp-surface-2 text-rp-accent' : 'text-rp-muted hover:text-rp-text'}`}
+              className={`min-h-11 flex-1 whitespace-nowrap rounded-md px-3 py-2 text-sm font-bold transition ${lugarId === lugar.id ? 'bg-rp-surface-2 text-rp-accent' : 'text-rp-muted hover:text-rp-text'}`}
             >
               {lugar.nombre}
             </button>
@@ -151,106 +392,302 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
-      <div className="mt-5 grid gap-4 lg:grid-cols-2">
-        <GraficoBarras titulo="Turnos por día (esta semana)" valores={panel.turnosPorDiaSemana} etiquetas={DIAS_SEMANA} />
-        <ProximosTurnos
-          cancha={canchaActual}
-          indice={indiceCancha}
-          total={turnosPorCancha.length}
-          onAnterior={() => setIndiceCancha((i) => (i - 1 + turnosPorCancha.length) % turnosPorCancha.length)}
-          onSiguiente={() => setIndiceCancha((i) => (i + 1) % turnosPorCancha.length)}
+      {error && <p className="mt-4 rounded-md border border-rp-danger/40 bg-rp-danger/10 px-3 py-2 text-sm font-bold text-rp-danger">{error}</p>}
+
+      <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-3">
+        <Tarjeta
+          icono={LayoutGrid}
+          titulo="Canchas ocupadas"
+          valor={panel ? `${panel.canchasOcupadasAhora}/${panel.canchasTotales}` : '-'}
+          detalle="Quién está jugando ahora"
+          onClick={() => setDetalle('canchas')}
+        />
+        <Tarjeta
+          icono={Wallet}
+          titulo="Falta cobrar"
+          valor={formatearMoneda(aCobrar)}
+          detalle={`${deudores.length} ${deudores.length === 1 ? 'turno' : 'turnos'} con deuda`}
+          tono={aCobrar > 0 ? 'alerta' : 'normal'}
+          onClick={() => setDetalle('cobrar')}
+        />
+        <Tarjeta
+          icono={CalendarClock}
+          titulo="Por confirmar"
+          valor={String(porConfirmar.length)}
+          detalle={porConfirmar.length > 0 ? 'Pedidos esperando respuesta' : 'Nada pendiente'}
+          tono={porConfirmar.length > 0 ? 'alerta' : 'normal'}
+          onClick={() => setDetalle('confirmar')}
+        />
+        <Tarjeta
+          icono={Sparkles}
+          titulo="Turnos disponibles"
+          valor={String(panel?.turnosDisponiblesHoy ?? 0)}
+          detalle={desgloseDisponibles(panel?.disponiblesPorDuracion) ?? 'No queda nada para vender'}
+          onClick={abrirDisponibles}
+        />
+        <Tarjeta
+          icono={Trophy}
+          titulo="Inscripciones"
+          valor={String(panel?.solicitudesPendientes ?? 0)}
+          detalle={(panel?.solicitudesPendientes ?? 0) > 0 ? 'Esperando respuesta' : 'Nada pendiente'}
+          tono={(panel?.solicitudesPendientes ?? 0) > 0 ? 'alerta' : 'normal'}
+          onClick={() => setDetalle('inscripciones')}
+        />
+        <Tarjeta
+          icono={Package}
+          titulo="Por reponer"
+          valor={String(bajoMinimo.length)}
+          detalle={bajoMinimo.length > 0 ? bajoMinimo.slice(0, 2).map((p) => p.nombre).join(', ') : 'Todo con stock'}
+          tono={bajoMinimo.length > 0 ? 'alerta' : 'normal'}
+          onClick={() => setDetalle('reponer')}
         />
       </div>
 
-      <p className="mt-5 text-xs font-black uppercase tracking-[0.16em] text-rp-accent">Hoy en la sede</p>
-      <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5">
-        <TarjetaMetrica icon={LayoutGrid} label="Canchas ocupadas ahora" texto={`${panel.canchasOcupadasAhora}/${panel.canchasTotales}`} onClick={() => setModalCanchas(true)} />
-        <TarjetaMetrica icon={Sparkles} label="Turnos disponibles hoy" value={panel.turnosDisponiblesHoy} onClick={abrirDisponibles} />
-        <TarjetaMetrica icon={CalendarClock} label="Turnos confirmados hoy" value={panel.reservasHoy} />
-        <TarjetaMetrica icon={Clock} label="Turnos por confirmar" value={panel.reservasPendientes} onClick={() => setModalReservas(true)} />
-        <TarjetaMetrica icon={Wallet} label="Ingreso estimado de turnos (hoy)" texto={formatearMoneda(panel.ingresoEstimadoHoy)} />
-      </div>
+      {/* La venta de kiosco que no va contra ningún turno —el que entra, compra una
+          gatorade y se va— es lo único que el mostrador necesita a un toque desde acá.
+          El resto de las pantallas ya están en el menú. */}
+      <button
+        type="button"
+        onClick={() => setVentaSuelta(true)}
+        className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-lg border border-rp-accent/50 bg-rp-accent/10 px-3 py-3 text-sm font-black text-rp-text transition hover:bg-rp-accent/20"
+      >
+        <ShoppingCart size={17} className="text-rp-accent" />Vender en el mostrador
+      </button>
 
-      <p className="mt-5 text-xs font-black uppercase tracking-[0.16em] text-rp-accent">Competición</p>
-      {temporadaActiva && (
-        <div className="mt-3 rounded-lg border border-rp-accent/30 bg-rp-accent/5 p-4">
-          <p className="text-xs font-black uppercase tracking-[0.16em] text-rp-accent">Temporada activa</p>
-          <h2 className="mt-2 text-xl font-black text-rp-text">{temporadaActiva.nombre}</h2>
-          <p className="mt-1 text-sm text-rp-muted">
-            {formatearFecha(temporadaActiva.fechaInicio)} - {temporadaActiva.fechaFin ? formatearFecha(temporadaActiva.fechaFin) : 'En curso'}
-          </p>
-        </div>
-      )}
-      <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <TarjetaMetrica icon={ClipboardList} label="Inscripciones pendientes" value={panel.solicitudesPendientes} onClick={() => setModalInscripciones(true)} />
-        <TarjetaMetrica icon={ClipboardList} label="Torneos en inscripción" value={panel.torneosEnInscripcion} onClick={() => navigate('/admin/torneos?estado=INSCRIPCION')} />
-        <TarjetaMetrica icon={Trophy} label="Torneos finalizados" value={panel.torneosFinalizados} onClick={() => navigate('/admin/torneos?estado=FINALIZADO')} />
-        <TarjetaMetrica icon={Users} label="Jugadores" value={resumen.jugadoresRegistrados} onClick={() => navigate('/admin/jugadores')} />
-      </div>
+      <Bloque titulo="Jugando ahora" vacio="No hay nadie en la cancha en este momento.">
+        {jugando.map((turno) => (
+          <FilaTurno key={turno.id} turno={turno} onConsumo={() => setTurnoVenta(turno)} onCobrar={() => abrirCobro(turno)} />
+        ))}
+      </Bloque>
 
+      {/* Una columna por cancha, dos por fila: así se ve de un vistazo cómo viene cargada
+          cada una, que es la pregunta real ("¿me queda lugar en la 2?"). Antes había que
+          pasar las canchas de a una con flechas. En el celular caen una abajo de otra. */}
       <div className="mt-5">
-        <h3 className="mb-3 text-xs font-black uppercase tracking-[0.16em] text-rp-accent">Últimos torneos en esta sede</h3>
-        {torneosRecientes.length === 0 ? (
-          <p className="rounded-lg border border-rp-border bg-rp-surface/82 p-4 text-sm text-rp-muted">Todavía no hay torneos en este lugar.</p>
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="text-xs font-black uppercase tracking-[0.16em] text-rp-accent">Próximos turnos</h2>
+          <NavLink to="/admin/turnos" className="text-xs font-bold text-rp-muted hover:text-rp-accent">Ver todos</NavLink>
+        </div>
+        {proximosPorCancha.length === 0 ? (
+          <p className="rounded-lg border border-rp-border bg-rp-surface/82 px-4 py-3 text-sm text-rp-muted">No queda ningún turno más en la jornada.</p>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {torneosRecientes.map((torneo) => (
-              <NavLink key={torneo.id} to={`/admin/torneos/${torneo.id}?vista=resumen`} className="rounded-lg border border-rp-border bg-rp-surface/82 p-4 transition hover:border-rp-accent/60">
-                <StatusBadge tone={torneo.estado === 'EN_CURSO' ? 'live' : torneo.estado === 'FINALIZADO' ? 'success' : 'warning'}>
-                  {torneo.estado}
-                </StatusBadge>
-                <h4 className="mt-2 line-clamp-2 font-bold text-rp-text">{torneo.nombre}</h4>
-                <p className="mt-1 flex items-center gap-1 text-xs text-rp-muted">
-                  <CalendarDays size={12} />{formatearFecha(torneo.fechaInicio)}
-                </p>
-              </NavLink>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {proximosPorCancha.map((grupo) => (
+              <div key={grupo.etiqueta} className="rounded-lg border border-rp-border bg-rp-surface/82 p-3">
+                <p className="mb-2 text-xs font-black uppercase tracking-[0.14em] text-rp-muted">{grupo.etiqueta}</p>
+                <div className="flex flex-col gap-2">
+                  {grupo.elementos.map((turno) => (
+                    <FilaTurno key={turno.id} turno={turno} compacta onConsumo={() => setTurnoVenta(turno)} onCobrar={() => abrirCobro(turno)} />
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         )}
       </div>
 
-      <Modal isOpen={modalCanchas} onClose={() => setModalCanchas(false)} title="Estado de las canchas ahora" size="md">
-        {panel.canchas.length === 0 ? (
-          <p className="py-6 text-center text-sm text-rp-muted">Este lugar no tiene canchas activas.</p>
+      {conDeuda.length > 0 && (
+        <Bloque titulo="Ya jugaron y deben">
+          {conDeuda.map((turno) => (
+            <FilaTurno key={turno.id} turno={turno} onConsumo={() => setTurnoVenta(turno)} onCobrar={() => abrirCobro(turno)} />
+          ))}
+        </Bloque>
+      )}
+
+      {/* ---------- Detalle de cada tarjeta ---------- */}
+
+      <Modal isOpen={detalle === 'canchas'} onClose={() => setDetalle(null)} title="Qué pasa en cada cancha" size="md">
+        {estadoCanchas.length === 0 ? (
+          <p className="py-6 text-center text-sm text-rp-muted">Esta sede no tiene canchas activas.</p>
         ) : (
           <ul className="flex flex-col gap-2">
-            {panel.canchas.map((cancha) => (
-              <li key={cancha.id} className="flex items-center justify-between rounded-md border border-rp-border bg-rp-bg/55 px-3 py-2">
-                <span className="text-sm font-bold text-rp-text">{cancha.nombre}</span>
-                <StatusBadge tone={cancha.ocupadaAhora ? 'danger' : 'success'}>{cancha.ocupadaAhora ? 'Ocupada' : 'Libre'}</StatusBadge>
+            {estadoCanchas.map((cancha) => (
+              <li key={cancha.id} className="rounded-md border border-rp-border bg-rp-bg/55 px-3 py-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-black text-rp-text">{cancha.nombre}</span>
+                  <StatusBadge tone={cancha.ocupadaAhora ? 'danger' : 'success'}>{cancha.ocupadaAhora ? 'Ocupada' : 'Libre'}</StatusBadge>
+                </div>
+                {cancha.turno ? (
+                  <div className="mt-2 border-t border-rp-border pt-2 text-xs">
+                    <p className="text-sm font-bold text-rp-text">{cancha.turno.clienteNombre}</p>
+                    <p className="text-rp-muted">
+                      Hasta las <b className="text-rp-text">{hora(cancha.turno.horaFin)}</b> · {duracionCorta(cancha.turno.duracionMin)}
+                      {cancha.turno.turnoFijo ? ' · abono' : ''}
+                    </p>
+                    <p className="mt-1 text-rp-muted">
+                      Cancha {formatearMoneda(cancha.turno.precioAplicado ?? 0)}
+                      {(cancha.turno.consumoACuenta ?? 0) > 0 ? ` · consumo ${formatearMoneda(cancha.turno.consumoACuenta ?? 0)}` : ''}
+                      {(cancha.turno.seniaPagada ?? 0) > 0 ? ` · seña ${formatearMoneda(cancha.turno.seniaPagada ?? 0)}` : ''}
+                    </p>
+                    <p className="mt-1 font-black">
+                      {(cancha.turno.saldoPendiente ?? 0) > 0
+                        ? <span className="text-rp-danger">Debe {formatearMoneda(cancha.turno.saldoPendiente ?? 0)}</span>
+                        : <span className="text-rp-accent">Pagado</span>}
+                      {cancha.turno.clienteTelefono ? <span className="ml-2 font-normal text-rp-muted">{cancha.turno.clienteTelefono}</span> : null}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="mt-1 text-xs text-rp-muted">Sin nadie jugando en este momento.</p>
+                )}
               </li>
             ))}
           </ul>
         )}
       </Modal>
 
-      <Modal isOpen={modalDisponibles} onClose={() => setModalDisponibles(false)} title="Turnos disponibles hoy" size="md">
+      <Modal isOpen={detalle === 'cobrar'} onClose={() => setDetalle(null)} title={`Falta cobrar ${formatearMoneda(aCobrar)}`} size="md">
+        {deudores.length === 0 ? (
+          <p className="py-6 text-center text-sm text-rp-muted">No queda nada por cobrar en esta jornada.</p>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {deudores.map((turno) => (
+              <li key={turno.id} className="rounded-md border border-rp-border bg-rp-bg/55 px-3 py-2.5">
+                <p className="text-sm font-black text-rp-text">{turno.clienteNombre}</p>
+                <p className="text-xs text-rp-muted">
+                  {turno.canchaNombre} · {hora(turno.horaInicio)} a {hora(turno.horaFin)} hs
+                  {turno.clienteTelefono ? ` · ${turno.clienteTelefono}` : ''}
+                </p>
+                <div className="mt-2 flex flex-col gap-0.5 border-t border-rp-border pt-2 text-xs">
+                  <span className="flex justify-between"><span className="text-rp-muted">Cancha</span><span className="text-rp-text">{formatearMoneda(turno.precioAplicado ?? 0)}</span></span>
+                  {(turno.consumoACuenta ?? 0) > 0 && <span className="flex justify-between"><span className="text-rp-muted">Consumo</span><span className="text-rp-text">{formatearMoneda(turno.consumoACuenta ?? 0)}</span></span>}
+                  {(turno.seniaPagada ?? 0) > 0 && <span className="flex justify-between"><span className="text-rp-muted">Seña pagada</span><span className="text-rp-text">-{formatearMoneda(turno.seniaPagada ?? 0)}</span></span>}
+                  {(turno.totalCobrado ?? 0) > 0 && <span className="flex justify-between"><span className="text-rp-muted">Ya cobrado</span><span className="text-rp-text">-{formatearMoneda(turno.totalCobrado ?? 0)}</span></span>}
+                </div>
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  <span className="text-sm font-black text-rp-danger">Debe {formatearMoneda(turno.saldoPendiente ?? 0)}</span>
+                  <Button size="sm" onClick={() => { setDetalle(null); abrirCobro(turno) }}><Wallet size={15} />Cobrar</Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Modal>
+
+      <ModalPorGrupo
+        abierto={detalle === 'confirmar'}
+        onClose={() => setDetalle(null)}
+        titulo="Turnos por confirmar"
+        vacio="No hay turnos esperando respuesta."
+        grupos={porConfirmarPorCancha}
+        indice={indiceGrupo}
+        onIndice={setIndiceGrupo}
+        render={(turno) => (
+          <li key={turno.id} className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-rp-border bg-rp-bg/55 px-3 py-2.5">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-black text-rp-text">{hora(turno.horaInicio)} - {hora(turno.horaFin)}</p>
+              <p className="truncate text-sm text-rp-text">{turno.clienteNombre}</p>
+              <p className="text-xs text-rp-muted">
+                {turno.clienteTelefono} · {duracionCorta(turno.duracionMin)} · {formatearMoneda(turno.precioAplicado ?? 0)}
+              </p>
+            </div>
+            <div className="flex shrink-0 gap-2">
+              <Button size="sm" disabled={accionando === turno.id} onClick={() => resolverTurno(turno, 'confirmar')}>Confirmar</Button>
+              <Button size="sm" variant="ghost" disabled={accionando === turno.id} onClick={() => resolverTurno(turno, 'rechazar')}>Rechazar</Button>
+            </div>
+          </li>
+        )}
+      />
+
+      <ModalPorGrupo
+        abierto={detalle === 'inscripciones'}
+        onClose={() => setDetalle(null)}
+        titulo="Inscripciones por responder"
+        vacio="No hay inscripciones pendientes."
+        grupos={inscripcionesPorTorneo}
+        indice={indiceGrupo}
+        onIndice={setIndiceGrupo}
+        render={(solicitud) => {
+          // Si el nombre que cargaron coincide con un jugador que ya existe, aprobar
+          // desde acá crearía un duplicado. Esa decisión se toma en el torneo, que es
+          // donde se puede elegir cuál de los candidatos es.
+          const hayDuplicado = (solicitud.jugador1EsNuevo && (solicitud.jugador1Candidatos?.length ?? 0) > 0)
+            || (solicitud.jugador2EsNuevo && (solicitud.jugador2Candidatos?.length ?? 0) > 0)
+          return (
+            <li key={solicitud.id} className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-rp-border bg-rp-bg/55 px-3 py-2.5">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-rp-text">{solicitud.jugador1} / {solicitud.jugador2}</p>
+                <p className="text-xs text-rp-muted">
+                  {solicitud.categoriaNombre}
+                  {solicitud.telefonoContacto ? ` · ${solicitud.telefonoContacto}` : ''}
+                  {solicitud.pagada ? ' · seña paga' : ''}
+                </p>
+                {hayDuplicado && (
+                  <p className="mt-1 text-xs font-bold text-rp-amber">
+                    Un nombre coincide con un jugador que ya existe: resolvelo en el torneo antes de aprobar.
+                  </p>
+                )}
+              </div>
+              <div className="flex shrink-0 flex-wrap gap-2">
+                {hayDuplicado ? (
+                  solicitud.torneoId && (
+                    <Button size="sm" variant="subtle" asChild onClick={() => setDetalle(null)}>
+                      <NavLink to={`/admin/torneos/${solicitud.torneoId}`}><ClipboardList size={15} />Resolver</NavLink>
+                    </Button>
+                  )
+                ) : (
+                  <Button size="sm" disabled={accionando === solicitud.id} onClick={() => resolverInscripcion(solicitud, 'aprobar')}>Confirmar</Button>
+                )}
+                <Button size="sm" variant="ghost" disabled={accionando === solicitud.id} onClick={() => resolverInscripcion(solicitud, 'rechazar')}>Rechazar</Button>
+              </div>
+            </li>
+          )
+        }}
+      />
+
+      {/* Mientras se carga un turno, la lista se esconde en vez de quedar detrás: dos
+          modales apilados se cierran los dos de un solo Escape. La lista vuelve —ya
+          recargada— apenas se cierra el formulario. */}
+      <Modal isOpen={detalle === 'disponibles' && !slotNuevo} onClose={() => setDetalle(null)} title="Turnos que todavía podés vender" size="md">
+        {(panel?.disponiblesPorDuracion ?? []).length > 0 && (
+          <div className="mb-3 rounded-md border border-rp-border bg-rp-bg/55 p-3">
+            <p className="text-xs font-bold text-rp-muted">Con lo que queda libre en toda la sede podés vender:</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {panel!.disponiblesPorDuracion.map((fila) => (
+                <span key={fila.minutos} className="rounded-md border border-rp-accent/50 bg-rp-accent/10 px-2 py-1 text-sm font-bold text-rp-text">
+                  {fila.turnos} de {duracionCorta(fila.minutos)}
+                </span>
+              ))}
+            </div>
+            <p className="mt-2 text-xs text-rp-muted">Es el mismo hueco contado de distintas formas, no se suman.</p>
+          </div>
+        )}
         {cargandoDisponibles ? (
           <p className="py-6 text-center text-sm text-rp-muted">Cargando disponibilidad...</p>
-        ) : disponiblesPorCancha.length === 0 ? (
-          <p className="py-6 text-center text-sm text-rp-muted">Este lugar no tiene canchas.</p>
+        ) : disponibles.length === 0 ? (
+          <p className="py-6 text-center text-sm text-rp-muted">Esta sede no tiene canchas.</p>
         ) : (
           (() => {
-            const canchaActualDisp = disponiblesPorCancha[Math.min(indiceDisponible, disponiblesPorCancha.length - 1)]
+            const grupo = disponibles[Math.min(indiceGrupo, disponibles.length - 1)]
             return (
               <div className="flex flex-col gap-3">
                 <NavegadorFase
-                  etiqueta={canchaActualDisp.canchaNombre}
-                  indice={Math.min(indiceDisponible, disponiblesPorCancha.length - 1)}
-                  total={disponiblesPorCancha.length}
-                  onAnterior={() => setIndiceDisponible((i) => (i - 1 + disponiblesPorCancha.length) % disponiblesPorCancha.length)}
-                  onSiguiente={() => setIndiceDisponible((i) => (i + 1) % disponiblesPorCancha.length)}
+                  etiqueta={grupo.etiqueta}
+                  indice={Math.min(indiceGrupo, disponibles.length - 1)}
+                  total={disponibles.length}
+                  onAnterior={() => setIndiceGrupo((i) => (i - 1 + disponibles.length) % disponibles.length)}
+                  onSiguiente={() => setIndiceGrupo((i) => (i + 1) % disponibles.length)}
                 />
-                {canchaActualDisp.slots.length === 0 ? (
-                  <p className="py-4 text-center text-sm text-rp-muted">Esta cancha no tiene turnos libres para hoy.</p>
+                {grupo.slots.length === 0 ? (
+                  <p className="py-4 text-center text-sm text-rp-muted">Esta cancha ya no tiene horarios libres en la jornada.</p>
                 ) : (
-                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                    {canchaActualDisp.slots.map((slot) => (
-                      <span key={slot.horaInicio} className="rounded-md border border-rp-accent/50 bg-rp-accent/10 px-2 py-1.5 text-center text-sm font-bold text-rp-text">
-                        {slot.horaInicio.slice(0, 5)}
-                      </span>
+                  <ul className="flex flex-col gap-1.5">
+                    {grupo.slots.map((slot) => (
+                      <li key={slot.horaInicio} className="flex flex-wrap items-center gap-2 rounded-md border border-rp-border bg-rp-bg/55 px-3 py-2">
+                        <span className="font-mono text-sm font-black text-rp-accent">{hora(slot.horaInicio)}</span>
+                        <span className="flex flex-1 flex-wrap gap-1.5">
+                          {slot.opciones.map((opcion) => (
+                            <span key={opcion.minutos} className="rounded border border-rp-border px-1.5 py-0.5 text-xs font-bold text-rp-text">
+                              {duracionCorta(opcion.minutos)}
+                              {opcion.precio != null ? <span className="ml-1 font-normal text-rp-muted">{formatearMoneda(opcion.precio)}</span> : null}
+                            </span>
+                          ))}
+                        </span>
+                        <Button size="sm" variant="subtle" onClick={() => abrirTurnoManual(grupo, slot)}>
+                          <Plus size={15} />Cargar
+                        </Button>
+                      </li>
                     ))}
-                  </div>
+                  </ul>
                 )}
               </div>
             )
@@ -258,134 +695,249 @@ export default function AdminDashboardPage() {
         )}
       </Modal>
 
-      <Modal isOpen={modalReservas} onClose={() => setModalReservas(false)} title="Turnos por confirmar" size="md">
-        {reservasPorCancha.length === 0 || !reservaCanchaActual ? (
-          <p className="py-6 text-center text-sm text-rp-muted">No hay turnos pendientes de confirmación.</p>
+      <Modal isOpen={detalle === 'reponer'} onClose={() => setDetalle(null)} title="Productos por reponer" size="md">
+        {bajoMinimo.length === 0 ? (
+          <p className="py-6 text-center text-sm text-rp-muted">Todos los productos están por encima de su mínimo.</p>
         ) : (
-          <div className="flex flex-col gap-3">
-            <NavegadorFase
-              etiqueta={reservaCanchaActual.canchaNombre}
-              indice={Math.min(indiceReserva, reservasPorCancha.length - 1)}
-              total={reservasPorCancha.length}
-              onAnterior={() => setIndiceReserva((i) => (i - 1 + reservasPorCancha.length) % reservasPorCancha.length)}
-              onSiguiente={() => setIndiceReserva((i) => (i + 1) % reservasPorCancha.length)}
-            />
-            <ul className="flex flex-col gap-2">
-              {reservaCanchaActual.reservas.map((reserva) => (
-                <li key={reserva.id} className="flex flex-wrap items-center gap-3 rounded-md border border-rp-border bg-rp-bg/55 px-3 py-2">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-bold text-rp-text">{reserva.clienteNombre} <span className="text-xs font-normal text-rp-muted">{reserva.clienteTelefono}</span></p>
-                    <p className="text-xs text-rp-muted">{reserva.fecha ? formatearFecha(reserva.fecha) : ''} {reserva.horaInicio?.slice(0, 5)}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button size="sm" disabled={accionando === reserva.id} onClick={() => operarReserva(reserva.id, 'confirmar')}>Confirmar</Button>
-                    <Button size="sm" variant="ghost" disabled={accionando === reserva.id} onClick={() => operarReserva(reserva.id, 'rechazar')}>Rechazar</Button>
-                  </div>
-                </li>
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-rp-border text-left text-[10px] font-black uppercase tracking-[0.12em] text-rp-muted">
+                    <th className="pb-2">Producto</th>
+                    <th className="pb-2 text-right">Quedan</th>
+                    <th className="pb-2 text-right">Mínimo</th>
+                    <th className="pb-2 text-right">Faltan</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bajoMinimo
+                    .slice((paginaProductos - 1) * PRODUCTOS_POR_PAGINA, paginaProductos * PRODUCTOS_POR_PAGINA)
+                    .map((producto) => (
+                      <tr key={producto.id} className="border-b border-rp-border/60 last:border-0">
+                        <td className="py-2 pr-2 font-bold text-rp-text">{producto.nombre}</td>
+                        <td className={`py-2 text-right font-black ${producto.stock <= 0 ? 'text-rp-danger' : 'text-rp-text'}`}>{producto.stock}</td>
+                        <td className="py-2 text-right text-rp-muted">{producto.stockMinimo}</td>
+                        <td className="py-2 text-right font-bold text-rp-amber">{Math.max(0, producto.stockMinimo - producto.stock)}</td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+            <Pagination page={paginaProductos} pageSize={PRODUCTOS_POR_PAGINA} total={bajoMinimo.length} onPageChange={setPaginaProductos} />
+            <Button variant="subtle" size="sm" asChild className="mt-3" onClick={() => setDetalle(null)}>
+              <NavLink to="/admin/productos"><Package size={15} />Cargar mercadería</NavLink>
+            </Button>
+          </>
+        )}
+      </Modal>
+
+      {/* ---------- Acciones ---------- */}
+
+      <VentaRapidaModal
+        abierto={turnoVenta !== null}
+        onClose={() => setTurnoVenta(null)}
+        onVendido={recargar}
+        turno={turnoVenta && {
+          id: turnoVenta.id,
+          clienteNombre: turnoVenta.clienteNombre,
+          horario: hora(turnoVenta.horaInicio),
+        }}
+      />
+      <VentaRapidaModal abierto={ventaSuelta} onClose={() => setVentaSuelta(false)} onVendido={recargar} />
+
+      <Modal
+        isOpen={Boolean(slotNuevo)}
+        onClose={() => setSlotNuevo(null)}
+        onSubmit={guardarTurnoManual}
+        title="Cargar un turno"
+        size="sm"
+      >
+        {slotNuevo && (
+          <div className="flex flex-col gap-4">
+            <p className="rounded-md border border-rp-accent/40 bg-rp-accent/10 px-3 py-2 text-sm text-rp-text">
+              <b>{slotNuevo.canchaNombre}</b> a las <b>{hora(slotNuevo.horaInicio)}</b> hs, {formatearFechaLarga(panel?.fechaJornada)}.
+            </p>
+            <Input label="Cliente" value={formNuevo.nombre} onChange={(e) => setFormNuevo((f) => ({ ...f, nombre: e.target.value }))} placeholder="Nombre y apellido" />
+            <Input label="Teléfono" value={formNuevo.telefono} onChange={(e) => setFormNuevo((f) => ({ ...f, telefono: e.target.value }))} placeholder="3855123456" />
+            <Select label="Duración" value={String(formNuevo.duracion)} onChange={(e) => setFormNuevo((f) => ({ ...f, duracion: Number(e.target.value) }))}>
+              {slotNuevo.opciones.map((opcion) => (
+                <option key={opcion.minutos} value={opcion.minutos}>
+                  {duracionCorta(opcion.minutos)}
+                  {opcion.precio != null ? ` - ${formatearMoneda(opcion.precio)}` : ''}
+                </option>
               ))}
-            </ul>
+            </Select>
+            {errorNuevo && <p className="rounded-md border border-rp-danger/40 bg-rp-danger/10 px-3 py-2 text-sm font-bold text-rp-danger">{errorNuevo}</p>}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="ghost" size="sm" onClick={() => setSlotNuevo(null)} disabled={guardandoNuevo}>Cancelar</Button>
+              <Button type="submit" size="sm" disabled={guardandoNuevo}>{guardandoNuevo ? 'Cargando...' : 'Cargar turno'}</Button>
+            </div>
           </div>
         )}
       </Modal>
 
-      <Modal isOpen={modalInscripciones} onClose={() => setModalInscripciones(false)} title="Inscripciones pendientes" size="md">
-        {panel.solicitudesPendientesLista.length === 0 ? (
-          <p className="py-6 text-center text-sm text-rp-muted">No hay inscripciones pendientes.</p>
-        ) : (
-          <ul className="flex flex-col gap-2">
-            {panel.solicitudesPendientesLista.map((solicitud) => (
-              <li key={solicitud.id} className="flex flex-wrap items-center gap-3 rounded-md border border-rp-border bg-rp-bg/55 px-3 py-2">
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-bold text-rp-text">{solicitud.jugador1} / {solicitud.jugador2}</p>
-                  <p className="text-xs text-rp-muted">
-                    {solicitud.torneoNombre ? `${solicitud.torneoNombre} · ` : ''}{solicitud.categoriaNombre}{solicitud.telefonoContacto ? ` · ${solicitud.telefonoContacto}` : ''}
-                  </p>
-                </div>
-                {solicitud.torneoId && (
-                  <Button size="sm" variant="subtle" asChild onClick={() => setModalInscripciones(false)}>
-                    <NavLink to={`/admin/torneos/${solicitud.torneoId}`}>Ver torneo</NavLink>
-                  </Button>
+      <Modal isOpen={Boolean(turnoCobro)} onClose={() => setTurnoCobro(null)} onSubmit={cobrar} title="Cobrar la cuenta" size="sm">
+        {turnoCobro && (
+          <div className="flex flex-col gap-4">
+            <div className="rounded-md border border-rp-border bg-rp-surface-2 px-3 py-2 text-sm">
+              <p className="font-bold text-rp-text">{turnoCobro.clienteNombre}</p>
+              <p className="text-xs text-rp-muted">
+                {turnoCobro.canchaNombre} · {hora(turnoCobro.horaInicio)} a {hora(turnoCobro.horaFin)} hs
+              </p>
+              <div className="mt-2 flex flex-col gap-0.5 border-t border-rp-border pt-2 text-xs">
+                <span className="flex justify-between"><span className="text-rp-muted">Cancha</span><span className="text-rp-text">{formatearMoneda(turnoCobro.precioAplicado ?? 0)}</span></span>
+                {(turnoCobro.consumoACuenta ?? 0) > 0 && (
+                  <span className="flex justify-between"><span className="text-rp-muted">Consumo</span><span className="text-rp-text">{formatearMoneda(turnoCobro.consumoACuenta ?? 0)}</span></span>
                 )}
-              </li>
-            ))}
-          </ul>
+                {(turnoCobro.seniaPagada ?? 0) > 0 && (
+                  <span className="flex justify-between"><span className="text-rp-muted">Seña ya pagada</span><span className="text-rp-text">-{formatearMoneda(turnoCobro.seniaPagada ?? 0)}</span></span>
+                )}
+                {(turnoCobro.totalCobrado ?? 0) > 0 && (
+                  <span className="flex justify-between"><span className="text-rp-muted">Ya cobrado</span><span className="text-rp-text">-{formatearMoneda(turnoCobro.totalCobrado ?? 0)}</span></span>
+                )}
+                <span className="mt-1 flex justify-between border-t border-rp-border pt-1 text-sm font-black">
+                  <span className="text-rp-muted">A cobrar</span>
+                  <span className="text-rp-accent">{formatearMoneda(turnoCobro.saldoPendiente ?? 0)}</span>
+                </span>
+              </div>
+            </div>
+            <Input label="Monto" value={formCobro.monto} onChange={(e) => setFormCobro((f) => ({ ...f, monto: e.target.value }))} />
+            <Select label="Cómo paga" value={formCobro.medio} onChange={(e) => setFormCobro((f) => ({ ...f, medio: e.target.value as MedioPago }))}>
+              {MEDIOS.map((medio) => <option key={medio.valor} value={medio.valor}>{medio.nombre}</option>)}
+            </Select>
+            {errorCobro && <p className="rounded-md border border-rp-danger/40 bg-rp-danger/10 px-3 py-2 text-sm font-bold text-rp-danger">{errorCobro}</p>}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="ghost" size="sm" onClick={() => setTurnoCobro(null)} disabled={cobrando}>Cancelar</Button>
+              <Button type="submit" size="sm" disabled={cobrando}>{cobrando ? 'Registrando...' : 'Cobrar'}</Button>
+            </div>
+          </div>
         )}
       </Modal>
     </section>
   )
 }
 
-function TarjetaMetrica({ icon: Icon, label, value, texto, onClick }: { icon: typeof Trophy; label: string; value?: number; texto?: string; onClick?: () => void }) {
-  const contenido = (
-    <>
-      <div className="flex items-center justify-between">
-        <Icon className="text-rp-accent" size={20} />
-        {onClick && <span className="text-xs font-bold text-rp-muted transition group-hover:text-rp-accent">Ver →</span>}
-      </div>
-      <span className="mt-3 block text-sm font-bold text-rp-muted">{label}</span>
-      <strong className="mt-2 block text-3xl font-black text-rp-text">{texto ?? value}</strong>
-    </>
-  )
-  if (onClick) {
-    return (
-      <button type="button" onClick={onClick} className="group cursor-pointer rounded-lg border border-rp-border bg-rp-surface p-4 text-left transition hover:border-rp-accent/60 hover:bg-rp-surface-2/40">
-        {contenido}
-      </button>
-    )
-  }
-  return <article className="rounded-lg border border-rp-border bg-rp-surface p-4">{contenido}</article>
+/**
+ * "5 de 1 h · 2 de 2 h". Las cantidades no se suman entre sí: es el mismo hueco contado
+ * con cada duración que el club vende.
+ */
+function desgloseDisponibles(duraciones: AdminDashboardResponse['disponiblesPorDuracion'] | undefined) {
+  const conTurnos = (duraciones ?? []).filter((fila) => fila.turnos > 0)
+  if (conTurnos.length === 0) return undefined
+  return conTurnos.map((fila) => `${fila.turnos} de ${duracionCorta(fila.minutos)}`).join(' · ')
 }
 
-function GraficoBarras({ titulo, valores, etiquetas }: { titulo: string; valores: number[]; etiquetas: string[] }) {
-  const maximo = Math.max(1, ...valores)
-  return (
-    <div className="flex h-full flex-col rounded-lg border border-rp-border bg-rp-surface/82 p-4">
-      <h3 className="mb-3 text-xs font-black uppercase tracking-[0.16em] text-rp-accent">{titulo}</h3>
-      <div className="flex flex-1 items-end gap-3" style={{ minHeight: 132 }}>
-        {valores.map((valor, indice) => (
-          <div key={indice} className="flex h-full flex-1 flex-col items-center justify-end gap-1">
-            <span className="text-xs font-bold text-rp-muted">{valor}</span>
-            <div className="w-full rounded-t bg-rp-accent/70" style={{ height: `${Math.max(2, (valor / maximo) * 96)}px` }} />
-            <span className="text-[10px] font-bold uppercase text-rp-muted">{etiquetas[indice]}</span>
-          </div>
-        ))}
+function Tarjeta({ icono: Icono, titulo, valor, detalle, tono = 'normal', onClick }: {
+  icono: typeof Wallet
+  titulo: string
+  valor: string
+  detalle: string
+  tono?: 'normal' | 'alerta'
+  onClick?: () => void
+}) {
+  const fondo = tono === 'alerta' ? 'border-rp-amber/40 bg-rp-amber/10' : 'border-rp-border bg-rp-surface/82'
+  const contenido = (
+    <>
+      <div className="flex items-start justify-between">
+        <Icono size={18} className="text-rp-accent" />
+        {onClick && <span className="text-[11px] font-bold text-rp-muted transition group-hover:text-rp-accent">Ver →</span>}
       </div>
+      <p className="mt-2 text-xs font-black uppercase tracking-[0.14em] text-rp-muted">{titulo}</p>
+      <p className="mt-1 text-2xl font-black text-rp-text">{valor}</p>
+      <p className="mt-0.5 truncate text-xs text-rp-muted" title={detalle}>{detalle}</p>
+    </>
+  )
+  if (!onClick) return <article className={`rounded-lg border p-4 ${fondo}`}>{contenido}</article>
+  return (
+    <button type="button" onClick={onClick} className={`group cursor-pointer rounded-lg border p-4 text-left transition hover:border-rp-accent/60 ${fondo}`}>
+      {contenido}
+    </button>
+  )
+}
+
+/**
+ * Modal que muestra un grupo por vez —una cancha, un torneo— y se recorre con las
+ * flechas. Es el patrón que ya usa el resto del panel para no apilar listas largas.
+ */
+function ModalPorGrupo<T>({ abierto, onClose, titulo, vacio, grupos, indice, onIndice, render }: {
+  abierto: boolean
+  onClose: () => void
+  titulo: string
+  vacio: string
+  grupos: { etiqueta: string; elementos: T[] }[]
+  indice: number
+  onIndice: (actualizar: (i: number) => number) => void
+  render: (item: T) => React.ReactNode
+}) {
+  const actual = grupos.length > 0 ? grupos[Math.min(indice, grupos.length - 1)] : undefined
+  return (
+    <Modal isOpen={abierto} onClose={onClose} title={titulo} size="md">
+      {!actual ? (
+        <p className="py-6 text-center text-sm text-rp-muted">{vacio}</p>
+      ) : (
+        <div className="flex flex-col gap-3">
+          <NavegadorFase
+            etiqueta={actual.etiqueta}
+            indice={Math.min(indice, grupos.length - 1)}
+            total={grupos.length}
+            onAnterior={() => onIndice((i) => (i - 1 + grupos.length) % grupos.length)}
+            onSiguiente={() => onIndice((i) => (i + 1) % grupos.length)}
+          />
+          <ul className="flex flex-col gap-2">{actual.elementos.map(render)}</ul>
+        </div>
+      )}
+    </Modal>
+  )
+}
+
+function Bloque({ titulo, vacio, children }: { titulo: string; vacio?: string; children: React.ReactNode }) {
+  const hayContenido = Array.isArray(children) ? children.length > 0 : Boolean(children)
+  if (!hayContenido && !vacio) return null
+  return (
+    <div className="mt-5">
+      <h2 className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-rp-accent">{titulo}</h2>
+      {hayContenido
+        ? <div className="flex flex-col gap-2">{children}</div>
+        : <p className="rounded-lg border border-rp-border bg-rp-surface/82 px-4 py-3 text-sm text-rp-muted">{vacio}</p>}
     </div>
   )
 }
 
-function ProximosTurnos({ cancha, indice, total, onAnterior, onSiguiente }: {
-  cancha: { canchaNombre: string; turnos: TurnoResumenResponse[] } | undefined
-  indice: number
-  total: number
-  onAnterior: () => void
-  onSiguiente: () => void
+/**
+ * `compacta` es la fila de media pantalla de "Próximos turnos": el nombre de la cancha ya
+ * lo dice la columna, así que no se repite, y el marco lo pone el grupo.
+ */
+function FilaTurno({ turno, onConsumo, onCobrar, compacta = false }: {
+  turno: ReservaResponse
+  onConsumo: () => void
+  onCobrar: () => void
+  compacta?: boolean
 }) {
+  const saldo = turno.saldoPendiente ?? 0
+  const consumo = turno.consumoACuenta ?? 0
   return (
-    <div className="rounded-lg border border-rp-border bg-rp-surface/82 p-4">
-      <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-xs font-black uppercase tracking-[0.16em] text-rp-accent">Próximos turnos de hoy</h3>
-        <NavLink to="/admin/turnos" className="text-xs font-bold text-rp-muted hover:text-rp-accent">Ver todos</NavLink>
+    <div className={compacta
+      ? 'flex flex-wrap items-center justify-between gap-2 rounded-md border border-rp-border bg-rp-bg/55 px-3 py-2'
+      : 'flex flex-wrap items-center justify-between gap-3 rounded-lg border border-rp-border bg-rp-surface/82 px-4 py-3'}>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-black text-rp-text">
+          {hora(turno.horaInicio)} - {hora(turno.horaFin)}
+          {!compacta && <span className="ml-2 font-bold text-rp-muted">{turno.canchaNombre}</span>}
+        </p>
+        <p className="truncate text-sm text-rp-text">{turno.clienteNombre}</p>
+        <p className="text-xs text-rp-muted">
+          Cancha {formatearMoneda(turno.precioAplicado ?? 0)}
+          {consumo > 0 ? ` + consumo ${formatearMoneda(consumo)}` : ''}
+        </p>
       </div>
-      {!cancha || total === 0 ? (
-        <p className="py-6 text-center text-sm text-rp-muted">Este lugar no tiene canchas.</p>
-      ) : (
-        <div className="flex flex-col gap-3">
-          <NavegadorFase etiqueta={cancha.canchaNombre} indice={Math.min(indice, total - 1)} total={total} onAnterior={onAnterior} onSiguiente={onSiguiente} />
-          {cancha.turnos.length === 0 ? (
-            <p className="py-4 text-center text-sm text-rp-muted">Esta cancha no tiene turnos confirmados para hoy.</p>
-          ) : (
-            <ul className="flex flex-col gap-2">
-              {[...cancha.turnos].sort((a, b) => a.horaInicio.localeCompare(b.horaInicio)).map((turno, i) => (
-                <li key={i} className="flex items-center gap-3 rounded-md border border-rp-border bg-rp-surface px-3 py-2">
-                  <span className="font-mono text-sm font-black text-rp-accent">{turno.horaInicio.slice(0, 5)}</span>
-                  <p className="min-w-0 flex-1 truncate text-sm font-bold text-rp-text">{turno.clienteNombre}</p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
+      <div className="flex shrink-0 flex-wrap items-center gap-2">
+        {saldo > 0
+          ? <span className="text-sm font-black text-rp-danger">Debe {formatearMoneda(saldo)}</span>
+          : <span className="text-sm font-bold text-rp-accent">Pagado</span>}
+        <Button size="sm" variant="subtle" onClick={onConsumo}><ShoppingCart size={15} />Consumo</Button>
+        {saldo > 0 && <Button size="sm" onClick={onCobrar}><Wallet size={15} />Cobrar</Button>}
+      </div>
     </div>
   )
 }
