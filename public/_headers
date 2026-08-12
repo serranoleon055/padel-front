@@ -1,9 +1,13 @@
 # Headers para Cloudflare Pages (Vercel ignora este archivo).
-# CSP: scripts solo propios; estilos propios + inline (React usa style attrs);
-# imágenes propias/https (Cloudinary); conexiones https (API backend);
+# CSP: scripts propios + el de Cloudflare Web Analytics; estilos propios + inline (React
+# usa style attrs); imágenes propias/https (Cloudinary); conexiones https (API backend);
 # iframes solo Google Maps (embed de la sede).
+#
+# `static.cloudflareinsights.com` es el contador de visitas: Pages lo inyecta solo cuando
+# se activa Web Analytics en el panel, así que si no está permitido acá el navegador lo
+# bloquea y no se cuenta ni una visita —sin ningún error a la vista.
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; font-src 'self'; connect-src 'self' https:; frame-src https://www.google.com https://*.google.com; object-src 'none'; base-uri 'self'; form-action 'self'
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; font-src 'self'; connect-src 'self' https:; frame-src https://www.google.com https://*.google.com; object-src 'none'; base-uri 'self'; form-action 'self'
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=()
