@@ -1,4 +1,4 @@
-import { ArrowLeft, ClipboardList, Settings, Shuffle } from 'lucide-react'
+import { Activity, ArrowLeft, Calendar, CalendarRange, ClipboardList, Flag, LayoutGrid, MapPin, Settings, Shuffle, Star, Swords, Tag, Trophy, Users } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { NavLink, useParams, useSearchParams } from 'react-router-dom'
 
@@ -329,19 +329,19 @@ export default function TournamentAdminDetailPage() {
                 <div className="mt-4 flex flex-col gap-4">
                     <div className="rounded-lg border border-rp-border bg-rp-surface/82 p-5">
                         <div className="grid gap-x-8 gap-y-1 sm:grid-cols-2">
-                            <FilaResumen emoji="📊" clave="Estado" valor={formatearEnum(torneo.estado)} />
-                            <FilaResumen emoji="🎾" clave="Formato" valor={formatearEnum(torneo.formato)} />
-                            <FilaResumen emoji="📍" clave="Lugar" valor={torneo.lugarNombre ?? 'Sin lugar'} />
-                            <FilaResumen emoji="📅" clave="Inicio" valor={formatearFecha(torneo.fechaInicio)} />
-                            {torneo.fechaFin ? <FilaResumen emoji="🏁" clave="Fin" valor={formatearFecha(torneo.fechaFin)} /> : null}
-                            <FilaResumen emoji="👥" clave="Parejas" valor={String(parejas.length)} />
-                            <FilaResumen emoji="⚔️" clave="Partidos" valor={String(partidos.length)} />
-                            {torneo.premioAcumulado ? <FilaResumen emoji="🏆" clave="Premio" valor={formatearMoneda(torneo.premioAcumulado)} /> : null}
-                            {torneo.temporadaNombre ? <FilaResumen emoji="🗓️" clave="Temporada" valor={torneo.temporadaNombre} /> : null}
-                            <FilaResumen emoji="⭐" clave="Suma ranking" valor={torneo.sumaPuntosRanking ? 'Sí' : 'No'} />
+                            <FilaResumen icono={Activity} clave="Estado" valor={formatearEnum(torneo.estado)} />
+                            <FilaResumen icono={LayoutGrid} clave="Formato" valor={formatearEnum(torneo.formato)} />
+                            <FilaResumen icono={MapPin} clave="Lugar" valor={torneo.lugarNombre ?? 'Sin lugar'} />
+                            <FilaResumen icono={Calendar} clave="Inicio" valor={formatearFecha(torneo.fechaInicio)} />
+                            {torneo.fechaFin ? <FilaResumen icono={Flag} clave="Fin" valor={formatearFecha(torneo.fechaFin)} /> : null}
+                            <FilaResumen icono={Users} clave="Parejas" valor={String(parejas.length)} />
+                            <FilaResumen icono={Swords} clave="Partidos" valor={String(partidos.length)} />
+                            {torneo.premioAcumulado ? <FilaResumen icono={Trophy} clave="Premio" valor={formatearMoneda(torneo.premioAcumulado)} /> : null}
+                            {torneo.temporadaNombre ? <FilaResumen icono={CalendarRange} clave="Temporada" valor={torneo.temporadaNombre} /> : null}
+                            <FilaResumen icono={Star} clave="Suma ranking" valor={torneo.sumaPuntosRanking ? 'Sí' : 'No'} />
                         </div>
                         <div className="mt-4 flex flex-wrap items-center gap-2">
-                            <span className="text-sm">🏅</span>
+                            <Tag size={14} className="text-rp-muted" />
                             {torneo.categorias.map((categoria) => (
                                 <StatusBadge key={categoria.id} tone="neutral">{categoria.nombre}</StatusBadge>
                             ))}
@@ -530,7 +530,7 @@ export default function TournamentAdminDetailPage() {
                         {partidoWo.parejaLocalId && <option value={partidoWo.parejaLocalId}>{formatearPareja(partidoWo, 'local')}</option>}
                         {partidoWo.parejaVisitanteId && <option value={partidoWo.parejaVisitanteId}>{formatearPareja(partidoWo, 'visitante')}</option>}
                     </Select>
-                    <Input label="Motivo (opcional)" value={woMotivo} onChange={(e) => setWoMotivo(e.target.value)} placeholder="Ej: lesión, ausencia justificada..." />
+                    <Input label="Motivo" value={woMotivo} onChange={(e) => setWoMotivo(e.target.value)} placeholder="Lesión" />
                     {errorWo && <p className="rounded-md border border-rp-danger/40 bg-rp-danger/10 px-3 py-2 text-sm font-bold text-rp-danger">{errorWo}</p>}
                     <div className="flex justify-end gap-2 pt-2">
                     <Button variant="ghost" size="sm" onClick={() => setWoAbierto(false)} disabled={guardandoWo}>Cancelar</Button>
@@ -543,10 +543,10 @@ export default function TournamentAdminDetailPage() {
     )
 }
 
-function FilaResumen({ emoji, clave, valor }: { emoji: string; clave: string; valor: string }) {
+function FilaResumen({ icono: Icono, clave, valor }: { icono: typeof Trophy; clave: string; valor: string }) {
     return (
         <div className="flex items-center justify-between gap-3 border-b border-rp-border/50 py-2">
-            <span className="flex items-center gap-2 text-sm text-rp-muted"><span>{emoji}</span>{clave}</span>
+            <span className="flex items-center gap-2 text-sm text-rp-muted"><Icono size={14} />{clave}</span>
             <span className="text-right text-sm font-bold text-rp-text">{valor}</span>
         </div>
     )

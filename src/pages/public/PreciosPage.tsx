@@ -3,19 +3,26 @@ import { useEffect, useState } from 'react'
 
 import { useConfiguracionSede } from '@/app/providers/ConfiguracionSedeContext'
 import { canchasApi, placesApi } from '@/features/catalog/catalogApi'
-import { describirDias, tarifasApi, type TarifaCanchaResponse } from '@/features/catalog/tarifasApi'
+import { describirDias, promocionesApi, type PromocionCanchaResponse } from '@/features/catalog/promocionesApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
 import { formatearMoneda } from '@/shared/lib/formatters'
 import type { CanchaResponse, LugarResponse } from '@/shared/types/api'
 import { Select } from '@/shared/ui/Select'
 import { StatusMessage } from '@/shared/ui/StatusMessage'
 
+/** Promociones que están corriendo hoy, ordenadas por horario. */
+function promocionesVigentes(promociones: PromocionCanchaResponse[] | undefined) {
+  return (promociones ?? [])
+    .filter((promocion) => promocion.activo && promocion.vigente)
+    .sort((a, b) => a.horaDesde.localeCompare(b.horaDesde))
+}
+
 export default function PreciosPage() {
   const { configuracion } = useConfiguracionSede()
   const [lugares, setLugares] = useState<LugarResponse[]>([])
   const [lugarId, setLugarId] = useState<number | null>(null)
   const [canchas, setCanchas] = useState<CanchaResponse[]>([])
-  const [tarifas, setTarifas] = useState<Record<number, TarifaCanchaResponse[]>>({})
+  const [promociones, setPromociones] = useState<Record<number, PromocionCanchaResponse[]>>({})
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -42,12 +49,12 @@ export default function PreciosPage() {
         const activas = datos.filter((cancha) => cancha.activo)
         setCanchas(activas)
         setError(null)
-        // Las franjas de todas las canchas en paralelo: si alguna falla, esa cancha
+        // Las promociones de todas las canchas en paralelo: si alguna falla, esa cancha
         // muestra su tarifa plana en vez de romper la página entera.
         const porCancha = await Promise.all(
-          activas.map(async (cancha) => [cancha.id, await tarifasApi.getAll(cancha.id).catch(() => [])] as const),
+          activas.map(async (cancha) => [cancha.id, await promocionesApi.getAll(cancha.id).catch(() => [])] as const),
         )
-        if (montado) setTarifas(Object.fromEntries(porCancha))
+        if (montado) setPromociones(Object.fromEntries(porCancha))
       })
       .catch((e: unknown) => { if (montado) setError(obtenerMensajeErrorApi(e)) })
       .finally(() => { if (montado) setCargando(false) })
@@ -58,9 +65,9 @@ export default function PreciosPage() {
 
   return (
     <section className="mx-auto max-w-4xl px-4 py-12 sm:px-6">
-      <p className="text-xs font-black uppercase tracking-[0.22em] text-rp-accent">Tarifas</p>
+      <p className="text-xs font-black uppercase tracking-[0.22em] text-rp-accent">El club</p>
       <h1 className="mt-2 text-3xl font-black text-rp-text sm:text-4xl">Precios</h1>
-      <p className="mt-2 text-sm text-rp-muted">Los precios son por hora. El valor del turno depende de su duración (60, 90 o 120 minutos). Reservá online y pagá la seña para asegurar la cancha.</p>
+      <p className="mt-2 text-sm text-rp-muted">Los valores son por hora de cancha. Reservá online y dejá la seña para asegurar el turno.</p>
 
       <div className="mt-6 w-full sm:w-72">
         <Select label="Sucursal" value={lugarId ?? ''} onChange={(e) => setLugarId(e.target.value ? Number(e.target.value) : null)}>
@@ -81,29 +88,27 @@ export default function PreciosPage() {
             {canchas.map((cancha) => (
               <article key={cancha.id} className="rounded-lg border border-rp-border bg-rp-surface/82 p-4">
                 <h3 className="text-sm font-black text-rp-text">{cancha.nombre}</h3>
-                {(tarifas[cancha.id]?.length ?? 0) > 0 ? (
-                  <div className="mt-2 flex flex-col gap-1.5">
-                    {tarifas[cancha.id].filter((t) => t.activo).map((tarifa) => (
-                      <div key={tarifa.id} className="flex items-baseline justify-between gap-2">
+                <p className="mt-2 text-2xl font-black text-rp-accent">
+                  {cancha.precioPorHora != null ? formatearMoneda(cancha.precioPorHora) : 'A consultar'}
+                  {cancha.precioPorHora != null && <span className="text-sm font-bold text-rp-muted"> por hora</span>}
+                </p>
+
+                {/* Solo las promociones que están corriendo: una vencida en la página
+                    pública es una promesa que el club no va a cumplir. */}
+                {promocionesVigentes(promociones[cancha.id]).length > 0 && (
+                  <div className="mt-3 flex flex-col gap-1.5 border-t border-rp-border pt-2">
+                    <p className="text-[11px] font-black uppercase tracking-wide text-rp-accent">Promociones</p>
+                    {promocionesVigentes(promociones[cancha.id]).map((promocion) => (
+                      <div key={promocion.id} className="flex items-baseline justify-between gap-2">
                         <span className="text-xs text-rp-muted">
-                          {describirDias(tarifa.diasSemana)} · {tarifa.horaDesde.slice(0, 5)} a {tarifa.horaHasta.slice(0, 5)}
+                          <b className="text-rp-text">{promocion.nombre}</b>
+                          {' · '}{describirDias(promocion.diasSemana)}
+                          {' · '}{promocion.horaDesde.slice(0, 5)} a {promocion.horaHasta.slice(0, 5)}
                         </span>
-                        <span className="shrink-0 text-lg font-black text-rp-accent">{formatearMoneda(tarifa.precioPorHora)}</span>
+                        <span className="shrink-0 text-base font-black text-rp-accent">{formatearMoneda(promocion.precioPorHora)}</span>
                       </div>
                     ))}
-                    {cancha.precioPorHora != null && (
-                      <div className="flex items-baseline justify-between gap-2 border-t border-rp-border pt-1.5">
-                        <span className="text-xs text-rp-muted">Resto de los horarios</span>
-                        <span className="shrink-0 text-lg font-black text-rp-accent">{formatearMoneda(cancha.precioPorHora)}</span>
-                      </div>
-                    )}
-                    <p className="mt-1 text-[11px] text-rp-muted">Precios por hora.</p>
                   </div>
-                ) : (
-                  <p className="mt-2 text-2xl font-black text-rp-accent">
-                    {cancha.precioPorHora != null ? formatearMoneda(cancha.precioPorHora) : 'A consultar'}
-                    {cancha.precioPorHora != null && <span className="text-sm font-bold text-rp-muted"> /hora</span>}
-                  </p>
                 )}
                 {cancha.descripcion && <p className="mt-1 text-xs text-rp-muted">{cancha.descripcion}</p>}
               </article>

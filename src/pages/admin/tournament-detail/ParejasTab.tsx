@@ -45,17 +45,17 @@ export function ParejasTab({ parejas, puedeInscribir, estadoTorneo, onOpenInscri
                     </StatusBadge>
                     )}
                     {puedeInscribir && (
-                        <button onClick={() => onEditar(pareja)} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent" title="Editar pareja">
+                        <button onClick={() => onEditar(pareja)} className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent" title="Editar pareja">
                         <Pencil size={14} />
                         </button>
                     )}
                     {puedeInscribir && (
-                        <button onClick={() => onEliminar({ id: pareja.id, name: `${pareja.jugador1Nombre} / ${pareja.jugador2Nombre}` })} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger" title="Eliminar pareja">
+                        <button onClick={() => onEliminar({ id: pareja.id, name: `${pareja.jugador1Nombre} / ${pareja.jugador2Nombre}` })} className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger" title="Eliminar pareja">
                         <Trash2 size={14} />
                         </button>
                     )}
                     {(estadoTorneo === 'EN_CURSO' || estadoTorneo === 'SORTEADO') && (
-                        <button onClick={() => onRetirar({ id: pareja.id, name: `${pareja.jugador1Nombre} / ${pareja.jugador2Nombre}` })} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger" title="Retirar pareja del torneo (genera W.O.)">
+                        <button onClick={() => onRetirar({ id: pareja.id, name: `${pareja.jugador1Nombre} / ${pareja.jugador2Nombre}` })} className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger" title="Retirar pareja del torneo (genera W.O.)">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                         </button>
                     )}

@@ -1,12 +1,17 @@
-import { CalendarClock, Check, ChevronLeft, ChevronRight, MapPin, Plus, Settings, Tag, Undo2, UserX, Wallet, X } from 'lucide-react'
+import { CalendarClock, Check, ChevronLeft, ChevronRight, MapPin, MessageCircle, Plus, Settings, ShoppingCart, Tag, Undo2, UserX, Wallet, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { NavLink } from 'react-router-dom'
 
+import { authApi } from '@/features/auth/authApi'
+import { brand } from '@/config/brand'
 import { cajaApi, MEDIOS, type MedioPago } from '@/features/caja/cajaApi'
 import { canchasApi, placesApi } from '@/features/catalog/catalogApi'
 import { horariosCanchaApi, reservasApi, type HorarioCanchaRequest, type ReservaResponse, type SlotDisponibilidad } from '@/features/reservas/reservasApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
-import { formatearEnum, formatearFecha, formatearMoneda } from '@/shared/lib/formatters'
-import { enlaceWhatsApp } from '@/shared/lib/whatsapp'
+import { fechaISO, formatearEnum, formatearFecha, formatearMoneda } from '@/shared/lib/formatters'
+import { compararPorJornada } from '@/shared/lib/jornada'
+import { enlaceWhatsApp, mensajeRecordatorioTurno } from '@/shared/lib/whatsapp'
+import { TelefonoWhatsApp } from '@/shared/ui/TelefonoWhatsApp'
 import type { CanchaResponse, LugarResponse } from '@/shared/types/api'
 import { AdminPageHeader } from '@/shared/ui/AdminPageHeader'
 import { AdminTable, type Column } from '@/shared/ui/AdminTable'
@@ -16,7 +21,8 @@ import { Modal } from '@/shared/ui/Modal'
 import { SegmentedToggle } from '@/shared/ui/SegmentedToggle'
 import { Select } from '@/shared/ui/Select'
 import { StatusBadge } from '@/shared/ui/StatusBadge'
-import { TarifasCanchaModal } from '@/pages/admin/TarifasCanchaModal'
+import { PromocionesCanchaModal } from '@/pages/admin/PromocionesCanchaModal'
+import { VentaRapidaModal } from '@/pages/admin/VentaRapidaModal'
 import { useToast } from '@/shared/ui/Toast'
 
 const NOMBRES_DIA = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
@@ -26,6 +32,7 @@ type FilaReserva = {
   reservas: ReservaResponse[]
   horaInicio: string
   horaFin: string
+  duracionMin: number
   clienteNombre: string
   clienteTelefono: string
   estado: string | null
@@ -33,6 +40,7 @@ type FilaReserva = {
   codigo: string
   turnoFijo: boolean
   saldoPendiente: number
+  consumoACuenta: number
 }
 
 function toneReserva(estado: string | null): 'success' | 'neutral' | 'danger' | 'warning' {
@@ -52,10 +60,7 @@ function yaEmpezo(fecha: string, horaInicio: string) {
   return new Date(`${fecha}T${horaInicio}`) <= new Date()
 }
 
-function aISO(fecha: Date) {
-  const local = new Date(fecha.getTime() - fecha.getTimezoneOffset() * 60000)
-  return local.toISOString().slice(0, 10)
-}
+const aISO = fechaISO
 
 function lunesDeLaSemana(base: Date) {
   const dia = new Date(base)
@@ -73,8 +78,13 @@ const HORARIO_VACIO: HorarioCanchaRequest = {
   horaApertura: '18:00',
   horaCierre: '23:00',
   diasActivos: '1,2,3,4,5,6,7',
-  duracionSlotMin: 60,
+  duracionesOfrecidas: '60,120',
   anticipacionDias: 14,
+}
+
+
+function etiquetaDuracion(minutos: number) {
+  return minutos % 60 === 0 ? `${minutos / 60} h` : `${minutos} min`
 }
 
 export default function TurnosAdminPage() {
@@ -90,12 +100,14 @@ export default function TurnosAdminPage() {
   const [error, setError] = useState<string | null>(null)
   const { success: avisoExito } = useToast()
 
-  const [horarioAbierto, setHorarioAbierto] = useState(false)
+  /**
+   * Solo de lectura: el horario se edita en Configuración → Turnos. Acá se necesita la
+   * hora de apertura, que es la que define el orden de la jornada.
+   */
   const [horario, setHorario] = useState<HorarioCanchaRequest>(HORARIO_VACIO)
-  const [guardandoHorario, setGuardandoHorario] = useState(false)
-  const [errorHorario, setErrorHorario] = useState<string | null>(null)
 
-  const [tarifasAbiertas, setTarifasAbiertas] = useState(false)
+  const [promocionesAbiertas, setPromocionesAbiertas] = useState(false)
+  const [filaConsumo, setFilaConsumo] = useState<FilaReserva | null>(null)
   const [filaCobro, setFilaCobro] = useState<FilaReserva | null>(null)
   const [formCobro, setFormCobro] = useState<{ monto: string; medio: MedioPago; notas: string }>({ monto: '', medio: 'EFECTIVO', notas: '' })
   const [cobrando, setCobrando] = useState(false)
@@ -104,16 +116,17 @@ export default function TurnosAdminPage() {
   const [nuevoAbierto, setNuevoAbierto] = useState(false)
   const [slotsNuevo, setSlotsNuevo] = useState<SlotDisponibilidad[]>([])
   const [horarioNuevo, setHorarioNuevo] = useState('')
-  const [duracionNuevo, setDuracionNuevo] = useState<1 | 2>(1)
+  const [duracionNuevo, setDuracionNuevo] = useState(60)
   const [nombreNuevo, setNombreNuevo] = useState('')
   const [telefonoNuevo, setTelefonoNuevo] = useState('')
   const [guardandoNuevo, setGuardandoNuevo] = useState(false)
   const [errorNuevo, setErrorNuevo] = useState<string | null>(null)
 
-  const slotConsecutivoNuevo = useMemo(() => {
-    const seleccionado = slotsNuevo.find((slot) => slot.horaInicio === horarioNuevo)
-    return seleccionado ? slotsNuevo.find((slot) => slot.horaInicio === seleccionado.horaFin) ?? null : null
-  }, [slotsNuevo, horarioNuevo])
+  /** Duraciones que entran a partir del horario elegido, ya cotizadas por el backend. */
+  const opcionesNuevo = useMemo(
+    () => slotsNuevo.find((slot) => slot.horaInicio === horarioNuevo)?.opciones ?? [],
+    [slotsNuevo, horarioNuevo],
+  )
 
   useEffect(() => {
     Promise.all([placesApi.getAll(), canchasApi.getAll()])
@@ -145,39 +158,66 @@ export default function TurnosAdminPage() {
   }, [filtroEstado])
 
   const canchasDelLugar = useMemo(() => canchas.filter((c) => c.lugarId === lugarId), [canchas, lugarId])
+
+  /**
+   * Abre WhatsApp con el recordatorio ya escrito. El sistema no manda nada solo: el club
+   * lee el mensaje y aprieta enviar, que además es lo que WhatsApp permite sin API paga.
+   */
+  function recordarPorWhatsApp(fila: FilaReserva) {
+    const enlace = enlaceWhatsApp(fila.clienteTelefono, mensajeRecordatorioTurno({
+      club: brand.name,
+      clienteNombre: fila.clienteNombre,
+      canchaNombre: canchasDelLugar.find((cancha) => cancha.id === canchaId)?.nombre ?? null,
+      fecha,
+      horaInicio: fila.horaInicio,
+      saldoPendiente: fila.saldoPendiente,
+    }))
+    if (!enlace) {
+      setError(`No se puede armar el WhatsApp: el teléfono "${fila.clienteTelefono}" no parece válido.`)
+      return
+    }
+    window.open(enlace, '_blank', 'noopener')
+  }
   const reservasFiltradas = useMemo(
     () => (filtroEstado ? reservas.filter((r) => r.estado === filtroEstado) : reservas),
     [reservas, filtroEstado],
   )
-  const filasReservas = useMemo(() => {
-    const ordenadas = [...reservasFiltradas].sort((a, b) =>
-      a.clienteTelefono.localeCompare(b.clienteTelefono) || a.horaInicio.localeCompare(b.horaInicio))
-    const filas: FilaReserva[] = []
-    for (const reserva of ordenadas) {
-      const ultima = filas[filas.length - 1]
-      if (ultima && ultima.clienteTelefono === reserva.clienteTelefono && ultima.estado === reserva.estado && ultima.horaFin === reserva.horaInicio) {
-        ultima.reservas.push(reserva)
-        ultima.horaFin = reserva.horaFin
-        ultima.saldoPendiente += reserva.saldoPendiente ?? 0
-      } else {
-        filas.push({
-          id: reserva.id,
-          reservas: [reserva],
-          horaInicio: reserva.horaInicio,
-          horaFin: reserva.horaFin,
-          clienteNombre: reserva.clienteNombre,
-          clienteTelefono: reserva.clienteTelefono,
-          estado: reserva.estado,
-          estadoPago: reserva.estadoPago ?? null,
-          codigo: reserva.codigo,
-          turnoFijo: reserva.turnoFijo ?? false,
-          saldoPendiente: reserva.saldoPendiente ?? 0,
-        })
-      }
-    }
-    return filas.sort((a, b) =>
-      a.clienteNombre.localeCompare(b.clienteNombre, 'es', { sensitivity: 'base' }) || a.horaInicio.localeCompare(b.horaInicio))
-  }, [reservasFiltradas])
+  /** Los turnos se ordenan por jornada: el de la 1 AM cierra la noche, no la abre. */
+  const porJornada = useMemo(() => compararPorJornada(horario.horaApertura), [horario.horaApertura])
+  /**
+   * Un turno es una reserva y punto. Antes había que adivinar el lote juntando reservas
+   * contiguas del mismo teléfono, porque un turno de dos horas eran dos filas de una.
+   */
+  const filasReservas = useMemo(
+    () => [...reservasFiltradas]
+      .map((reserva) => ({
+        id: reserva.id,
+        reservas: [reserva],
+        horaInicio: reserva.horaInicio,
+        horaFin: reserva.horaFin,
+        duracionMin: reserva.duracionMin,
+        clienteNombre: reserva.clienteNombre,
+        clienteTelefono: reserva.clienteTelefono,
+        estado: reserva.estado,
+        estadoPago: reserva.estadoPago ?? null,
+        codigo: reserva.codigo,
+        turnoFijo: reserva.turnoFijo ?? false,
+        saldoPendiente: reserva.saldoPendiente ?? 0,
+        consumoACuenta: reserva.consumoACuenta ?? 0,
+      }))
+      .sort((a, b) => porJornada(a.horaInicio, b.horaInicio)
+        || a.clienteNombre.localeCompare(b.clienteNombre, 'es', { sensitivity: 'base' })),
+    [reservasFiltradas, porJornada],
+  )
+
+  /** Cuántos turnos hay en cada estado, para que el filtro muestre lo que va a filtrar. */
+  const conteoPorEstado = useMemo(() => {
+    const conteo: Record<string, number> = {}
+    reservas.forEach((reserva) => {
+      if (reserva.estado) conteo[reserva.estado] = (conteo[reserva.estado] ?? 0) + 1
+    })
+    return conteo
+  }, [reservas])
 
   function elegirLugar(nuevoLugarId: number | null) {
     setLugarId(nuevoLugarId)
@@ -194,10 +234,8 @@ export default function TurnosAdminPage() {
     setCargando(true)
     reservasApi.listar(idCancha, dia)
       .then((datos) => {
-        const ordenadas = [...datos].sort((a, b) =>
-          a.clienteNombre.localeCompare(b.clienteNombre, 'es', { sensitivity: 'base' })
-          || a.horaInicio.localeCompare(b.horaInicio))
-        setReservas(ordenadas)
+        // Sin ordenar acá: el orden de la pantalla lo arma `filasReservas`, por jornada.
+        setReservas(datos)
         setError(null)
       })
       .catch((e: unknown) => setError(obtenerMensajeErrorApi(e)))
@@ -258,10 +296,14 @@ export default function TurnosAdminPage() {
     } finally { setCobrando(false) }
   }
 
-  function abrirHorario() {
+  /**
+   * El horario se carga apenas se elige la cancha, no recién al abrir el modal: la hora
+   * de apertura es la que define el orden de la jornada, y sin ella los turnos de la
+   * madrugada se ordenaban arriba de todo en vez de al final de la noche.
+   */
+  useEffect(() => {
     if (canchaId == null) return
     const idCancha = canchaId
-    setErrorHorario(null)
     horariosCanchaApi.listar(idCancha)
       .then((lista) => {
         const activo = lista.find((h) => h.activo) ?? lista[0]
@@ -271,37 +313,20 @@ export default function TurnosAdminPage() {
               horaApertura: hhmm(activo.horaApertura),
               horaCierre: hhmm(activo.horaCierre),
               diasActivos: activo.diasActivos ?? '1,2,3,4,5,6,7',
-              duracionSlotMin: activo.duracionSlotMin,
+              duracionesOfrecidas: activo.duracionesOfrecidas,
               anticipacionDias: activo.anticipacionDias,
             }
           : { ...HORARIO_VACIO, canchaId: idCancha })
-        setHorarioAbierto(true)
       })
-      .catch(() => { setHorario({ ...HORARIO_VACIO, canchaId: idCancha }); setHorarioAbierto(true) })
-  }
-
-  async function guardarHorario() {
-    if (lugarId == null) return
-    setGuardandoHorario(true)
-    setErrorHorario(null)
-    try {
-      await horariosCanchaApi.guardarSucursal(lugarId, horario)
-      avisoExito('Horario guardado para todas las canchas de la sucursal')
-      setHorarioAbierto(false)
-      if (canchaId != null) cargarReservas(canchaId, fecha)
-    } catch (e: unknown) {
-      setErrorHorario(obtenerMensajeErrorApi(e))
-    } finally {
-      setGuardandoHorario(false)
-    }
-  }
+      .catch(() => setHorario({ ...HORARIO_VACIO, canchaId: idCancha }))
+  }, [canchaId])
 
   function abrirNuevo() {
     if (canchaId == null) return
     setNombreNuevo('')
     setTelefonoNuevo('')
     setHorarioNuevo('')
-    setDuracionNuevo(1)
+    setDuracionNuevo(60)
     setErrorNuevo(null)
     setSlotsNuevo([])
     setNuevoAbierto(true)
@@ -319,17 +344,16 @@ export default function TurnosAdminPage() {
     setGuardandoNuevo(true)
     setErrorNuevo(null)
     try {
-      const horarios = duracionNuevo === 2 && slotConsecutivoNuevo
-        ? [horarioNuevo, slotConsecutivoNuevo.horaInicio]
-        : [horarioNuevo]
-      const reservas = await reservasApi.solicitarLote({
+      const reserva = await reservasApi.solicitar({
         canchaId,
         fecha,
-        horarios,
+        horaInicio: horarioNuevo,
+        duracionMin: duracionNuevo,
         clienteNombre: nombreNuevo.trim(),
         clienteTelefono: telefonoNuevo.trim(),
       })
-      await Promise.all(reservas.map((reserva) => reservasApi.confirmar(reserva.id)))
+      // El club carga el turno de frente al mostrador: no hay nada que aprobar después.
+      await reservasApi.confirmar(reserva.id)
       avisoExito('Turno asignado')
       setNuevoAbierto(false)
       cargarReservas(canchaId, fecha)
@@ -341,35 +365,28 @@ export default function TurnosAdminPage() {
   }
 
   const columnas = useMemo(() => [
-    { key: 'horario', label: 'Horario', render: (fila: FilaReserva) => <span className="text-sm font-bold text-rp-text">{hhmm(fila.horaInicio)} - {hhmm(fila.horaFin)}</span> },
+    {
+      key: 'horario',
+      label: 'Horario',
+      render: (fila: FilaReserva) => (
+        <div>
+          <p className="text-sm font-bold text-rp-text">{hhmm(fila.horaInicio)} - {hhmm(fila.horaFin)}</p>
+          <p className="text-xs text-rp-muted">{etiquetaDuracion(fila.duracionMin)}</p>
+        </div>
+      ),
+    },
     {
       key: 'cliente',
       label: 'Cliente',
-      render: (fila: FilaReserva) => {
-        const enlace = enlaceWhatsApp(
-          fila.clienteTelefono,
-          `Hola ${fila.clienteNombre}! Te escribo por tu turno de las ${hhmm(fila.horaInicio)} (código ${fila.codigo}).`,
-        )
-        return (
-          <div>
-            <p className="text-sm font-bold text-rp-text">{fila.clienteNombre}</p>
-            {enlace ? (
-              <a
-                href={enlace}
-                target="_blank"
-                rel="noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="text-xs text-rp-muted underline-offset-2 hover:text-rp-accent hover:underline"
-                title="Escribirle por WhatsApp"
-              >
-                {fila.clienteTelefono}
-              </a>
-            ) : (
-              <p className="text-xs text-rp-muted">{fila.clienteTelefono}</p>
-            )}
-          </div>
-        )
-      },
+      render: (fila: FilaReserva) => (
+        <div>
+          <p className="text-sm font-bold text-rp-text">{fila.clienteNombre}</p>
+          <TelefonoWhatsApp
+            telefono={fila.clienteTelefono}
+            mensaje={`Hola ${fila.clienteNombre}! Te escribo por tu turno de las ${hhmm(fila.horaInicio)} (código ${fila.codigo}).`}
+          />
+        </div>
+      ),
     },
     {
       key: 'estado',
@@ -398,14 +415,27 @@ export default function TurnosAdminPage() {
     },
     {
       key: 'saldo',
-      label: 'Saldo',
-      render: (fila: FilaReserva) => (
-        fila.saldoPendiente > 0
-          ? <span className="text-sm font-bold text-rp-danger">{formatearMoneda(fila.saldoPendiente)}</span>
-          : <span className="text-xs text-rp-muted">Pago</span>
-      ),
+      label: 'Cuenta',
+      render: (fila: FilaReserva) => {
+        if (fila.estado === 'PENDIENTE') {
+          return <span className="text-xs text-rp-muted">Sin confirmar</span>
+        }
+        const cancha = fila.reservas.reduce((total, reserva) => total + (reserva.precioAplicado ?? 0), 0)
+        return (
+          <div>
+            {fila.saldoPendiente > 0
+              ? <span className="text-sm font-bold text-rp-danger">Debe {formatearMoneda(fila.saldoPendiente)}</span>
+              : <span className="text-sm font-bold text-rp-accent">Pagado</span>}
+            {/* La cuenta del turno: la cancha más lo que consumieron mientras jugaban. */}
+            <p className="text-[11px] text-rp-muted">
+              Cancha {formatearMoneda(cancha)}
+              {fila.consumoACuenta > 0 ? ` + consumo ${formatearMoneda(fila.consumoACuenta)}` : ''}
+            </p>
+          </div>
+        )
+      },
     },
-    { key: 'codigo', label: 'Código', render: (fila: FilaReserva) => <span className="text-xs text-rp-muted">{fila.codigo}{fila.reservas.length > 1 ? ` · ${fila.reservas.length} turnos` : ''}</span> },
+    { key: 'codigo', label: 'Código', render: (fila: FilaReserva) => <span className="text-xs text-rp-muted">{fila.codigo}</span> },
   ] as Column<FilaReserva>[], [])
 
   const hoy = aISO(new Date())
@@ -414,8 +444,14 @@ export default function TurnosAdminPage() {
     <section>
       <AdminPageHeader title={<><CalendarClock size={26} />Turnos</>} action={<>
         <Button size="sm" onClick={abrirNuevo} disabled={canchaId == null}><Plus size={16} />Nuevo turno</Button>
-        <Button size="sm" variant="subtle" onClick={abrirHorario}><Settings size={16} />Configurar horario</Button>
-        <Button size="sm" variant="subtle" onClick={() => setTarifasAbiertas(true)} disabled={canchaId == null}><Tag size={16} />Tarifas</Button>
+        {/* El horario vive en Configuración: define qué se vende, igual que el precio, y
+            por eso lo toca el dueño. Al empleado no se le ofrece un atajo a un 403. */}
+        {authApi.esDuenio() && (
+          <Button size="sm" variant="subtle" asChild>
+            <NavLink to="/admin/configuracion"><Settings size={16} />Configurar horario</NavLink>
+          </Button>
+        )}
+        <Button size="sm" variant="subtle" onClick={() => setPromocionesAbiertas(true)} disabled={canchaId == null}><Tag size={16} />Promociones</Button>
       </>} />
 
       <div className="mt-4 grid gap-3 sm:max-w-md sm:grid-cols-2">
@@ -435,13 +471,20 @@ export default function TurnosAdminPage() {
           valor={filtroEstado}
           onChange={setFiltroEstado}
           opciones={[
-            { valor: 'CONFIRMADA', label: 'Confirmada' },
-            { valor: 'FINALIZADA', label: 'Finalizada' },
-            { valor: 'PENDIENTE', label: 'Pendiente' },
-            { valor: 'RECHAZADA', label: 'Rechazada' },
-            { valor: 'CANCELADA', label: 'Cancelada' },
-            { valor: 'EXPIRADA', label: 'Expirada' },
-          ]}
+            { valor: 'CONFIRMADA', label: 'Confirmados' },
+            { valor: 'PENDIENTE', label: 'Pendientes' },
+            { valor: 'FINALIZADA', label: 'Jugados' },
+            { valor: 'NO_SHOW', label: 'No vinieron' },
+            { valor: 'CANCELADA', label: 'Cancelados' },
+            { valor: 'RECHAZADA', label: 'Rechazados' },
+            { valor: 'EXPIRADA', label: 'Vencidos' },
+            { valor: '', label: 'Todos' },
+          ].map((opcion) => ({
+            ...opcion,
+            label: opcion.valor
+              ? `${opcion.label} (${conteoPorEstado[opcion.valor] ?? 0})`
+              : `${opcion.label} (${reservas.length})`,
+          }))}
         />
       </div>
 
@@ -490,19 +533,28 @@ export default function TurnosAdminPage() {
           actions={(fila) => (
             <>
               {fila.estado === 'PENDIENTE' && (
-                <button onClick={() => ejecutarAccionLote(fila.reservas, (id) => reservasApi.confirmar(id), fila.reservas.length > 1 ? 'Turnos confirmados' : 'Turno confirmado')} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent" aria-label="Confirmar"><Check size={15} /></button>
+                <button onClick={() => ejecutarAccionLote(fila.reservas, (id) => reservasApi.confirmar(id), fila.reservas.length > 1 ? 'Turnos confirmados' : 'Turno confirmado')} className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent" aria-label="Confirmar"><Check size={15} /></button>
               )}
               {(fila.estado === 'PENDIENTE' || fila.estado === 'CONFIRMADA') && (
-                <button onClick={() => ejecutarAccionLote(fila.reservas, (id) => fila.estado === 'PENDIENTE' ? reservasApi.rechazar(id) : reservasApi.cancelar(id), fila.reservas.length > 1 ? 'Turnos liberados' : 'Turno liberado')} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger" aria-label="Rechazar o cancelar"><X size={15} /></button>
+                <button onClick={() => ejecutarAccionLote(fila.reservas, (id) => fila.estado === 'PENDIENTE' ? reservasApi.rechazar(id) : reservasApi.cancelar(id), fila.reservas.length > 1 ? 'Turnos liberados' : 'Turno liberado')} className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger" aria-label="Rechazar o cancelar"><X size={15} /></button>
               )}
               {(fila.estado === 'CONFIRMADA' || fila.estado === 'FINALIZADA') && yaEmpezo(fecha, fila.horaInicio) && (
-                <button onClick={() => ejecutarAccionLote(fila.reservas, (id) => reservasApi.marcarNoShow(id), 'Marcado como ausente')} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger" aria-label="No vino" title="No vino"><UserX size={15} /></button>
+                <button onClick={() => ejecutarAccionLote(fila.reservas, (id) => reservasApi.marcarNoShow(id), 'Marcado como ausente')} className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger" aria-label="No vino" title="No vino"><UserX size={15} /></button>
+              )}
+              {(fila.estado === 'CONFIRMADA' || fila.estado === 'FINALIZADA' || fila.estado === 'NO_SHOW') && (
+                <button onClick={() => setFilaConsumo(fila)} className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent" aria-label="Cargar consumo" title="Cargar consumo al turno"><ShoppingCart size={15} /></button>
               )}
               {fila.saldoPendiente > 0 && fila.estado !== 'PENDIENTE' && (
-                <button onClick={() => abrirCobro(fila)} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent" aria-label="Cobrar saldo" title="Cobrar saldo"><Wallet size={15} /></button>
+                <button onClick={() => abrirCobro(fila)} className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent" aria-label="Cobrar saldo" title="Cobrar la cuenta del turno"><Wallet size={15} /></button>
               )}
               {fila.estado === 'NO_SHOW' && (
-                <button onClick={() => ejecutarAccionLote(fila.reservas, (id) => reservasApi.desmarcarNoShow(id), 'Ausencia deshecha')} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent" aria-label="Deshacer ausente" title="Deshacer: sí vino"><Undo2 size={15} /></button>
+                <button onClick={() => ejecutarAccionLote(fila.reservas, (id) => reservasApi.desmarcarNoShow(id), 'Ausencia deshecha')} className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent" aria-label="Deshacer ausente" title="Deshacer: sí vino"><Undo2 size={15} /></button>
+              )}
+              {/* Recordar el turno es lo que baja los ausentes: cada uno es una hora de
+                  cancha que ya no se puede revender. Solo tiene sentido antes de que
+                  empiece y si el turno sigue en pie. */}
+              {(fila.estado === 'PENDIENTE' || fila.estado === 'CONFIRMADA') && !yaEmpezo(fecha, fila.horaInicio) && (
+                <button onClick={() => recordarPorWhatsApp(fila)} className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent" aria-label="Recordar por WhatsApp" title="Recordarle el turno por WhatsApp"><MessageCircle size={15} /></button>
               )}
             </>
           )}
@@ -522,7 +574,7 @@ export default function TurnosAdminPage() {
                   <button
                     key={slot.horaInicio}
                     type="button"
-                    onClick={() => { setHorarioNuevo(slot.horaInicio); setDuracionNuevo(1) }}
+                    onClick={() => { setHorarioNuevo(slot.horaInicio); setDuracionNuevo(slot.opciones[0]?.minutos ?? 60) }}
                     className={horarioNuevo === slot.horaInicio
                       ? 'rounded-md border border-rp-accent bg-rp-accent px-2 py-1.5 text-sm font-black text-white'
                       : 'rounded-md border border-rp-accent/50 bg-rp-accent/10 px-2 py-1.5 text-sm font-bold text-rp-text hover:bg-rp-accent/20'}
@@ -537,27 +589,21 @@ export default function TurnosAdminPage() {
             <div>
               <span className="text-xs font-black uppercase tracking-[0.14em] text-rp-muted">Duración</span>
               <div className="mt-2 flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setDuracionNuevo(1)}
-                  className={duracionNuevo === 1
-                    ? 'flex-1 rounded-md border border-rp-accent bg-rp-accent px-3 py-2 text-sm font-black text-white'
-                    : 'flex-1 rounded-md border border-rp-border bg-rp-surface px-3 py-2 text-sm font-bold text-rp-text hover:border-rp-accent'}
-                >
-                  1 hora
-                </button>
-                <button
-                  type="button"
-                  disabled={!slotConsecutivoNuevo}
-                  onClick={() => setDuracionNuevo(2)}
-                  className={!slotConsecutivoNuevo
-                    ? 'flex-1 cursor-not-allowed rounded-md border border-rp-border bg-rp-surface-2 px-3 py-2 text-sm font-bold text-rp-muted/50'
-                    : duracionNuevo === 2
-                      ? 'flex-1 rounded-md border border-rp-accent bg-rp-accent px-3 py-2 text-sm font-black text-white'
-                      : 'flex-1 rounded-md border border-rp-border bg-rp-surface px-3 py-2 text-sm font-bold text-rp-text hover:border-rp-accent'}
-                >
-                  2 horas
-                </button>
+                {opcionesNuevo.map((opcion) => (
+                  <button
+                    key={opcion.minutos}
+                    type="button"
+                    onClick={() => setDuracionNuevo(opcion.minutos)}
+                    className={duracionNuevo === opcion.minutos
+                      ? 'flex-1 rounded-md border border-rp-accent bg-rp-accent px-3 py-2 text-white'
+                      : 'flex-1 rounded-md border border-rp-border bg-rp-surface px-3 py-2 text-rp-text hover:border-rp-accent'}
+                  >
+                    <span className="block text-sm font-black">{etiquetaDuracion(opcion.minutos)}</span>
+                    <span className="block text-xs font-semibold opacity-80">
+                      {opcion.precio != null ? formatearMoneda(opcion.precio) : `hasta ${hhmm(opcion.horaFin)}`}
+                    </span>
+                  </button>
+                ))}
               </div>
             </div>
           )}
@@ -571,32 +617,22 @@ export default function TurnosAdminPage() {
         </div>
       </Modal>
 
-      <Modal isOpen={horarioAbierto} onClose={() => setHorarioAbierto(false)} onSubmit={guardarHorario} title={`Horario de ${lugares.find((l) => l.id === lugarId)?.nombre ?? 'la sucursal'}`} size="sm">
-        <div className="flex flex-col gap-4">
-          <p className="rounded-md border border-rp-border bg-rp-surface-2 px-3 py-2 text-xs leading-5 text-rp-muted">Este horario se aplica a todas las canchas de la sucursal.</p>
-          <div className="grid grid-cols-2 gap-3">
-            <Input label="Apertura" type="time" value={horario.horaApertura} onChange={(e) => setHorario((h) => ({ ...h, horaApertura: e.target.value }))} />
-            <Input label="Cierre" type="time" value={horario.horaCierre} onChange={(e) => setHorario((h) => ({ ...h, horaCierre: e.target.value }))} />
-          </div>
-          <Input label="Días (1=Lun ... 7=Dom)" value={horario.diasActivos ?? ''} onChange={(e) => setHorario((h) => ({ ...h, diasActivos: e.target.value }))} placeholder="1,2,3,4,5,6,7" />
-          <div className="grid grid-cols-2 gap-3">
-            <Input label="Duración slot (min)" type="number" value={horario.duracionSlotMin ?? 60} onChange={(e) => setHorario((h) => ({ ...h, duracionSlotMin: Number(e.target.value) }))} />
-            <Input label="Anticipación (días)" type="number" value={horario.anticipacionDias ?? 14} onChange={(e) => setHorario((h) => ({ ...h, anticipacionDias: Number(e.target.value) }))} />
-          </div>
-          <p className="text-xs leading-5 text-rp-muted">«Anticipación» = con cuántos días de adelanto pueden reservar los jugadores (ej. 14 = hasta dos semanas antes).</p>
-          {errorHorario && <p className="rounded-md border border-rp-danger/40 bg-rp-danger/10 px-3 py-2 text-sm font-bold text-rp-danger">{errorHorario}</p>}
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="ghost" size="sm" onClick={() => setHorarioAbierto(false)} disabled={guardandoHorario}>Cancelar</Button>
-            <Button type="submit" size="sm" disabled={guardandoHorario}>{guardandoHorario ? 'Guardando...' : 'Guardar'}</Button>
-          </div>
-        </div>
-      </Modal>
+      <VentaRapidaModal
+        abierto={filaConsumo !== null}
+        onClose={() => setFilaConsumo(null)}
+        onVendido={() => { if (canchaId != null) cargarReservas(canchaId, fecha) }}
+        turno={filaConsumo && {
+          id: filaConsumo.id,
+          clienteNombre: filaConsumo.clienteNombre,
+          horario: hhmm(filaConsumo.horaInicio),
+        }}
+      />
 
-      <TarifasCanchaModal
-        canchaId={tarifasAbiertas ? canchaId : null}
+      <PromocionesCanchaModal
+        canchaId={promocionesAbiertas ? canchaId : null}
         canchaNombre={canchasDelLugar.find((c) => c.id === canchaId)?.nombre ?? ''}
         precioBase={canchasDelLugar.find((c) => c.id === canchaId)?.precioPorHora ?? null}
-        onClose={() => { setTarifasAbiertas(false); if (canchaId != null) cargarReservas(canchaId, fecha) }}
+        onClose={() => { setPromocionesAbiertas(false); if (canchaId != null) cargarReservas(canchaId, fecha) }}
       />
 
       <Modal isOpen={Boolean(filaCobro)} onClose={() => setFilaCobro(null)} onSubmit={cobrar} title="Cobrar saldo" size="sm">
@@ -612,7 +648,7 @@ export default function TurnosAdminPage() {
             <Select label="Cómo pagó" value={formCobro.medio} onChange={(e) => setFormCobro((f) => ({ ...f, medio: e.target.value as MedioPago }))}>
               {MEDIOS.map((medio) => <option key={medio.valor} value={medio.valor}>{medio.nombre}</option>)}
             </Select>
-            <Input label="Notas (opcional)" value={formCobro.notas} onChange={(e) => setFormCobro((f) => ({ ...f, notas: e.target.value }))} />
+            <Input label="Notas" value={formCobro.notas} onChange={(e) => setFormCobro((f) => ({ ...f, notas: e.target.value }))} />
             {errorCobro && <p className="rounded-md border border-rp-danger/40 bg-rp-danger/10 px-3 py-2 text-sm font-bold text-rp-danger">{errorCobro}</p>}
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="ghost" size="sm" onClick={() => setFilaCobro(null)} disabled={cobrando}>Cancelar</Button>

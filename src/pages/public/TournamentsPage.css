@@ -382,4 +382,14 @@ select.filter-field {
   .cards-grid {
     padding: 14px;
   }
+
+  /*
+    16 px en los campos: por debajo de eso iOS hace zoom solo al tocarlos y deja la
+    página corrida. Y 46 px de alto para que se puedan tocar sin errarle.
+  */
+  .filter-field,
+  .search-field input {
+    font-size: 16px;
+    min-height: 46px;
+  }
 }

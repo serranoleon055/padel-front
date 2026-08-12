@@ -1,13 +1,16 @@
-import { ChevronLeft, ChevronRight, MapPin } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Clock, MapPin } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
 import { brand } from '@/config/brand'
-import { canchasApi, placesApi } from '@/features/catalog/catalogApi'
+import { placesApi } from '@/features/catalog/catalogApi'
 import { pagosApi } from '@/features/pagos/pagosApi'
-import { reservasApi, type ReservaResponse, type SlotDisponibilidad } from '@/features/reservas/reservasApi'
+import {
+  reservasApi,
+  type CanchaLibre, type FranjaSede, type OpcionDuracion, type ReservaResponse,
+} from '@/features/reservas/reservasApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
-import { formatearMoneda } from '@/shared/lib/formatters'
-import type { CanchaResponse, LugarResponse } from '@/shared/types/api'
+import { fechaISO, formatearMoneda } from '@/shared/lib/formatters'
+import type { LugarResponse } from '@/shared/types/api'
 import { Button } from '@/shared/ui/Button'
 import { Input } from '@/shared/ui/Input'
 import { Modal } from '@/shared/ui/Modal'
@@ -15,10 +18,7 @@ import { Select } from '@/shared/ui/Select'
 
 const NOMBRES_DIA = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 
-function aISO(fecha: Date) {
-  const local = new Date(fecha.getTime() - fecha.getTimezoneOffset() * 60000)
-  return local.toISOString().slice(0, 10)
-}
+const aISO = fechaISO
 
 function hoyISO() {
   return aISO(new Date())
@@ -26,8 +26,7 @@ function hoyISO() {
 
 function lunesDeLaSemana(base: Date) {
   const dia = new Date(base)
-  const desplazamiento = (dia.getDay() + 6) % 7
-  dia.setDate(dia.getDate() - desplazamiento)
+  dia.setDate(dia.getDate() - ((dia.getDay() + 6) % 7))
   dia.setHours(0, 0, 0, 0)
   return dia
 }
@@ -36,62 +35,49 @@ function hhmm(hora: string) {
   return hora.slice(0, 5)
 }
 
-function minutosDeHora(hora: string) {
-  const [h, m] = hhmm(hora).split(':').map(Number)
-  return h * 60 + m
+function etiquetaDuracion(minutos: number) {
+  return minutos % 60 === 0 ? `${minutos / 60} h` : `${minutos} min`
 }
 
-function rango(horaInicio: string, horaFin: string) {
-  return `${hhmm(horaInicio)}-${hhmm(horaFin)}`
-}
-
-function enlaceWhatsApp(reservas: ReservaResponse[]) {
+function enlaceWhatsApp(reserva: ReservaResponse) {
   const telefono = brand.phone.replace(/\D/g, '')
-  const primera = reservas[0]
-  const lineas = reservas.map((reserva) => `- ${reserva.fecha} ${rango(reserva.horaInicio, reserva.horaFin)} hs (código ${reserva.codigo})`).join('\n')
-  const encabezado = reservas.length > 1 ? 'Quiero confirmar estos turnos' : 'Quiero confirmar mi turno'
-  const texto = `Hola! ${encabezado} en ${primera.canchaNombre} a nombre de ${primera.clienteNombre}:\n${lineas}`
+  const texto = `Hola! Quiero confirmar mi turno en ${reserva.canchaNombre} a nombre de ${reserva.clienteNombre}: `
+    + `${reserva.fecha} de ${hhmm(reserva.horaInicio)} a ${hhmm(reserva.horaFin)} hs (código ${reserva.codigo}).`
   return `https://wa.me/${telefono}?text=${encodeURIComponent(texto)}`
 }
 
+/** Lo que el jugador ya eligió: hora, cancha y duración. */
+type Eleccion = { franja: FranjaSede; cancha: CanchaLibre; opcion: OpcionDuracion }
+
 export default function ReservarPage() {
   const [lugares, setLugares] = useState<LugarResponse[]>([])
-  const [canchas, setCanchas] = useState<CanchaResponse[]>([])
   const [lugarId, setLugarId] = useState<number | null>(null)
-  const [canchaId, setCanchaId] = useState<number | null>(null)
 
   const [inicioSemana, setInicioSemana] = useState(() => lunesDeLaSemana(new Date()))
   const [fecha, setFecha] = useState(hoyISO())
-  const [slots, setSlots] = useState<SlotDisponibilidad[]>([])
+  const [franjas, setFranjas] = useState<FranjaSede[]>([])
   const [recarga, setRecarga] = useState(0)
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const [horariosElegidos, setHorariosElegidos] = useState<string[]>([])
-  const [slotDuracion, setSlotDuracion] = useState<SlotDisponibilidad | null>(null)
-  const [modalAbierto, setModalAbierto] = useState(false)
+  // El flujo es en tres pasos: se elige el horario, después la cancha, después cuánto jugar.
+  const [franjaAbierta, setFranjaAbierta] = useState<FranjaSede | null>(null)
+  const [canchaElegida, setCanchaElegida] = useState<CanchaLibre | null>(null)
+  const [eleccion, setEleccion] = useState<Eleccion | null>(null)
+
   const [metodoPago, setMetodoPago] = useState<'ONLINE' | 'EFECTIVO'>('EFECTIVO')
   const [nombre, setNombre] = useState('')
   const [telefono, setTelefono] = useState('')
   const [enviando, setEnviando] = useState(false)
   const [errorFormulario, setErrorFormulario] = useState<string | null>(null)
-  const [reservasCreadas, setReservasCreadas] = useState<ReservaResponse[]>([])
+  const [reservaCreada, setReservaCreada] = useState<ReservaResponse | null>(null)
 
   useEffect(() => {
-    Promise.all([placesApi.getAll(), canchasApi.getAll()])
-      .then(([lugaresData, canchasData]) => {
+    placesApi.getAll()
+      .then((lugaresData) => {
         setLugares(lugaresData)
-        setCanchas(canchasData)
-        const lugarGuardado = Number(sessionStorage.getItem('rp-turnos-lugar'))
-        const canchaGuardada = Number(sessionStorage.getItem('rp-turnos-cancha'))
-        const primeraConCancha = lugaresData.find((lugar) => canchasData.some((cancha) => cancha.lugarId === lugar.id))
-        const lugarInicial = lugaresData.some((lugar) => lugar.id === lugarGuardado)
-          ? lugarGuardado
-          : primeraConCancha?.id ?? lugaresData[0]?.id ?? null
-        setLugarId(lugarInicial)
-        const canchaGuardadaValida = canchasData.find((cancha) => cancha.id === canchaGuardada && cancha.lugarId === lugarInicial)
-        const primeraCancha = canchaGuardadaValida ?? canchasData.find((cancha) => cancha.lugarId === lugarInicial) ?? canchasData[0] ?? null
-        setCanchaId(primeraCancha?.id ?? null)
+        const guardado = Number(sessionStorage.getItem('rp-turnos-lugar'))
+        setLugarId(lugaresData.some((lugar) => lugar.id === guardado) ? guardado : lugaresData[0]?.id ?? null)
       })
       .catch((e: unknown) => setError(obtenerMensajeErrorApi(e)))
   }, [])
@@ -101,41 +87,15 @@ export default function ReservarPage() {
   }, [lugarId])
 
   useEffect(() => {
-    if (canchaId != null) sessionStorage.setItem('rp-turnos-cancha', String(canchaId))
-  }, [canchaId])
-
-  const canchasDelLugar = useMemo(
-    () => canchas.filter((cancha) => cancha.lugarId === lugarId),
-    [canchas, lugarId],
-  )
-
-  function elegirLugar(nuevoLugarId: number | null) {
-    setLugarId(nuevoLugarId)
-    const primeraCancha = canchas.find((cancha) => cancha.lugarId === nuevoLugarId)
-    setCanchaId(primeraCancha?.id ?? null)
-  }
-
-  const dias = useMemo(() => {
-    return Array.from({ length: 7 }, (_, indice) => {
-      const dia = new Date(inicioSemana)
-      dia.setDate(dia.getDate() + indice)
-      return dia
-    })
-  }, [inicioSemana])
-
-  const hoy = hoyISO()
-
-  useEffect(() => {
-    if (canchaId == null) return
+    if (lugarId == null) return
     let activo = true
-    setHorariosElegidos([])
     setCargando(true)
-    reservasApi.getDisponibilidad(canchaId, fecha)
-      .then((datos) => { if (activo) { setSlots(datos); setError(null) } })
+    reservasApi.disponibilidadSede(lugarId, fecha)
+      .then((datos) => { if (activo) { setFranjas(datos); setError(null) } })
       .catch((e: unknown) => { if (activo) setError(obtenerMensajeErrorApi(e)) })
       .finally(() => { if (activo) setCargando(false) })
     return () => { activo = false }
-  }, [canchaId, fecha, recarga])
+  }, [lugarId, fecha, recarga])
 
   useEffect(() => {
     const pendiente = sessionStorage.getItem('rp-pago-pendiente')
@@ -147,18 +107,15 @@ export default function ReservarPage() {
       .finally(() => setRecarga((n) => n + 1))
   }, [])
 
-  const canchaNombre = useMemo(
-    () => canchas.find((cancha) => cancha.id === canchaId)?.nombre ?? '',
-    [canchas, canchaId],
-  )
-  const lugarNombre = useMemo(
-    () => lugares.find((lugar) => lugar.id === lugarId)?.nombre ?? '',
-    [lugares, lugarId],
-  )
+  const dias = useMemo(() => Array.from({ length: 7 }, (_, i) => {
+    const dia = new Date(inicioSemana)
+    dia.setDate(dia.getDate() + i)
+    return dia
+  }), [inicioSemana])
 
+  const hoy = hoyISO()
   const semanaActual = lunesDeLaSemana(new Date()).getTime()
-  const puedeRetroceder = inicioSemana.getTime() > semanaActual
-  const puedeAvanzar = inicioSemana.getTime() < semanaActual + 7 * 24 * 60 * 60 * 1000
+  const lugarNombre = lugares.find((lugar) => lugar.id === lugarId)?.nombre ?? ''
 
   function cambiarSemana(deltaDias: number) {
     setInicioSemana((actual) => {
@@ -168,107 +125,65 @@ export default function ReservarPage() {
     })
   }
 
-  function slotConsecutivo(slot: SlotDisponibilidad) {
-    return slots.find((otro) => otro.horaInicio === slot.horaFin && otro.disponible) ?? null
+  function elegirCancha(cancha: CanchaLibre) {
+    setCanchaElegida(cancha)
+    // Con una sola duración posible no tiene sentido preguntar.
+    if (cancha.opciones.length === 1 && franjaAbierta) {
+      abrirConfirmacion({ franja: franjaAbierta, cancha, opcion: cancha.opciones[0] })
+    }
   }
 
-  function elegirSlot(slot: SlotDisponibilidad) {
-    if (horariosElegidos.includes(slot.horaInicio)) {
-      setHorariosElegidos((actuales) => actuales.filter((hora) => hora !== slot.horaInicio))
-      return
-    }
-    setSlotDuracion(slot)
-  }
-
-  function agregarDuracion(horas: 1 | 2) {
-    if (!slotDuracion) return
-    const inicios = [slotDuracion.horaInicio]
-    if (horas === 2) {
-      const consecutivo = slotConsecutivo(slotDuracion)
-      if (consecutivo) inicios.push(consecutivo.horaInicio)
-    }
-    setHorariosElegidos((actuales) => [...new Set([...actuales, ...inicios])])
-    setSlotDuracion(null)
-  }
-
-  const rangosElegidos = useMemo(() => {
-    const finPorInicio = new Map(slots.map((slot) => [slot.horaInicio, slot.horaFin]))
-    const inicios = [...horariosElegidos].sort()
-    const rangos: string[] = []
-    let i = 0
-    while (i < inicios.length) {
-      const inicio = inicios[i]
-      let fin = finPorInicio.get(inicio) ?? inicio
-      let j = i + 1
-      while (j < inicios.length && inicios[j] === fin) {
-        fin = finPorInicio.get(inicios[j]) ?? fin
-        j++
-      }
-      rangos.push(rango(inicio, fin))
-      i = j
-    }
-    return rangos
-  }, [horariosElegidos, slots])
-
-  const canchaSeleccionada = useMemo(
-    () => canchas.find((cancha) => cancha.id === canchaId) ?? null,
-    [canchas, canchaId],
-  )
-  const precioPorHora = canchaSeleccionada?.precioPorHora ?? null
-  const porcentajeSenia = canchaSeleccionada?.seniaPorcentaje && canchaSeleccionada.seniaPorcentaje > 0
-    ? canchaSeleccionada.seniaPorcentaje
-    : 50
-  const minutosElegidos = useMemo(() => {
-    const finPorInicio = new Map(slots.map((slot) => [slot.horaInicio, slot.horaFin]))
-    return horariosElegidos.reduce((acumulado, inicio) => {
-      const fin = finPorInicio.get(inicio)
-      if (!fin) return acumulado
-      const duracion = minutosDeHora(fin) - minutosDeHora(inicio)
-      return acumulado + (duracion > 0 ? duracion : duracion + 1440)
-    }, 0)
-  }, [horariosElegidos, slots])
-  const precioTotalEstimado = precioPorHora != null ? Math.round((minutosElegidos / 60) * precioPorHora) : null
-  const montoSeniaEstimado = precioTotalEstimado != null
-    ? Math.round((precioTotalEstimado * porcentajeSenia) / 100)
-    : null
-  const hayPrecio = montoSeniaEstimado != null
-  const metodoEfectivo = !hayPrecio || metodoPago === 'EFECTIVO'
-
-  function abrirModal() {
-    if (horariosElegidos.length === 0) return
+  function abrirConfirmacion(elegido: Eleccion) {
+    setEleccion(elegido)
+    setFranjaAbierta(null)
+    setCanchaElegida(null)
     setNombre('')
     setTelefono('')
     setErrorFormulario(null)
-    setReservasCreadas([])
-    setMetodoPago(precioPorHora != null ? 'ONLINE' : 'EFECTIVO')
-    setModalAbierto(true)
+    setReservaCreada(null)
+    setMetodoPago(elegido.opcion.precio != null ? 'ONLINE' : 'EFECTIVO')
   }
 
-  function cerrarModal() {
-    setModalAbierto(false)
+  function cerrarTodo() {
+    setFranjaAbierta(null)
+    setCanchaElegida(null)
+    setEleccion(null)
     setErrorFormulario(null)
+  }
+
+  const porcentajeSenia = 50
+  const precio = eleccion?.opcion.precio ?? null
+  const montoSenia = precio != null ? Math.round((precio * porcentajeSenia) / 100) : null
+  const metodoEfectivo = precio == null || metodoPago === 'EFECTIVO'
+
+  function datosDelPedido() {
+    if (!eleccion) return null
+    return {
+      canchaId: eleccion.cancha.canchaId,
+      fecha,
+      horaInicio: eleccion.franja.horaInicio,
+      duracionMin: eleccion.opcion.minutos,
+      clienteNombre: nombre.trim(),
+      clienteTelefono: telefono.trim(),
+    }
+  }
+
+  function faltanDatos() {
+    if (!nombre.trim() || !telefono.trim()) {
+      setErrorFormulario('Completá tu nombre y teléfono.')
+      return true
+    }
+    return false
   }
 
   async function confirmarReserva() {
-    if (canchaId == null || horariosElegidos.length === 0) return
-    if (!nombre.trim() || !telefono.trim()) {
-      setErrorFormulario('Completá tu nombre y teléfono.')
-      return
-    }
+    const pedido = datosDelPedido()
+    if (!pedido || faltanDatos()) return
     setEnviando(true)
     setErrorFormulario(null)
     try {
-      const reservas = await reservasApi.solicitarLote({
-        canchaId,
-        fecha,
-        horarios: horariosElegidos,
-        clienteNombre: nombre.trim(),
-        clienteTelefono: telefono.trim(),
-      })
-      setReservasCreadas(reservas)
-      setHorariosElegidos([])
-      const datos = await reservasApi.getDisponibilidad(canchaId, fecha)
-      setSlots(datos)
+      setReservaCreada(await reservasApi.solicitar(pedido))
+      setRecarga((n) => n + 1)
     } catch (e: unknown) {
       setErrorFormulario(obtenerMensajeErrorApi(e))
     } finally {
@@ -277,21 +192,12 @@ export default function ReservarPage() {
   }
 
   async function pagarSenia() {
-    if (canchaId == null || horariosElegidos.length === 0) return
-    if (!nombre.trim() || !telefono.trim()) {
-      setErrorFormulario('Completá tu nombre y teléfono.')
-      return
-    }
+    const pedido = datosDelPedido()
+    if (!pedido || faltanDatos()) return
     setEnviando(true)
     setErrorFormulario(null)
     try {
-      const { referencia, initPoint } = await pagosApi.crearPagoReserva({
-        canchaId,
-        fecha,
-        horarios: horariosElegidos,
-        clienteNombre: nombre.trim(),
-        clienteTelefono: telefono.trim(),
-      })
+      const { referencia, initPoint } = await pagosApi.crearPagoReserva(pedido)
       sessionStorage.setItem('rp-pago-pendiente', referencia)
       window.location.href = initPoint
     } catch (e: unknown) {
@@ -304,28 +210,28 @@ export default function ReservarPage() {
     <section className="mx-auto max-w-3xl px-4 py-10">
       <p className="text-xs font-black uppercase tracking-[0.22em] text-rp-accent">Turnos</p>
       <h1 className="mt-2 text-3xl font-black text-rp-text">Reservar una cancha</h1>
-      <p className="mt-1 text-sm text-rp-muted">Elegí sucursal, cancha y día, marcá uno o varios horarios y pedilos todos juntos. Después los confirmás con el club por WhatsApp.</p>
+      <p className="mt-1 text-sm text-rp-muted">
+        Elegí el día y el horario que te sirve. Después te mostramos qué canchas quedan libres y
+        cuánto sale cada duración.
+      </p>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2">
-        <Select label="Sucursal" value={lugarId ?? ''} onChange={(e) => elegirLugar(e.target.value ? Number(e.target.value) : null)}>
-          {lugares.map((lugar) => (
-            <option key={lugar.id} value={lugar.id}>{lugar.nombre}</option>
-          ))}
+      {lugares.length > 1 && (
+        <Select
+          label="Sucursal"
+          className="mt-6 sm:max-w-xs"
+          value={lugarId ?? ''}
+          onChange={(e) => setLugarId(e.target.value ? Number(e.target.value) : null)}
+        >
+          {lugares.map((lugar) => <option key={lugar.id} value={lugar.id}>{lugar.nombre}</option>)}
         </Select>
-        <Select label="Cancha" value={canchaId ?? ''} onChange={(e) => setCanchaId(e.target.value ? Number(e.target.value) : null)}>
-          {canchasDelLugar.length === 0 ? <option value="">Sin canchas</option> : null}
-          {canchasDelLugar.map((cancha) => (
-            <option key={cancha.id} value={cancha.id}>{cancha.nombre}</option>
-          ))}
-        </Select>
-      </div>
+      )}
 
       <div className="mt-6">
         <span className="text-xs font-black uppercase tracking-[0.14em] text-rp-muted">Elegí el día</span>
         <div className="mt-2 flex items-stretch gap-1.5">
           <button
             onClick={() => cambiarSemana(-7)}
-            disabled={!puedeRetroceder}
+            disabled={inicioSemana.getTime() <= semanaActual}
             className="flex shrink-0 items-center justify-center rounded-md border border-rp-border px-1.5 text-rp-muted disabled:opacity-40 hover:enabled:border-rp-accent hover:enabled:text-rp-accent"
             aria-label="Semana anterior"
           >
@@ -362,8 +268,7 @@ export default function ReservarPage() {
           </div>
           <button
             onClick={() => cambiarSemana(7)}
-            disabled={!puedeAvanzar}
-            className="flex shrink-0 items-center justify-center rounded-md border border-rp-border px-1.5 text-rp-muted disabled:opacity-40 hover:enabled:border-rp-accent hover:enabled:text-rp-accent"
+            className="flex shrink-0 items-center justify-center rounded-md border border-rp-border px-1.5 text-rp-muted hover:border-rp-accent hover:text-rp-accent"
             aria-label="Semana siguiente"
           >
             <ChevronRight size={18} />
@@ -374,124 +279,172 @@ export default function ReservarPage() {
       <div className="mt-6">
         <p className="flex items-center gap-1.5 text-sm font-bold text-rp-muted">
           <MapPin size={15} className="text-rp-accent" />
-          {lugarNombre || 'Sucursal'}{canchaNombre ? ` · ${canchaNombre}` : ''}
+          {lugarNombre || 'Sucursal'}
         </p>
 
         <div className="mt-3">
           {error && <p className="rounded-md border border-rp-danger/40 bg-rp-danger/10 px-3 py-2 text-sm font-bold text-rp-danger">{error}</p>}
-          {slots.length === 0 && cargando ? (
-            <p className="text-sm text-rp-muted">Cargando disponibilidad...</p>
-          ) : slots.length === 0 ? (
-            <p className="text-sm text-rp-muted">No hay turnos disponibles para esta cancha en esta fecha. Probá con otro día o cancha.</p>
+          {franjas.length === 0 && cargando ? (
+            <p className="text-sm text-rp-muted">Buscando horarios libres...</p>
+          ) : franjas.length === 0 ? (
+            <p className="text-sm text-rp-muted">No queda ningún horario libre este día. Probá con otra fecha.</p>
           ) : (
             <div className={`grid grid-cols-2 gap-2 transition-opacity duration-150 sm:grid-cols-3 ${cargando ? 'pointer-events-none opacity-50' : 'opacity-100'}`}>
-              {slots.map((slot) => {
-                const elegido = horariosElegidos.includes(slot.horaInicio)
-                return (
-                  <button
-                    key={slot.horaInicio}
-                    disabled={!slot.disponible}
-                    onClick={() => elegirSlot(slot)}
-                    aria-pressed={elegido}
-                    className={
-                      !slot.disponible
-                        ? 'cursor-not-allowed rounded-md border border-rp-border bg-rp-surface-2 px-3 py-2 text-sm font-semibold text-rp-muted line-through'
-                        : elegido
-                          ? 'rounded-md border border-rp-accent bg-rp-accent px-3 py-2 text-sm font-black text-white transition'
-                          : 'rounded-md border border-rp-accent/50 bg-rp-accent/15 px-3 py-2 text-sm font-bold text-rp-text transition hover:bg-rp-accent/25'
-                    }
-                  >
-                    {hhmm(slot.horaInicio)}
-                  </button>
-                )
-              })}
+              {franjas.map((franja) => (
+                <button
+                  key={franja.horaInicio}
+                  onClick={() => { setFranjaAbierta(franja); setCanchaElegida(null) }}
+                  data-testid={`horario-${hhmm(franja.horaInicio)}`}
+                  className="flex flex-col gap-1 rounded-lg border border-rp-accent/45 bg-rp-accent/10 px-3 py-2.5 text-left transition hover:border-rp-accent hover:bg-rp-accent/20"
+                >
+                  <span className="flex items-baseline justify-between gap-2">
+                    <span className="text-lg font-black leading-none text-rp-text">{hhmm(franja.horaInicio)}</span>
+                    {franja.enPromocion && (
+                      <span className="rounded-full bg-rp-amber/25 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-rp-amber">Promo</span>
+                    )}
+                  </span>
+                  <span className="flex items-center gap-1.5 text-xs font-bold text-rp-muted">
+                    <span className="size-1.5 rounded-full bg-rp-accent" />
+                    {franja.canchasDisponibles} {franja.canchasDisponibles === 1 ? 'cancha' : 'canchas'}
+                  </span>
+                  {franja.precioDesde != null && (
+                    <span className="text-xs font-semibold text-rp-muted">desde {formatearMoneda(franja.precioDesde)}</span>
+                  )}
+                </button>
+              ))}
             </div>
           )}
         </div>
       </div>
 
-      {horariosElegidos.length > 0 && (
-        <div className="sticky bottom-4 z-10 mt-5 flex items-center justify-between gap-3 rounded-xl border border-rp-accent/40 bg-rp-surface/95 px-4 py-3 shadow-lg backdrop-blur">
-          <span className="text-sm font-bold text-rp-text">
-            {horariosElegidos.length} {horariosElegidos.length === 1 ? 'turno' : 'turnos'}
-            <span className="ml-1 font-semibold text-rp-muted">· {rangosElegidos.join(', ')} hs</span>
-          </span>
-          <Button size="sm" onClick={abrirModal}>Reservar ({horariosElegidos.length})</Button>
-        </div>
-      )}
+      {/* Paso 2: qué cancha. Paso 3: cuánto jugar (solo si hay más de una opción). */}
+      <Modal
+        isOpen={franjaAbierta !== null}
+        onClose={cerrarTodo}
+        title={canchaElegida ? `${canchaElegida.canchaNombre} · ${hhmm(franjaAbierta?.horaInicio ?? '')} hs` : `Canchas libres a las ${hhmm(franjaAbierta?.horaInicio ?? '')}`}
+        size="sm"
+      >
+        {franjaAbierta && !canchaElegida && (
+          <div className="flex flex-col gap-2">
+            {franjaAbierta.canchas.map((cancha) => {
+              const masLarga = cancha.opciones[cancha.opciones.length - 1]
+              return (
+                <button
+                  key={cancha.canchaId}
+                  onClick={() => elegirCancha(cancha)}
+                  className="rounded-md border border-rp-border px-4 py-3 text-left transition hover:border-rp-accent hover:bg-rp-accent/10"
+                >
+                  <p className="text-sm font-black text-rp-text">{cancha.canchaNombre}</p>
+                  {cancha.tipo && <p className="text-xs text-rp-muted">{cancha.tipo}</p>}
+                  <p className="mt-0.5 text-xs font-semibold text-rp-accent">
+                    Hasta {etiquetaDuracion(masLarga.minutos)}
+                  </p>
+                </button>
+              )
+            })}
+          </div>
+        )}
 
-      <Modal isOpen={modalAbierto} onClose={cerrarModal} onSubmit={reservasCreadas.length > 0 ? undefined : (metodoEfectivo ? confirmarReserva : pagarSenia)} title={reservasCreadas.length > 0 ? 'Turnos solicitados' : 'Confirmar reserva'} size="sm">
-        {reservasCreadas.length > 0 ? (
+        {franjaAbierta && canchaElegida && (
+          <div className="flex flex-col gap-3">
+            <span className="text-xs font-black uppercase tracking-[0.14em] text-rp-muted">Duración</span>
+            <div className="grid grid-cols-3 gap-2">
+              {canchaElegida.opciones.map((opcion) => (
+                <button
+                  key={opcion.minutos}
+                  data-testid={`duracion-${opcion.minutos}`}
+                  onClick={() => abrirConfirmacion({ franja: franjaAbierta, cancha: canchaElegida, opcion })}
+                  className="flex flex-col items-center gap-1.5 rounded-lg border border-rp-border bg-rp-surface px-2 py-3 transition hover:border-rp-accent hover:bg-rp-accent/10"
+                >
+                  <Clock size={18} className="text-rp-accent" />
+                  <span className="text-sm font-black text-rp-text">{etiquetaDuracion(opcion.minutos)}</span>
+                  <span className="text-xs font-bold text-rp-accent">
+                    {opcion.precio != null ? formatearMoneda(opcion.precio) : 'A consultar'}
+                  </span>
+                  <span className="text-[10px] text-rp-muted">hasta {hhmm(opcion.horaFin)}</span>
+                </button>
+              ))}
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => setCanchaElegida(null)}>Elegir otra cancha</Button>
+          </div>
+        )}
+      </Modal>
+
+      <Modal
+        isOpen={eleccion !== null}
+        onClose={cerrarTodo}
+        onSubmit={reservaCreada ? undefined : (metodoEfectivo ? confirmarReserva : pagarSenia)}
+        title={reservaCreada ? 'Turno solicitado' : 'Confirmar reserva'}
+        size="sm"
+      >
+        {reservaCreada ? (
           <div className="flex flex-col gap-3">
             <p className="text-sm text-rp-text">
-              {reservasCreadas.length === 1 ? 'Tu turno quedó' : `Tus ${reservasCreadas.length} turnos quedaron`} <strong>pendiente{reservasCreadas.length === 1 ? '' : 's'}</strong> en {reservasCreadas[0].canchaNombre}:
+              Tu turno quedó <strong>pendiente</strong> en {reservaCreada.canchaNombre}:
             </p>
-            <ul className="flex flex-col gap-1.5">
-              {reservasCreadas.map((reserva) => (
-                <li key={reserva.id} className="flex items-center justify-between rounded-md border border-rp-border bg-rp-surface-2 px-3 py-2 text-sm">
-                  <span className="font-bold text-rp-text">{reserva.fecha} · {rango(reserva.horaInicio, reserva.horaFin)} hs</span>
-                  <span className="text-xs text-rp-muted">código {reserva.codigo}</span>
-                </li>
-              ))}
-            </ul>
-            <p className="text-sm text-rp-muted">Confirmalos con el club por WhatsApp:</p>
+            <div className="rounded-md border border-rp-border bg-rp-surface-2 px-3 py-2 text-sm">
+              <span className="font-bold text-rp-text">
+                {reservaCreada.fecha} · {hhmm(reservaCreada.horaInicio)} a {hhmm(reservaCreada.horaFin)} hs
+              </span>
+              <span className="ml-2 text-xs text-rp-muted">código {reservaCreada.codigo}</span>
+            </div>
+            <p className="text-sm text-rp-muted">Confirmalo con el club por WhatsApp:</p>
             <a
-              href={enlaceWhatsApp(reservasCreadas)}
+              href={enlaceWhatsApp(reservaCreada)}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center justify-center rounded-md bg-rp-accent px-4 py-2.5 text-sm font-black text-rp-bg transition hover:opacity-90"
             >
               Confirmar por WhatsApp
             </a>
-            <Button variant="ghost" size="sm" onClick={cerrarModal}>Cerrar</Button>
+            <Button variant="ghost" size="sm" onClick={cerrarTodo}>Cerrar</Button>
           </div>
-        ) : (
+        ) : eleccion && (
           <div className="flex flex-col gap-4">
             <div className="rounded-md border border-rp-border bg-rp-surface-2 px-3 py-2 text-sm">
-              <p className="font-bold text-rp-text">{lugarNombre} · {canchaNombre}</p>
-              <p className="mt-0.5 text-rp-muted">{fecha} · {rangosElegidos.join(', ')} hs</p>
+              <p className="font-bold text-rp-text">{lugarNombre} · {eleccion.cancha.canchaNombre}</p>
+              <p className="mt-0.5 text-rp-muted">
+                {fecha} · {hhmm(eleccion.franja.horaInicio)} a {hhmm(eleccion.opcion.horaFin)} hs
+                <span className="ml-1 font-semibold">({etiquetaDuracion(eleccion.opcion.minutos)})</span>
+              </p>
             </div>
 
             <div className="rounded-md border border-rp-border px-3 py-2 text-sm">
               <div className="flex items-center justify-between">
-                <span className="text-rp-muted">Precio total del turno</span>
-                <strong className="text-rp-text">{hayPrecio ? formatearMoneda(precioTotalEstimado) : 'Sin precio'}</strong>
+                <span className="text-rp-muted">Precio del turno</span>
+                <strong className="text-rp-text">{precio != null ? formatearMoneda(precio) : 'Sin precio'}</strong>
               </div>
-              {hayPrecio && (
+              {montoSenia != null && (
                 <div className="mt-1 flex items-center justify-between">
-                  <span className="text-rp-muted">Monto de la seña <span className="text-xs font-bold text-rp-accent">A pagar ahora</span></span>
-                  <strong className="text-rp-accent">{formatearMoneda(montoSeniaEstimado)}</strong>
+                  <span className="text-rp-muted">Seña <span className="text-xs font-bold text-rp-accent">A pagar ahora</span></span>
+                  <strong className="text-rp-accent">{formatearMoneda(montoSenia)}</strong>
                 </div>
               )}
             </div>
 
             <div className="flex flex-col gap-2">
               <p className="text-xs font-bold text-rp-muted">Método de pago</p>
-              {hayPrecio && (
+              {montoSenia != null && (
                 <button
                   type="button"
                   onClick={() => setMetodoPago('ONLINE')}
                   className={metodoPago === 'ONLINE'
-                    ? 'flex items-center justify-between rounded-md border border-rp-accent bg-rp-accent/10 px-3 py-2 text-left'
-                    : 'flex items-center justify-between rounded-md border border-rp-border px-3 py-2 text-left hover:border-rp-accent/50'}
+                    ? 'rounded-md border border-rp-accent bg-rp-accent/10 px-3 py-2 text-left'
+                    : 'rounded-md border border-rp-border px-3 py-2 text-left hover:border-rp-accent/50'}
                 >
-                  <span>
-                    <span className="block text-sm font-bold text-rp-text">Pagar seña online</span>
-                    <span className="block text-xs text-rp-muted">Mercado Pago · {formatearMoneda(montoSeniaEstimado)}. Confirma solo.</span>
-                  </span>
+                  <span className="block text-sm font-bold text-rp-text">Pagar seña online</span>
+                  <span className="block text-xs text-rp-muted">Mercado Pago · {formatearMoneda(montoSenia)}. Confirma solo.</span>
                 </button>
               )}
               <button
                 type="button"
                 onClick={() => setMetodoPago('EFECTIVO')}
                 className={metodoEfectivo
-                  ? 'flex items-center justify-between rounded-md border border-rp-accent bg-rp-accent/10 px-3 py-2 text-left'
-                  : 'flex items-center justify-between rounded-md border border-rp-border px-3 py-2 text-left hover:border-rp-accent/50'}
+                  ? 'rounded-md border border-rp-accent bg-rp-accent/10 px-3 py-2 text-left'
+                  : 'rounded-md border border-rp-border px-3 py-2 text-left hover:border-rp-accent/50'}
               >
-                <span>
-                  <span className="block text-sm font-bold text-rp-text">Efectivo en el lugar</span>
-                  <span className="block text-xs text-rp-muted">Pagás al llegar. El club confirma el turno.</span>
-                </span>
+                <span className="block text-sm font-bold text-rp-text">Efectivo en el lugar</span>
+                <span className="block text-xs text-rp-muted">Pagás al llegar. El club confirma el turno.</span>
               </button>
             </div>
 
@@ -500,45 +453,13 @@ export default function ReservarPage() {
 
             {errorFormulario && <p className="rounded-md border border-rp-danger/40 bg-rp-danger/10 px-3 py-2 text-sm font-bold text-rp-danger">{errorFormulario}</p>}
             <div className="flex flex-wrap justify-end gap-2 pt-2">
-              <Button variant="ghost" size="sm" onClick={cerrarModal} disabled={enviando}>Cancelar</Button>
+              <Button variant="ghost" size="sm" onClick={cerrarTodo} disabled={enviando}>Cancelar</Button>
               <Button type="submit" size="sm" disabled={enviando}>
-                {enviando ? (metodoEfectivo ? 'Enviando...' : 'Redirigiendo...') : (metodoEfectivo ? 'Confirmar reserva' : `Pagar seña ${formatearMoneda(montoSeniaEstimado)}`)}
+                {enviando
+                  ? (metodoEfectivo ? 'Enviando...' : 'Redirigiendo...')
+                  : (metodoEfectivo ? 'Confirmar reserva' : `Pagar seña ${formatearMoneda(montoSenia)}`)}
               </Button>
             </div>
-          </div>
-        )}
-      </Modal>
-
-      <Modal isOpen={slotDuracion !== null} onClose={() => setSlotDuracion(null)} title="¿Cuánto querés jugar?" size="sm">
-        {slotDuracion && (
-          <div className="flex flex-col gap-3">
-            <p className="text-sm text-rp-muted">Turno en {canchaNombre} desde las {hhmm(slotDuracion.horaInicio)} hs.</p>
-            <button
-              onClick={() => agregarDuracion(1)}
-              className="flex items-center justify-between rounded-md border border-rp-accent/50 bg-rp-accent/10 px-4 py-3 text-left transition hover:bg-rp-accent/20"
-            >
-              <span className="text-sm font-black text-rp-text">1 hora</span>
-              <span className="text-sm font-bold text-rp-accent">{rango(slotDuracion.horaInicio, slotDuracion.horaFin)} hs</span>
-            </button>
-            {(() => {
-              const consecutivo = slotConsecutivo(slotDuracion)
-              return (
-                <button
-                  onClick={() => agregarDuracion(2)}
-                  disabled={!consecutivo}
-                  className={
-                    consecutivo
-                      ? 'flex items-center justify-between rounded-md border border-rp-accent/50 bg-rp-accent/10 px-4 py-3 text-left transition hover:bg-rp-accent/20'
-                      : 'flex cursor-not-allowed items-center justify-between rounded-md border border-rp-border bg-rp-surface-2 px-4 py-3 text-left opacity-60'
-                  }
-                >
-                  <span className="text-sm font-black text-rp-text">2 horas</span>
-                  <span className="text-sm font-bold text-rp-accent">
-                    {consecutivo ? `${rango(slotDuracion.horaInicio, consecutivo.horaFin)} hs` : 'Sin disponibilidad'}
-                  </span>
-                </button>
-              )
-            })()}
           </div>
         )}
       </Modal>

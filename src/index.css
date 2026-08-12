@@ -133,6 +133,14 @@ body {
   opacity: .45;
 }
 
+/* En el celular se pasa de página con el dedo: 34 px quedaban chicos para acertarle. */
+@media (max-width: 768px) {
+  .rp-pagination button {
+    width: 44px;
+    height: 44px;
+  }
+}
+
 .rp-pagination span {
   color: var(--rp-muted-light);
   font-size: 13px;
@@ -433,10 +441,19 @@ img {
   background: var(--rp-green-600);
 }
 
+/*
+  El área táctil va completa aunque el dibujo sean tres rayitas de 24 px: es el control
+  más importante del celular y con el padding de 6 px medía 28 px de alto, por debajo del
+  mínimo que se puede tocar sin errarle.
+*/
 .hamburger {
   display: none;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
   gap: 5px;
+  min-width: 44px;
+  min-height: 44px;
   padding: 6px;
   background: transparent;
   cursor: pointer;
@@ -588,6 +605,23 @@ img {
     display: flex;
   }
 
+  /* Los íconos de redes se tocan con el dedo: 36 px quedaban justos. */
+  .fsoc {
+    width: 44px;
+    height: 44px;
+  }
+
+  /*
+    Los enlaces del footer son navegación real y medían 21 px de alto. Se les da altura
+    de toque en vez del margen suelto: ocupan casi lo mismo y ahora se aciertan.
+  */
+  .footer-col a {
+    display: flex;
+    min-height: 44px;
+    align-items: center;
+    margin-bottom: 0;
+  }
+
   .footer-grid {
     grid-template-columns: 1fr;
     gap: 32px;
@@ -635,17 +669,8 @@ img {
   color: #fff;
 }
 
-.admin-sidebar-temporada {
-  border-color: rgba(185, 154, 88, .32);
-  background: rgba(185, 154, 88, .12);
-}
-
-.admin-sidebar-temporada-titulo {
-  color: var(--rp-gold);
-}
-
-.admin-sidebar-temporada-valor {
-  color: #fff;
+.admin-sidebar-grupo {
+  color: rgba(255, 255, 255, .38);
 }
 
 .admin-sidebar-salir {

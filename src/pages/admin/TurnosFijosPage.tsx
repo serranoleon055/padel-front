@@ -4,8 +4,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { canchasApi, placesApi } from '@/features/catalog/catalogApi'
 import { turnosFijosApi, type TurnoFijoRequest, type TurnoFijoResponse } from '@/features/reservas/turnosFijosApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
-import { formatearFecha, formatearMoneda } from '@/shared/lib/formatters'
-import { enlaceWhatsApp } from '@/shared/lib/whatsapp'
+import { fechaISO, formatearFecha, formatearMoneda } from '@/shared/lib/formatters'
+import { TelefonoWhatsApp } from '@/shared/ui/TelefonoWhatsApp'
 import type { CanchaResponse, LugarResponse } from '@/shared/types/api'
 import { AdminPageHeader } from '@/shared/ui/AdminPageHeader'
 import { AdminTable, type Column } from '@/shared/ui/AdminTable'
@@ -27,12 +27,16 @@ const DIAS = [
   { valor: 7, nombre: 'Domingo' },
 ]
 
+function etiquetaDuracion(minutos: number) {
+  return minutos % 60 === 0 ? `-e h` : ` min`
+}
+
 function hhmm(hora: string | null | undefined) {
   return hora ? hora.slice(0, 5) : '-'
 }
 
 function hoyISO() {
-  return new Date().toISOString().slice(0, 10)
+  return fechaISO()
 }
 
 /** El precio se escribe como texto (nada de type=number) y se limpia al enviar. */
@@ -47,7 +51,7 @@ const VACIO = {
   canchaId: '',
   diaSemana: '2',
   horaInicio: '20:00',
-  slots: '1',
+  duracionMin: '60',
   clienteNombre: '',
   clienteTelefono: '',
   precioPactado: '',
@@ -111,7 +115,7 @@ export default function TurnosFijosPage() {
       canchaId: String(turno.canchaId),
       diaSemana: String(turno.diaSemana),
       horaInicio: hhmm(turno.horaInicio),
-      slots: String(turno.slots),
+      duracionMin: String(turno.duracionMin),
       clienteNombre: turno.clienteNombre,
       clienteTelefono: turno.clienteTelefono,
       precioPactado: turno.precioPactado != null ? String(turno.precioPactado) : '',
@@ -128,16 +132,16 @@ export default function TurnosFijosPage() {
     if (!formulario.clienteNombre.trim() || !formulario.clienteTelefono.trim()) {
       setErrorFormulario('El nombre y el teléfono del cliente son obligatorios.'); return
     }
-    const slots = Number(formulario.slots)
-    if (!Number.isInteger(slots) || slots < 1 || slots > 6) {
-      setErrorFormulario('La cantidad de horarios tiene que ir de 1 a 6.'); return
+    const duracionMin = Number(formulario.duracionMin)
+    if (![60, 90, 120].includes(duracionMin)) {
+      setErrorFormulario('Elegí una duración de 1 hora, 1 hora y media o 2 horas.'); return
     }
 
     const cuerpo: TurnoFijoRequest = {
       canchaId: Number(formulario.canchaId),
       diaSemana: Number(formulario.diaSemana),
       horaInicio: `${formulario.horaInicio}:00`,
-      slots,
+      duracionMin,
       clienteNombre: formulario.clienteNombre.trim(),
       clienteTelefono: formulario.clienteTelefono.trim(),
       precioPactado: aNumero(formulario.precioPactado),
@@ -206,7 +210,7 @@ export default function TurnosFijosPage() {
             {DIAS.find((dia) => dia.valor === turno.diaSemana)?.nombre ?? '-'} {hhmm(turno.horaInicio)}
           </p>
           <p className="text-xs text-rp-muted">
-            hasta {hhmm(turno.horaFin)}{turno.slots > 1 ? ` · ${turno.slots} horarios` : ''}
+            hasta {hhmm(turno.horaFin)} · {etiquetaDuracion(turno.duracionMin)}
           </p>
         </div>
       ),
@@ -215,17 +219,15 @@ export default function TurnosFijosPage() {
     {
       key: 'cliente',
       label: 'Cliente',
-      render: (turno: TurnoFijoResponse) => {
-        const enlace = enlaceWhatsApp(turno.clienteTelefono, `Hola ${turno.clienteNombre}! Te escribo por tu turno fijo.`)
-        return (
-          <div>
-            <p className="text-sm font-bold text-rp-text">{turno.clienteNombre}</p>
-            {enlace
-              ? <a href={enlace} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="text-xs text-rp-muted underline-offset-2 hover:text-rp-accent hover:underline">{turno.clienteTelefono}</a>
-              : <p className="text-xs text-rp-muted">{turno.clienteTelefono}</p>}
-          </div>
-        )
-      },
+      render: (turno: TurnoFijoResponse) => (
+        <div>
+          <p className="text-sm font-bold text-rp-text">{turno.clienteNombre}</p>
+          <TelefonoWhatsApp
+            telefono={turno.clienteTelefono}
+            mensaje={`Hola ${turno.clienteNombre}! Te escribo por tu turno fijo.`}
+          />
+        </div>
+      ),
     },
     {
       key: 'precio',
@@ -294,9 +296,9 @@ export default function TurnosFijosPage() {
           emptyTitle="No hay turnos fijos"
           emptyDescription="Cargá los abonos semanales del club y se agendan solos."
           actions={(turno) => (<>
-            <button onClick={() => abrirEditar(turno)} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent"><Pencil size={15} /></button>
+            <button onClick={() => abrirEditar(turno)} className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent"><Pencil size={15} /></button>
             {turno.activo && (
-              <button onClick={() => setObjetivoBaja(turno)} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger"><Trash2 size={15} /></button>
+              <button onClick={() => setObjetivoBaja(turno)} className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger"><Trash2 size={15} /></button>
             )}
           </>)}
         />
@@ -316,11 +318,10 @@ export default function TurnosFijosPage() {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <Input label="Hora de inicio" type="time" value={formulario.horaInicio} onChange={(e) => setFormulario((f) => ({ ...f, horaInicio: e.target.value }))} />
-            <Select label="Cuántos horarios" value={formulario.slots} onChange={(e) => setFormulario((f) => ({ ...f, slots: e.target.value }))}>
-              <option value="1">1 (una hora)</option>
-              <option value="2">2 (dos horas)</option>
-              <option value="3">3</option>
-              <option value="4">4</option>
+            <Select label="Duración" value={formulario.duracionMin} onChange={(e) => setFormulario((f) => ({ ...f, duracionMin: e.target.value }))}>
+              <option value="60">1 hora</option>
+              <option value="90">1 hora y media</option>
+              <option value="120">2 horas</option>
             </Select>
           </div>
 
@@ -329,16 +330,18 @@ export default function TurnosFijosPage() {
             <Input label="Teléfono" value={formulario.clienteTelefono} onChange={(e) => setFormulario((f) => ({ ...f, clienteTelefono: e.target.value }))} placeholder="385 689 4061" />
           </div>
 
-          <Input label="Precio pactado del turno (opcional)" value={formulario.precioPactado}
+          <Input label="Precio pactado del turno" value={formulario.precioPactado}
             onChange={(e) => setFormulario((f) => ({ ...f, precioPactado: e.target.value }))}
-            placeholder="Vacío = tarifa vigente de la cancha" />
+            placeholder="45000" />
+          <p className="-mt-2 text-[11px] text-rp-muted">Si lo dejás vacío se cobra la tarifa de la cancha.</p>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <Input label="Desde" type="date" value={formulario.vigenteDesde} onChange={(e) => setFormulario((f) => ({ ...f, vigenteDesde: e.target.value }))} />
-            <Input label="Hasta (opcional)" type="date" value={formulario.vigenteHasta} onChange={(e) => setFormulario((f) => ({ ...f, vigenteHasta: e.target.value }))} />
+            <Input label="Hasta" type="date" value={formulario.vigenteHasta} onChange={(e) => setFormulario((f) => ({ ...f, vigenteHasta: e.target.value }))} />
           </div>
+          <p className="-mt-2 text-[11px] text-rp-muted">Sin fecha de fin, el abono sigue hasta que lo des de baja.</p>
 
-          <Input label="Notas (opcional)" value={formulario.notas} onChange={(e) => setFormulario((f) => ({ ...f, notas: e.target.value }))} placeholder="Paga por mes, factura a nombre de..." />
+          <Input label="Notas" value={formulario.notas} onChange={(e) => setFormulario((f) => ({ ...f, notas: e.target.value }))} placeholder="Paga por mes" />
 
           {errorFormulario && <p className="rounded-md border border-rp-danger/40 bg-rp-danger/10 px-3 py-2 text-sm font-bold text-rp-danger">{errorFormulario}</p>}
           <div className="flex justify-end gap-2 pt-2">

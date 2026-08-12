@@ -380,26 +380,26 @@ export default function TournamentFormPage() {
             <div className="mt-4 grid gap-4">
               <Input label="Nombre del torneo" value={formulario.nombre} onChange={(e) => setFormulario((f) => ({ ...f, nombre: e.target.value }))} placeholder="Copa Santiago 2026" />
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-bold text-rp-muted">Descripción (opcional)</label>
+                <label className="text-xs font-bold text-rp-muted">Descripción</label>
                 <textarea
                   rows={2}
                   value={formulario.descripcion ?? ''}
                   onChange={(e) => setFormulario((f) => ({ ...f, descripcion: e.target.value || null }))}
-                  placeholder="Información sobre el torneo, premios, requisitos..."
+                  placeholder="Premios, requisitos, horarios"
                   className="rounded-md border border-rp-border bg-rp-bg px-3 py-2 text-sm text-rp-text focus:border-rp-accent focus:outline-none resize-none"
                 />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Input label="URL de imagen (opcional, alternativa)" value={formulario.imagenUrl ?? ''} onChange={(e) => setFormulario((f) => ({ ...f, imagenUrl: e.target.value || null }))} placeholder="https://..." />
                 <label className="flex flex-col gap-2 text-sm font-bold text-rp-text">
-                  Subir imagen (opcional)
+                  Subir imagen
                   <input type="file" accept="image/jpeg,image/png" onChange={(e) => setArchivoImagen(e.target.files?.[0] ?? null)} className="w-full min-w-0 max-w-full rounded-md border border-rp-border bg-rp-surface px-3 py-2 text-sm text-rp-muted" />
                 </label>
               </div>
               <p className="text-xs leading-5 text-rp-muted">El cupo máximo de parejas se define por categoría más abajo. JPG o PNG, ideal cuadrada y menor a 2 MB.</p>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Input label="Fecha de inicio" type="date" value={formulario.fechaInicio} onChange={(e) => setFormulario((f) => ({ ...f, fechaInicio: e.target.value }))} />
-                <Input label="Fecha de fin (opcional)" type="date" value={formulario.fechaFin ?? ''} onChange={(e) => setFormulario((f) => ({ ...f, fechaFin: e.target.value || null }))} />
+                <Input label="Fecha de fin" type="date" value={formulario.fechaFin ?? ''} onChange={(e) => setFormulario((f) => ({ ...f, fechaFin: e.target.value || null }))} />
               </div>
             </div>
           </fieldset>
@@ -490,7 +490,7 @@ export default function TournamentFormPage() {
             <legend className="px-1 text-xs font-black uppercase tracking-[0.14em] text-rp-accent">Inscripción y premios</legend>
             <div className="mt-4 grid gap-4">
               <Input label="Costo de inscripción por jugador" type="number" min={0} value={formulario.costoInscripcionJugador?.toString() ?? ''} onChange={(e) => setFormulario((f) => ({ ...f, costoInscripcionJugador: e.target.value ? Number(e.target.value) : null }))} placeholder="20000" />
-              <Input label="Premio acumulado / prize pool (opcional)" type="number" min={0} value={formulario.premioAcumulado?.toString() ?? ''} onChange={(e) => setFormulario((f) => ({ ...f, premioAcumulado: e.target.value ? Number(e.target.value) : null }))} placeholder="0" />
+              <Input label="Premio acumulado" type="number" min={0} value={formulario.premioAcumulado?.toString() ?? ''} onChange={(e) => setFormulario((f) => ({ ...f, premioAcumulado: e.target.value ? Number(e.target.value) : null }))} placeholder="0" />
               <Input label="Seña (% del total, por defecto 50)" type="number" min={1} max={100} value={formulario.seniaPorcentaje?.toString() ?? ''} onChange={(e) => setFormulario((f) => ({ ...f, seniaPorcentaje: e.target.value ? Number(e.target.value) : null }))} placeholder="50" />
             </div>
             {formulario.costoInscripcionJugador ? (

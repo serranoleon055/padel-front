@@ -1,6 +1,13 @@
 import { apiClient } from '@/shared/api/apiClient'
 import type { ConfiguracionSede } from '@/shared/types/api'
 
+export interface EstadoNotificaciones {
+  servidorConfigurado: boolean
+  destino: string | null
+  origenDestino: 'sede' | 'variable' | null
+  activo: boolean
+}
+
 export const configuracionSedeApi = {
   async get() {
     const { data } = await apiClient.get<ConfiguracionSede>('/api/configuracion-sede')
@@ -19,5 +26,15 @@ export const configuracionSedeApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
     return data.url
+  },
+
+  async estadoNotificaciones() {
+    const { data } = await apiClient.get<EstadoNotificaciones>('/api/configuracion-sede/notificaciones')
+    return data
+  },
+
+  async probarNotificaciones() {
+    const { data } = await apiClient.post<{ destino: string }>('/api/configuracion-sede/notificaciones/prueba')
+    return data.destino
   },
 }

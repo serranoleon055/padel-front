@@ -1160,6 +1160,18 @@
 }
 
 @media (max-width: 720px) {
+  /*
+    Los enlaces de texto ("Ver torneos", "Ver todos los resultados") medían 21 px de alto
+    y con el dedo se le erra. El padding vertical sobre un elemento en línea agranda el
+    área que se puede tocar sin mover el diseño: se siguen viendo como el mismo enlace
+    subrayado que aprobó Leon.
+  */
+  .btn-secondary,
+  .see-all {
+    padding-top: 11px;
+    padding-bottom: 11px;
+  }
+
   .hero-stats,
   .tp-fields {
     grid-template-columns: repeat(2, minmax(0, 1fr));

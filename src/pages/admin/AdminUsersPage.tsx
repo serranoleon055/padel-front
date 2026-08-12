@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { adminUsersApi } from '@/features/admin/adminUsersApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
 import { coincidePrefijoNombre } from '@/shared/lib/tournamentView'
-import type { AdminUserRequest, AdminUserResponse } from '@/shared/types/api'
+import type { AdminUserRequest, AdminUserResponse, RolUsuario } from '@/shared/types/api'
 import { AdminPageHeader } from '@/shared/ui/AdminPageHeader'
 import { AdminTable, type Column } from '@/shared/ui/AdminTable'
 import { Button } from '@/shared/ui/Button'
@@ -12,9 +12,15 @@ import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
 import { Input } from '@/shared/ui/Input'
 import { Modal } from '@/shared/ui/Modal'
 import { Pagination } from '@/shared/ui/Pagination'
+import { Select } from '@/shared/ui/Select'
 
 const TAMANO_PAGINA = 8
-const VACIO: AdminUserRequest = { username: '', password: '' }
+const VACIO: AdminUserRequest = { username: '', password: '', rol: 'DUENIO' }
+
+/** En la pantalla se habla de dueño y empleado; MOSTRADOR es el nombre interno del rol. */
+function nombreRol(rol: RolUsuario | null | undefined) {
+  return rol === 'MOSTRADOR' ? 'Empleado' : 'Dueño'
+}
 
 export default function AdminUsersPage() {
   const [elementos, setElementos] = useState<AdminUserResponse[]>([])
@@ -64,7 +70,7 @@ export default function AdminUsersPage() {
 
   function abrirEditar(usuario: AdminUserResponse) {
     setObjetivoEdicion(usuario)
-    setFormulario({ username: usuario.username, password: '' })
+    setFormulario({ username: usuario.username, password: '', rol: usuario.rol })
     setErrorFormulario(null)
     setModalAbierto(true)
   }
@@ -91,7 +97,7 @@ export default function AdminUsersPage() {
       return
     }
 
-    const datos: AdminUserRequest = { username: usuario }
+    const datos: AdminUserRequest = { username: usuario, rol: formulario.rol ?? 'DUENIO' }
     if (contrasena) datos.password = contrasena
 
     setGuardando(true)
@@ -137,11 +143,18 @@ export default function AdminUsersPage() {
         </div>
       ),
     },
+    {
+      key: 'rol',
+      label: 'Rol',
+      render: (usuario: AdminUserResponse) => (
+        <span className="text-sm font-bold text-rp-muted">{nombreRol(usuario.rol)}</span>
+      ),
+    },
   ] as Column<AdminUserResponse>[], [])
 
   return (
     <section>
-      <AdminPageHeader title="Usuarios admin" action={<Button size="sm" onClick={abrirCrear}><Plus size={16} />Nuevo admin</Button>} />
+      <AdminPageHeader title="Usuarios" action={<Button size="sm" onClick={abrirCrear}><Plus size={16} />Nuevo usuario</Button>} />
 
       <div className="rp-toolbar">
         <Input placeholder="Buscar por usuario..." value={busqueda} onChange={(event) => setBusqueda(event.target.value)} />
@@ -154,28 +167,41 @@ export default function AdminUsersPage() {
           getRowKey={(usuario) => usuario.id}
           isLoading={cargando}
           error={error}
-          emptyTitle="No hay usuarios admin"
+          emptyTitle="No hay usuarios"
           emptyDescription="Creá el primero con el botón de arriba."
           actions={(usuario) => (
             <>
-              <button onClick={() => abrirEditar(usuario)} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent"><Pencil size={15} /></button>
-              <button onClick={() => setObjetivoEliminar(usuario)} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger"><Trash2 size={15} /></button>
+              <button onClick={() => abrirEditar(usuario)} className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent"><Pencil size={15} /></button>
+              <button onClick={() => setObjetivoEliminar(usuario)} className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger"><Trash2 size={15} /></button>
             </>
           )}
         />
         <Pagination page={pagina} pageSize={TAMANO_PAGINA} total={filtrados.length} onPageChange={setPagina} />
       </div>
 
-      <Modal isOpen={modalAbierto} onClose={cerrarModal} onSubmit={manejarGuardar} title={objetivoEdicion ? 'Editar admin' : 'Nuevo admin'} size="sm">
+      <Modal isOpen={modalAbierto} onClose={cerrarModal} onSubmit={manejarGuardar} title={objetivoEdicion ? 'Editar usuario' : 'Nuevo usuario'} size="sm">
         <div className="flex flex-col gap-4">
           <Input label="Usuario" value={formulario.username} onChange={(event) => setFormulario((actual) => ({ ...actual, username: event.target.value }))} placeholder="admin" />
           <Input
-            label={objetivoEdicion ? 'Nueva contraseña (opcional)' : 'Contraseña'}
+            label={objetivoEdicion ? 'Nueva contraseña' : 'Contraseña'}
             type="password"
             value={formulario.password ?? ''}
             onChange={(event) => setFormulario((actual) => ({ ...actual, password: event.target.value }))}
             placeholder="Mínimo 6 caracteres"
           />
+          <Select
+            label="Rol"
+            value={formulario.rol ?? 'DUENIO'}
+            onChange={(event) => setFormulario((actual) => ({ ...actual, rol: event.target.value as RolUsuario }))}
+          >
+            <option value="DUENIO">Dueño</option>
+            <option value="MOSTRADOR">Empleado</option>
+          </Select>
+          <p className="text-xs leading-5 text-rp-muted">
+            El <b className="text-rp-text">dueño</b> entra a todo. El <b className="text-rp-text">empleado</b> atiende
+            turnos, cobra y vende, pero no ve la rentabilidad, no carga gastos, no cambia precios
+            y no puede reabrir una caja ya cerrada.
+          </p>
           {objetivoEdicion ? <p className="text-xs leading-5 text-rp-muted">Dejá la contraseña vacía si no querés cambiarla.</p> : null}
           {errorFormulario && <p className="rounded-md border border-rp-danger/40 bg-rp-danger/10 px-3 py-2 text-sm font-bold text-rp-danger">{errorFormulario}</p>}
           <div className="flex justify-end gap-2 pt-2">
@@ -189,7 +215,7 @@ export default function AdminUsersPage() {
         isOpen={Boolean(objetivoEliminar)}
         onClose={() => setObjetivoEliminar(null)}
         onConfirm={manejarEliminar}
-        title="Eliminar admin"
+        title="Eliminar usuario"
         description={`¿Eliminás el usuario "${objetivoEliminar?.username}"?`}
         isLoading={eliminando}
       />

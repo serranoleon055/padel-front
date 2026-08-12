@@ -1,42 +1,72 @@
-import { Banknote, BarChart3, CalendarClock, CalendarDays, CalendarSync, Contact, Layers, LayoutDashboard, LogOut, MapPin, Menu, Settings, ShieldCheck, Sigma, Tag, Trophy, UserCog, Users, X } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { Banknote, BarChart3, CalendarClock, CalendarDays, Contact, HelpCircle, Layers, LayoutDashboard, LogOut, MapPin, Menu, Package, Settings, ShieldCheck, Tag, Trophy, UserCog, Users, X } from 'lucide-react'
+import { useCallback, useMemo, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 
 import { useAuth } from '@/app/providers/AuthContext'
+import { authApi } from '@/features/auth/authApi'
 import { brand } from '@/config/brand'
-import { homeApi } from '@/features/home/homeApi'
 import { cn } from '@/shared/lib/utils'
-import type { TemporadaResponse } from '@/shared/types/api'
 
+/**
+ * Agrupado por lo que el club hace, no por entidad del sistema: el que atiende el
+ * mostrador vive en "Día a día" y no debería tener que pasar por encima de plantillas
+ * de torneo para llegar a la caja.
+ *
+ * <p>No hay una entrada "Vender" aparte: el Panel es la pantalla del día y la venta se
+ * dispara desde ahí. Eran dos pantallas que mostraban lo mismo.
+ */
 const NAV = [
-  { to: '/admin', label: 'Panel', icon: LayoutDashboard, end: true },
-  { to: '/admin/estadisticas', label: 'Estadísticas', icon: BarChart3, end: false },
-  { to: '/admin/jugadores', label: 'Jugadores', icon: Users, end: false },
-  { to: '/admin/categorias', label: 'Categorías', icon: Tag, end: false },
-  { to: '/admin/lugares', label: 'Lugares', icon: MapPin, end: false },
-  { to: '/admin/turnos', label: 'Turnos', icon: CalendarClock, end: false },
-  { to: '/admin/turnos-fijos', label: 'Turnos fijos', icon: CalendarSync, end: false },
-  { to: '/admin/clientes', label: 'Clientes', icon: Contact, end: false },
-  { to: '/admin/caja', label: 'Caja', icon: Banknote, end: false },
-  { to: '/admin/temporadas', label: 'Temporadas', icon: CalendarDays, end: false },
-  { to: '/admin/torneos', label: 'Torneos', icon: Trophy, end: false },
-  { to: '/admin/plantillas-formato', label: 'Plantillas formato', icon: Layers, end: false },
-  { to: '/admin/plantillas-puntos', label: 'Plantillas puntos', icon: Sigma, end: false },
-  { to: '/admin/usuarios-admin', label: 'Usuarios admin', icon: UserCog, end: false },
-  { to: '/admin/configuracion', label: 'Configuración sede', icon: Settings, end: false },
+  {
+    grupo: 'Día a día',
+    items: [
+      { to: '/admin', label: 'Panel', icon: LayoutDashboard, end: true },
+      { to: '/admin/turnos', label: 'Turnos', icon: CalendarClock, end: false },
+      { to: '/admin/clientes', label: 'Clientes', icon: Contact, end: false },
+      { to: '/admin/caja', label: 'Caja', icon: Banknote, end: false },
+      { to: '/admin/productos', label: 'Productos y stock', icon: Package, end: false, soloDuenio: true },
+    ],
+  },
+  {
+    grupo: 'Negocio',
+    items: [
+      { to: '/admin/estadisticas', label: 'Estadísticas', icon: BarChart3, end: false, soloDuenio: true },
+    ],
+  },
+  {
+    grupo: 'Torneos',
+    items: [
+      { to: '/admin/torneos', label: 'Torneos', icon: Trophy, end: false },
+      { to: '/admin/jugadores', label: 'Jugadores', icon: Users, end: false },
+      { to: '/admin/categorias', label: 'Categorías', icon: Tag, end: false },
+      { to: '/admin/temporadas', label: 'Temporadas', icon: CalendarDays, end: false },
+      { to: '/admin/plantillas', label: 'Plantillas', icon: Layers, end: false },
+    ],
+  },
+  {
+    grupo: 'Sistema',
+    items: [
+      { to: '/admin/lugares', label: 'Sedes y canchas', icon: MapPin, end: false, soloDuenio: true },
+      { to: '/admin/usuarios', label: 'Usuarios', icon: UserCog, end: false, soloDuenio: true },
+      { to: '/admin/configuracion', label: 'Configuración', icon: Settings, end: false, soloDuenio: true },
+      { to: '/admin/como-funciona', label: 'Cómo funciona', icon: HelpCircle, end: false },
+    ],
+  },
 ]
 
 export function AdminLayout() {
   const { logout } = useAuth()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
-  const [activeSeason, setActiveSeason] = useState<TemporadaResponse | null>(null)
 
-  useEffect(() => {
-    homeApi.getAdminDashboard()
-      .then((data) => setActiveSeason(data.temporadaActiva ?? null))
-      .catch(() => {})
-  }, [])
+  // Esconder lo que el mostrador no puede abrir es comodidad, no seguridad: quien
+  // decide qué se puede hacer es el backend. Acá solo se evita ofrecer un 403.
+  const esDuenio = authApi.esDuenio()
+  const menu = useMemo(() => NAV
+    .map((seccion) => ({
+      ...seccion,
+      items: seccion.items.filter((item) => esDuenio || !item.soloDuenio),
+    }))
+    .filter((seccion) => seccion.items.length > 0), [esDuenio])
 
   const handleLogout = useCallback(() => {
     logout()
@@ -58,35 +88,38 @@ export function AdminLayout() {
           </span>
         </div>
 
-        <nav className="flex-1 overflow-y-auto px-3 py-4">
-          <ul className="flex flex-col gap-1">
-            {NAV.map((item) => (
-              <li key={item.to}>
-                <NavLink
-                  to={item.to}
-                  end={item.end}
-                  onClick={() => setOpen(false)}
-                  className={({ isActive }) => cn(
-                    'admin-sidebar-enlace flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-semibold transition',
-                    isActive && 'activo',
-                  )}
-                >
-                  <item.icon size={17} />
-                  {item.label}
-                </NavLink>
-              </li>
-            ))}
-          </ul>
+        <nav className="flex-1 overflow-y-auto px-3 py-2">
+          {menu.map((seccion) => (
+            <div key={seccion.grupo} className="mb-1 last:mb-0">
+              <p className="admin-sidebar-grupo px-3 pb-0.5 pt-2 text-[10px] font-black uppercase tracking-[0.16em]">
+                {seccion.grupo}
+              </p>
+              <ul className="flex flex-col">
+                {seccion.items.map((item) => (
+                  <li key={item.to}>
+                    <NavLink
+                      to={item.to}
+                      end={item.end}
+                      onClick={() => setOpen(false)}
+                      // En el celular el menú es un drawer que se toca con el dedo: los
+                      // 32 px de alto que alcanzaban con el mouse quedaban por debajo del
+                      // área táctil mínima. En escritorio vuelve a la altura compacta.
+                      className={({ isActive }) => cn(
+                        'admin-sidebar-enlace flex min-h-11 items-center gap-3 rounded-md px-3 py-2 text-sm font-semibold transition lg:min-h-0 lg:py-1.5',
+                        isActive && 'activo',
+                      )}
+                    >
+                      <item.icon size={16} />
+                      {item.label}
+                    </NavLink>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </nav>
 
-        {activeSeason && (
-          <div className="admin-sidebar-temporada mx-3 mb-2 rounded-md border px-3 py-2">
-            <p className="admin-sidebar-temporada-titulo text-[10px] font-black uppercase tracking-[0.12em]">Temporada activa</p>
-            <p className="admin-sidebar-temporada-valor mt-0.5 text-xs font-bold">{activeSeason.nombre}</p>
-          </div>
-        )}
-
-        <div className="admin-sidebar-separador border-t px-3 py-4">
+        <div className="admin-sidebar-separador border-t px-3 py-3">
           <button onClick={handleLogout} className="admin-sidebar-salir flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm font-semibold transition">
             <LogOut size={17} />
             Cerrar sesión
@@ -98,10 +131,10 @@ export function AdminLayout() {
         <header className="admin-topbar flex h-14 items-center justify-between border-b px-4 lg:hidden">
           <span className="admin-topbar-titulo text-sm font-black">Panel Admin</span>
           <div className="flex items-center gap-2">
-            <button onClick={handleLogout} className="admin-topbar-boton admin-topbar-boton-salir flex size-9 items-center justify-center rounded-md" aria-label="Cerrar sesión">
+            <button onClick={handleLogout} className="admin-topbar-boton admin-topbar-boton-salir flex size-11 items-center justify-center rounded-md" aria-label="Cerrar sesión">
               <LogOut size={18} />
             </button>
-            <button onClick={() => setOpen(!open)} className="admin-topbar-boton flex size-9 items-center justify-center rounded-md" aria-label="Abrir menú">
+            <button onClick={() => setOpen(!open)} className="admin-topbar-boton flex size-11 items-center justify-center rounded-md" aria-label="Abrir menú">
               {open ? <X size={20} /> : <Menu size={20} />}
             </button>
           </div>

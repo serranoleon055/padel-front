@@ -1,4 +1,4 @@
-import { Pencil, Plus, Trash2 } from 'lucide-react'
+import { Pencil, Plus, Trash2, Upload } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { categoriesApi } from '@/features/catalog/catalogApi'
@@ -9,6 +9,7 @@ import { formatearFecha, formatearEnum } from '@/shared/lib/formatters'
 import { nombreCompletoEmpiezaCon } from '@/shared/lib/tournamentView'
 import { ordenarCategorias } from '@/shared/lib/categorias'
 import type { CategoriaResponse, Genero, JugadorRequest, JugadorResponse, PosicionJuego } from '@/shared/types/api'
+import { ImportarCsvModal } from '@/pages/admin/ImportarCsvModal'
 import { AdminPageHeader } from '@/shared/ui/AdminPageHeader'
 import { AdminTable, type Column } from '@/shared/ui/AdminTable'
 import { Button } from '@/shared/ui/Button'
@@ -41,6 +42,7 @@ export default function PlayersPage() {
   const [eliminarLoteAbierto, setEliminarLoteAbierto] = useState(false)
   const [eliminandoLote, setEliminandoLote] = useState(false)
   const [busqueda, setBusqueda] = useState('')
+  const [importarAbierto, setImportarAbierto] = useState(false)
   const [filtroGenero, setFiltroGenero] = useState<Genero>('MASCULINO')
   const [filtroCategoria, setFiltroCategoria] = useState('')
   const [pagina, setPagina] = useState(1)
@@ -218,7 +220,22 @@ export default function PlayersPage() {
 
   return (
     <section>
-      <AdminPageHeader title="Jugadores" action={<Button size="sm" onClick={abrirCrear}><Plus size={16} />Nuevo jugador</Button>} />
+      <AdminPageHeader
+        title="Jugadores"
+        action={(
+          <div className="flex gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setImportarAbierto(true)}><Upload size={16} />Importar</Button>
+            <Button size="sm" onClick={abrirCrear}><Plus size={16} />Nuevo jugador</Button>
+          </div>
+        )}
+      />
+
+      <ImportarCsvModal
+        tipo="jugadores"
+        abierto={importarAbierto}
+        onClose={() => setImportarAbierto(false)}
+        onImportado={cargar}
+      />
 
       <div className="rp-toolbar">
         <Input placeholder="Buscar por nombre..." value={busqueda} onChange={(event) => setBusqueda(event.target.value)} />
@@ -251,8 +268,8 @@ export default function PlayersPage() {
           onSelectAll={seleccionarTodo}
           actions={(jugador) => (
             <>
-              <button onClick={() => abrirEditar(jugador)} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent"><Pencil size={15} /></button>
-              <button onClick={() => setObjetivoEliminar(jugador)} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger"><Trash2 size={15} /></button>
+              <button onClick={() => abrirEditar(jugador)} className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent"><Pencil size={15} /></button>
+              <button onClick={() => setObjetivoEliminar(jugador)} className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger"><Trash2 size={15} /></button>
             </>
           )}
         />
@@ -271,13 +288,13 @@ export default function PlayersPage() {
             <Select label="Categoría" value={formulario.categoriaId?.toString() ?? ''} onChange={(event) => setFormulario((actual) => ({ ...actual, categoriaId: event.target.value ? Number(event.target.value) : null }))} placeholder="Sin categoría">
               {opcionesCategoriaFormulario.map((categoria) => <option key={categoria.id} value={categoria.id}>{categoria.nombre}</option>)}
             </Select>
-            <Select label="Posición (opcional)" value={formulario.posicionJuego ?? ''} onChange={(event) => setFormulario((actual) => ({ ...actual, posicionJuego: event.target.value ? (event.target.value as PosicionJuego) : null }))} placeholder="Sin definir">
+            <Select label="Posición" value={formulario.posicionJuego ?? ''} onChange={(event) => setFormulario((actual) => ({ ...actual, posicionJuego: event.target.value ? (event.target.value as PosicionJuego) : null }))} placeholder="Sin definir">
               <option value="DRIVE">Drive</option>
               <option value="REVES">Revés</option>
             </Select>
-            <Input label="Fecha de nacimiento (opcional)" type="date" value={formulario.fechaNacimiento ?? ''} onChange={(event) => setFormulario((actual) => ({ ...actual, fechaNacimiento: event.target.value }))} />
+            <Input label="Fecha de nacimiento" type="date" value={formulario.fechaNacimiento ?? ''} onChange={(event) => setFormulario((actual) => ({ ...actual, fechaNacimiento: event.target.value }))} />
             <Input
-              label="URL de foto (opcional)"
+              label="URL de foto"
               type="url"
               value={formulario.fotoUrl?.startsWith('/uploads/') ? '' : formulario.fotoUrl ?? ''}
               onChange={(event) => setFormulario((actual) => ({ ...actual, fotoUrl: event.target.value || null }))}

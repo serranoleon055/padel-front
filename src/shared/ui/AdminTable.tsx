@@ -26,7 +26,10 @@ type AdminTableProps<T> = {
 
 function AdminTableInner<T extends { id: number }>({ columns, rows, getRowKey, isLoading = false, error = null, emptyTitle = 'No hay registros', emptyDescription, actions, selectedIds, onToggleSelect, onSelectAll }: AdminTableProps<T>) {
     const showCheckbox = selectedIds !== undefined && onToggleSelect !== undefined
-    const colTemplate = `${showCheckbox ? '40px ' : ''}${columns.map(() => '1fr').join(' ')}${actions ? ' 100px' : ''}`
+    // La columna de acciones se adapta a los botones que haya. Con un ancho fijo, la
+    // tercera acción se iba a una segunda línea y la fila quedaba desalineada contra
+    // las de al lado.
+    const colTemplate = `${showCheckbox ? '40px ' : ''}${columns.map(() => 'minmax(0, 1fr)').join(' ')}${actions ? ' minmax(96px, max-content)' : ''}`
 
     return (
         <div className="overflow-hidden rounded-lg border border-rp-border bg-rp-surface/82">
@@ -59,7 +62,7 @@ function AdminTableInner<T extends { id: number }>({ columns, rows, getRowKey, i
                                 <div className="min-w-0 text-right md:text-left">{col.render(item)}</div>
                             </div>
                         ))}
-                        {actions ? <div className="flex flex-wrap justify-end gap-1 border-t border-rp-border pt-2.5 md:border-0 md:pt-0">{actions(item)}</div> : null}
+                        {actions ? <div className="flex flex-wrap justify-end gap-1 border-t border-rp-border pt-2.5 md:flex-nowrap md:border-0 md:pt-0">{actions(item)}</div> : null}
                     </div>
                     ))
                 )}

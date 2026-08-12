@@ -18,8 +18,13 @@ const variants = {
   danger: 'bg-rp-danger text-white hover:opacity-90',
 }
 
+/*
+  En el celular los dos tamaños llegan a 44 px de alto: son los botones que el mostrador
+  aprieta con el cliente enfrente (Cobrar, Confirmar, Consumo) y 36 px se erran. De `lg`
+  para arriba el `sm` vuelve a ser compacto, así el escritorio no cambia de densidad.
+*/
 const sizes = {
-  sm: 'h-9 px-3 text-sm',
+  sm: 'h-11 px-3 text-sm lg:h-9',
   md: 'h-11 px-4 text-sm',
 }
 

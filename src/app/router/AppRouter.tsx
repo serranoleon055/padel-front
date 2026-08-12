@@ -33,13 +33,13 @@ const TournamentsAdminPage = lazy(() => import('@/pages/admin/TournamentsAdminPa
 const TournamentFormPage = lazy(() => import('@/pages/admin/TournamentFormPage'))
 const TournamentAdminDetailPage = lazy(() => import('@/pages/admin/TournamentAdminDetailPage'))
 const AdminUsersPage = lazy(() => import('@/pages/admin/AdminUsersPage'))
-const FormatTemplatesPage = lazy(() => import('@/pages/admin/FormatTemplatesPage'))
-const PointTemplatesPage = lazy(() => import('@/pages/admin/PointTemplatesPage'))
+const PlantillasPage = lazy(() => import('@/pages/admin/PlantillasPage'))
+const ComoFuncionaPage = lazy(() => import('@/pages/admin/ComoFuncionaPage'))
 const ReservarPage = lazy(() => import('@/pages/public/ReservarPage'))
-const TurnosAdminPage = lazy(() => import('@/pages/admin/TurnosAdminPage'))
-const TurnosFijosPage = lazy(() => import('@/pages/admin/TurnosFijosPage'))
+const TurnosPage = lazy(() => import('@/pages/admin/TurnosPage'))
 const ClientesPage = lazy(() => import('@/pages/admin/ClientesPage'))
 const CajaPage = lazy(() => import('@/pages/admin/CajaPage'))
+const ProductosPage = lazy(() => import('@/pages/admin/ProductosPage'))
 const InscribirmePage = lazy(() => import('@/pages/public/InscribirmePage'))
 const PagoResultadoPage = lazy(() => import('@/pages/public/PagoResultadoPage'))
 const InscripcionesAdminPage = lazy(() => import('@/pages/admin/InscripcionesAdminPage'))
@@ -93,20 +93,20 @@ export function AppRouter() {
           <Route path="jugadores" element={<PlayersPage />} />
           <Route path="categorias" element={<CategoriesPage />} />
           <Route path="lugares" element={<PlacesPage />} />
-          <Route path="turnos" element={<TurnosAdminPage />} />
-          <Route path="turnos-fijos" element={<TurnosFijosPage />} />
+          <Route path="turnos" element={<TurnosPage />} />
           <Route path="clientes" element={<ClientesPage />} />
           <Route path="caja" element={<CajaPage />} />
+          <Route path="productos" element={<ProductosPage />} />
           <Route path="temporadas" element={<SeasonsPage />} />
           <Route path="torneos" element={<TournamentsAdminPage />} />
           <Route path="torneos/nuevo" element={<TournamentFormPage />} />
           <Route path="torneos/:torneoId/editar" element={<TournamentFormPage />} />
           <Route path="torneos/:torneoId" element={<TournamentAdminDetailPage />} />
           <Route path="torneos/:torneoId/inscripciones" element={<InscripcionesAdminPage />} />
-          <Route path="plantillas-formato" element={<FormatTemplatesPage />} />
-          <Route path="plantillas-puntos" element={<PointTemplatesPage />} />
-          <Route path="usuarios-admin" element={<AdminUsersPage />} />
+          <Route path="plantillas" element={<PlantillasPage />} />
+          <Route path="usuarios" element={<AdminUsersPage />} />
           <Route path="configuracion" element={<ConfiguracionSedePage />} />
+          <Route path="como-funciona" element={<ComoFuncionaPage />} />
         </Route>
 
       </Routes>

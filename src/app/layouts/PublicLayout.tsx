@@ -2,6 +2,7 @@ import { ChevronDown } from 'lucide-react'
 import { memo, useCallback, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { Footer } from '@/shared/ui/Footer'
+import { FranjaSponsors } from '@/shared/ui/FranjaSponsors'
 import { brand } from '@/config/brand'
 
 const navPrincipal = [
@@ -118,6 +119,12 @@ export function PublicLayout() {
 
       <main className="flex-1 pt-[62px]">
         <Outlet />
+        {/* Va en el layout y no en cada página: el club le vende el espacio al sponsor y
+            lo que vende es "todo el sitio", no una pantalla suelta. Si no hay sponsors
+            cargados, no dibuja nada. */}
+        <div className="mx-auto w-full max-w-6xl px-4 pb-8">
+          <FranjaSponsors />
+        </div>
       </main>
       <Footer />
     </div>

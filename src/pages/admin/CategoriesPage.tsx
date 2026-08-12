@@ -143,8 +143,8 @@ export default function CategoriesPage() {
                 <AdminTable columns={columnas} rows={paginados} getRowKey={(categoria) => categoria.id} isLoading={cargando} error={error} emptyTitle="No hay categorías"
                     selectedIds={idsSeleccionados} onToggleSelect={alternarSeleccion} onSelectAll={seleccionarTodo}
                 actions={(categoria) => (<>
-                    <button onClick={() => abrirEditar(categoria)} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent"><Pencil size={15} /></button>
-                    <button onClick={() => setObjetivoEliminar(categoria)} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger"><Trash2 size={15} /></button>
+                    <button onClick={() => abrirEditar(categoria)} className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent"><Pencil size={15} /></button>
+                    <button onClick={() => setObjetivoEliminar(categoria)} className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger"><Trash2 size={15} /></button>
                 </>)}
                 />
                 <Pagination page={pagina} pageSize={TAMANO_PAGINA} total={filtrados.length} onPageChange={setPagina} />

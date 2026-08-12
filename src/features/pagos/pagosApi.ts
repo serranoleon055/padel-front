@@ -18,7 +18,9 @@ export interface PagoResponse {
 export interface PagoReservaRequest {
   canchaId: number
   fecha: string
-  horarios: string[]
+  horaInicio: string
+  /** Minutos del turno. Sin esto, el club usa su duración más corta. */
+  duracionMin?: number
   clienteNombre: string
   clienteTelefono: string
 }

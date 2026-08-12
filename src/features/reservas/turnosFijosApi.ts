@@ -4,7 +4,7 @@ export interface TurnoFijoRequest {
   canchaId: number
   diaSemana: number
   horaInicio: string
-  slots: number
+  duracionMin: number
   clienteNombre: string
   clienteTelefono: string
   precioPactado: number | null
@@ -22,7 +22,7 @@ export interface TurnoFijoResponse {
   diaSemana: number
   horaInicio: string
   horaFin: string
-  slots: number
+  duracionMin: number
   clienteNombre: string
   clienteTelefono: string
   precioPactado: number | null

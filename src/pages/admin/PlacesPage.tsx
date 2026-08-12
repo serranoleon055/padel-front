@@ -134,9 +134,9 @@ export default function PlacesPage() {
                 <AdminTable columns={columnas} rows={paginados} getRowKey={(lugar) => lugar.id} isLoading={cargando} error={error} emptyTitle="No hay lugares"
                     selectedIds={idsSeleccionados} onToggleSelect={alternarSeleccion} onSelectAll={seleccionarTodo}
                 actions={(lugar) => (<>
-                    <button onClick={() => setLugarCanchas(lugar)} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent" aria-label="Canchas"><LayoutGrid size={15} /></button>
-                    <button onClick={() => abrirEditar(lugar)} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent"><Pencil size={15} /></button>
-                    <button onClick={() => setObjetivoEliminar(lugar)} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger"><Trash2 size={15} /></button>
+                    <button onClick={() => setLugarCanchas(lugar)} className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent" aria-label="Canchas"><LayoutGrid size={15} /></button>
+                    <button onClick={() => abrirEditar(lugar)} className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent"><Pencil size={15} /></button>
+                    <button onClick={() => setObjetivoEliminar(lugar)} className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger"><Trash2 size={15} /></button>
                 </>)}
                 />
                 <Pagination page={pagina} pageSize={TAMANO_PAGINA} total={filtrados.length} onPageChange={setPagina} />

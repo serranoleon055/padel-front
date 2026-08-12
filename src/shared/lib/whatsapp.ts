@@ -31,3 +31,38 @@ export function enlaceWhatsApp(telefono: string | null | undefined, mensaje?: st
   const texto = mensaje ? `?text=${encodeURIComponent(mensaje)}` : ''
   return `https://wa.me/${numero}${texto}`
 }
+
+const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado']
+
+/**
+ * Recordatorio del turno. Es la palanca directa contra el no-show: cada ausente es una
+ * hora de cancha que el club no vendió y ya no puede revender.
+ *
+ * <p>El texto pide que avisen si no vienen, que es lo que permite liberar el horario a
+ * tiempo. Si quedó saldo, lo dice: llegar sabiendo cuánto se debe evita la discusión en
+ * el mostrador.
+ */
+export function mensajeRecordatorioTurno(datos: {
+  club: string
+  clienteNombre: string | null
+  canchaNombre: string | null
+  /** Fecha del turno en ISO (yyyy-mm-dd). */
+  fecha: string
+  horaInicio: string
+  saldoPendiente?: number
+}): string {
+  const dia = new Date(`${datos.fecha}T12:00:00`)
+  const cuando = `${DIAS[dia.getDay()]} ${dia.getDate()}/${dia.getMonth() + 1}`
+  const hora = datos.horaInicio.slice(0, 5)
+  const nombre = datos.clienteNombre?.trim().split(' ')[0]
+
+  const partes = [
+    `${nombre ? `Hola ${nombre}!` : 'Hola!'} Te recordamos tu turno en ${datos.club}.`,
+    `${cuando} a las ${hora}${datos.canchaNombre ? ` · ${datos.canchaNombre}` : ''}.`,
+  ]
+  if (datos.saldoPendiente && datos.saldoPendiente > 0) {
+    partes.push(`Queda un saldo de $${datos.saldoPendiente.toLocaleString('es-AR')} para abonar en el club.`)
+  }
+  partes.push('Si no podés venir, avisanos así liberamos la cancha. ¡Gracias!')
+  return partes.join('\n')
+}

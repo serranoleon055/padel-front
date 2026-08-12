@@ -39,7 +39,8 @@ export const Modal = memo(function Modal({ children, isOpen, onClose, title, siz
             <div className={cn('relative flex max-h-[92svh] w-full flex-col rounded-t-2xl border border-rp-border bg-rp-surface shadow-2xl sm:max-h-[calc(100svh-2rem)] sm:rounded-xl', sizeClass[size])}>
                 <div className="flex items-center justify-between border-b border-rp-border px-4 py-3.5 sm:px-5 sm:py-4">
                 <h2 id="modal-title" className="text-base font-black text-rp-text">{title}</h2>
-                <button onClick={onClose} className="flex size-8 shrink-0 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-text" aria-label="Cerrar">
+                {/* En el celular se cierra con el dedo: 32 px quedaban por debajo del área táctil. */}
+                <button onClick={onClose} className="flex size-11 shrink-0 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-text lg:size-8" aria-label="Cerrar">
                     <X size={18} />
                 </button>
                 </div>

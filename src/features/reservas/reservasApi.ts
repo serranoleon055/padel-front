@@ -1,23 +1,41 @@
 import { apiClient } from '@/shared/api/apiClient'
 
+export interface OpcionDuracion {
+  minutos: number
+  horaFin: string
+  precio: number | null
+}
+
 export interface SlotDisponibilidad {
   horaInicio: string
   horaFin: string
   disponible: boolean
+  opciones: OpcionDuracion[]
+}
+
+/** Una cancha con lugar a cierta hora. */
+export interface CanchaLibre {
+  canchaId: number
+  canchaNombre: string
+  tipo: string | null
+  opciones: OpcionDuracion[]
+}
+
+/** La agenda del día vista por horario, no por cancha. */
+export interface FranjaSede {
+  horaInicio: string
+  canchasDisponibles: number
+  precioDesde: number | null
+  enPromocion: boolean
+  canchas: CanchaLibre[]
 }
 
 export interface SolicitudReservaRequest {
   canchaId: number
   fecha: string
   horaInicio: string
-  clienteNombre: string
-  clienteTelefono: string
-}
-
-export interface SolicitudLoteReservaRequest {
-  canchaId: number
-  fecha: string
-  horarios: string[]
+  /** Minutos del turno. Sin esto, el club usa su duración más corta. */
+  duracionMin?: number
   clienteNombre: string
   clienteTelefono: string
 }
@@ -29,6 +47,7 @@ export interface ReservaResponse {
   fecha: string
   horaInicio: string
   horaFin: string
+  duracionMin: number
   estado: string
   clienteNombre: string
   clienteTelefono: string
@@ -43,6 +62,15 @@ export interface ReservaResponse {
   seniaPagada?: number | null
   totalCobrado?: number | null
   saldoPendiente?: number | null
+  /** Consumo del kiosco anotado en el turno y todavía impago. */
+  consumoACuenta?: number | null
+  /** Cancha + consumo: lo que vale el turno entero. */
+  totalTurno?: number | null
+  /**
+   * Momento real de arranque, con la jornada resuelta. Solo lo mandan los listados que lo
+   * necesitan: pegar `fecha` con `horaInicio` da mal en los turnos de la madrugada.
+   */
+  inicioReal?: string | null
 }
 
 export interface HorarioCanchaRequest {
@@ -50,7 +78,8 @@ export interface HorarioCanchaRequest {
   horaApertura: string
   horaCierre: string
   diasActivos?: string
-  duracionSlotMin?: number
+  /** Duraciones que vende el club, ej. "60,90,120". */
+  duracionesOfrecidas?: string
   anticipacionDias?: number
 }
 
@@ -60,7 +89,7 @@ export interface HorarioCanchaResponse {
   horaApertura: string
   horaCierre: string
   diasActivos: string | null
-  duracionSlotMin: number
+  duracionesOfrecidas: string
   anticipacionDias: number
   activo: boolean
 }
@@ -78,8 +107,21 @@ export const reservasApi = {
     return data
   },
 
-  async solicitarLote(payload: SolicitudLoteReservaRequest) {
-    const { data } = await apiClient.post<ReservaResponse[]>('/api/reservas/lote', payload)
+  async disponibilidadSede(lugarId: number, fecha: string) {
+    const { data } = await apiClient.get<{ franjas: FranjaSede[] }>('/api/reservas/disponibilidad-sede', {
+      params: { lugarId, fecha },
+    })
+    return data.franjas
+  },
+
+  /**
+   * Turnos vivos del día en todas las canchas: lo que mira el mostrador. Sin fecha
+   * devuelve la jornada que el club está atendiendo, que a la 1 AM es la de ayer.
+   */
+  async delDia(fecha?: string) {
+    const { data } = await apiClient.get<ReservaResponse[]>('/api/reservas/del-dia', {
+      params: fecha ? { fecha } : undefined,
+    })
     return data
   },
 

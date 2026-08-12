@@ -1,15 +1,19 @@
 import { apiClient } from '@/shared/api/apiClient'
 
-export interface TarifaCanchaRequest {
+export interface PromocionCanchaRequest {
   canchaId: number
   nombre: string
   diasSemana: string
   horaDesde: string
   horaHasta: string
   precioPorHora: number
+  /** Null = arranca ya. */
+  vigenteDesde: string | null
+  /** Null = sigue hasta que la den de baja. */
+  vigenteHasta: string | null
 }
 
-export interface TarifaCanchaResponse {
+export interface PromocionCanchaResponse {
   id: number
   canchaId: number
   canchaNombre: string
@@ -18,6 +22,10 @@ export interface TarifaCanchaResponse {
   horaDesde: string
   horaHasta: string
   precioPorHora: number
+  vigenteDesde: string | null
+  vigenteHasta: string | null
+  /** La promoción está corriendo hoy. */
+  vigente: boolean
   activo: boolean
 }
 
@@ -38,20 +46,20 @@ export function describirDias(diasSemana: string): string {
   return `${nombres.slice(0, -1).join(', ')} y ${nombres[nombres.length - 1]}`
 }
 
-export const tarifasApi = {
+export const promocionesApi = {
   async getAll(canchaId: number) {
-    const { data } = await apiClient.get<TarifaCanchaResponse[]>('/api/tarifas-cancha', { params: { canchaId } })
+    const { data } = await apiClient.get<PromocionCanchaResponse[]>('/api/promociones-cancha', { params: { canchaId } })
     return data
   },
-  async create(body: TarifaCanchaRequest) {
-    const { data } = await apiClient.post<TarifaCanchaResponse>('/api/tarifas-cancha', body)
+  async create(body: PromocionCanchaRequest) {
+    const { data } = await apiClient.post<PromocionCanchaResponse>('/api/promociones-cancha', body)
     return data
   },
-  async update(id: number, body: TarifaCanchaRequest) {
-    const { data } = await apiClient.put<TarifaCanchaResponse>(`/api/tarifas-cancha/${id}`, body)
+  async update(id: number, body: PromocionCanchaRequest) {
+    const { data } = await apiClient.put<PromocionCanchaResponse>(`/api/promociones-cancha/${id}`, body)
     return data
   },
   async remove(id: number) {
-    await apiClient.delete(`/api/tarifas-cancha/${id}`)
+    await apiClient.delete(`/api/promociones-cancha/${id}`)
   },
 }

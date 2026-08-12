@@ -40,16 +40,23 @@ export type LoginRequest = {
 
 export type LoginResponse = {
   token: string
+  /** DUENIO o MOSTRADOR. Solo para saber qué mostrar; los permisos los aplica el backend. */
+  rol: 'DUENIO' | 'MOSTRADOR' | null
+  usuario: string | null
 }
+
+export type RolUsuario = 'DUENIO' | 'MOSTRADOR'
 
 export type AdminUserResponse = {
   id: number
   username: string
+  rol: RolUsuario
 }
 
 export type AdminUserRequest = {
   username: string
   password?: string
+  rol?: RolUsuario
 }
 
 export type CategoriaResponse = {
@@ -456,6 +463,17 @@ export type SolicitudPendienteResumen = {
   jugador1: string | null
   jugador2: string | null
   telefonoContacto: string | null
+  /**
+   * Datos para resolver duplicados. Si alguien se cargó como nuevo pero ya existe un
+   * jugador con ese nombre, hay que elegir cuál es antes de aprobar, o se crea un
+   * jugador repetido. El panel no resuelve el duplicado: manda al torneo, que sí sabe.
+   */
+  jugador1EsNuevo?: boolean
+  jugador2EsNuevo?: boolean
+  jugador1Candidatos?: { id: number; nombre: string; apellido: string }[]
+  jugador2Candidatos?: { id: number; nombre: string; apellido: string }[]
+  pagada?: boolean
+  montoSenia?: number | null
 }
 
 export type HorarioSede = { dias: string; horas: string }
@@ -505,7 +523,14 @@ export type CanchaEstadoDashboard = {
   ocupadaAhora: boolean
 }
 
+export type DisponibilidadDuracion = {
+  minutos: number
+  turnos: number
+}
+
 export type AdminDashboardResponse = {
+  /** Jornada que el club está atendiendo. A la 1 AM no es la fecha de hoy. */
+  fechaJornada: string
   summary: HomeSummaryResponse
   temporadaActiva: TemporadaResponse | null
   ultimosTorneos: TorneoResponse[]
@@ -514,6 +539,8 @@ export type AdminDashboardResponse = {
   canchasOcupadasAhora: number
   canchasLibresAhora: number
   turnosDisponiblesHoy: number
+  /** El mismo hueco contado con cada duración que vende el club: no se suman entre sí. */
+  disponiblesPorDuracion: DisponibilidadDuracion[]
   canchas: CanchaEstadoDashboard[]
   reservasHoy: number
   reservasPendientes: number
@@ -529,14 +556,58 @@ export type AdminDashboardResponse = {
 
 export type EstadisticasResponse = {
   heatmap: { diaSemana: number; hora: number; cantidad: number }[]
+  /** Hora en que arranca la jornada: el gráfico de horas se dibuja desde acá. */
+  horaApertura: number
   canchasMasUsadas: { canchaNombre: string; reservas: number }[]
-  ingresosPorMes: { mes: string; turnos: number; inscripciones: number; egresos: number; resultado: number }[]
+  ingresosPorMes: { mes: string; turnos: number; inscripciones: number; ventas: number; egresos: number; resultado: number }[]
   reservasTotales: number
   reservasCanceladas: number
   tasaCancelacion: number
   reservasNoShow: number
   tasaNoShow: number
-  embudoTorneos: { torneoId: number; torneoNombre: string; inscriptos: number; cupo: number | null; ingresos: number }[]
+  mesActual: {
+    mes: string
+    facturado: number
+    facturadoMesAnterior: number
+    /** Variación contra el mes anterior. Null si el anterior fue cero. */
+    variacion: number | null
+    resultado: number
+    turnosJugados: number
+    ticketPromedio: number
+    ocupacion: number
+    ingresoPorHoraAbierta: number
+    deudaAcumulada: number
+  }
+  ocupacionPorCancha: {
+    canchaNombre: string
+    horasVendidas: number
+    horasDisponibles: number
+    ocupacion: number
+    facturado: number
+  }[]
+  rendimientoProductos: {
+    productoId: number
+    nombre: string
+    unidades: number
+    facturado: number
+    ganancia: number
+    margen: number | null
+  }[]
+  mejoresClientes: { clienteId: number; nombre: string; turnos: number; gastado: number }[]
+  kiosco: {
+    facturado: number
+    ganancia: number
+    capitalEnStock: number
+    productosBajoMinimo: number
+  }
+  embudoTorneos: {
+    torneoId: number
+    torneoNombre: string
+    inscriptos: number
+    cupo: number | null
+    ingresos: number
+    categorias: { categoriaId: number; categoriaNombre: string; inscriptos: number; cupo: number | null }[]
+  }[]
   categoriasDemandadas: { categoriaNombre: string; inscriptos: number }[]
 }
 

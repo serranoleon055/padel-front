@@ -208,15 +208,24 @@ export default function TournamentDetailPage() {
               <ItemInfo icon={Trophy} label="Premios" value={formatearMoneda(torneo.premioAcumulado)} />
             ) : null}
             <ItemInfo icon={Trophy} label="Partidos" value={String(detalle.partidos.length)} />
-            {torneo.cupoMaximoParejas ? (
-              <ItemInfo icon={Trophy} label="Cupo" value={`${detalle.parejas.length}/${torneo.cupoMaximoParejas} parejas`} />
-            ) : null}
+            <ItemInfo icon={Trophy} label="Parejas anotadas" value={`${detalle.parejas.length}`} />
           </dl>
 
+          {/* El cupo es por categoría: mostrarlo contra el total de parejas del torneo
+              daba números imposibles del tipo "36/12". */}
           <div className="td-categories">
-            {torneo.categorias.map((categoria) => (
-              <NavLink key={categoria.id} to={`/ranking?categoria=${categoria.id}`}>{categoria.nombre}</NavLink>
-            ))}
+            {torneo.categorias.map((categoria) => {
+              const anotadas = detalle.parejas.filter((pareja) => pareja.categoriaId === categoria.id).length
+              const cupo = torneo.cuposPorCategoria?.[categoria.id] ?? null
+              return (
+                <NavLink key={categoria.id} to={`/ranking?categoria=${categoria.id}`}>
+                  {categoria.nombre}
+                  <span className="td-categories-cupo">
+                    {cupo && cupo > 0 ? `${anotadas}/${cupo}` : `${anotadas}`}
+                  </span>
+                </NavLink>
+              )
+            })}
           </div>
         </div> : null}
 

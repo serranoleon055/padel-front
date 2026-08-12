@@ -19,6 +19,28 @@ export interface ClienteResponse {
 export interface ClienteFicha {
   cliente: ClienteResponse
   historial: ReservaResponse[]
+  /** Otros nombres con los que reservó este mismo teléfono. */
+  otrosNombres: string[]
+  /** Cancha más consumo que este cliente debe hoy. */
+  deuda: number
+  /** Lo que dejó en el kiosco en el último año. */
+  consumoKiosco: number
+  ultimasCompras: {
+    id: number
+    fecha: string
+    total: number
+    medio: string | null
+    detalle: string
+  }[]
+  abonos: {
+    id: number
+    canchaNombre: string
+    diaSemana: number
+    horaInicio: string
+    horaFin: string
+    activo: boolean
+    vigenteHasta: string | null
+  }[]
 }
 
 export interface ClienteRequest {

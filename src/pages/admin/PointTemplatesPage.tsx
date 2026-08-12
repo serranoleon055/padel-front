@@ -208,8 +208,8 @@ export default function PointTemplatesPage() {
       <div className="mt-4">
         <AdminTable columns={columnas} rows={paginados} getRowKey={(plantilla) => plantilla.id} isLoading={cargando} error={error} emptyTitle="No hay plantillas de puntos"
           actions={(plantilla) => (<>
-            <button onClick={() => abrirEditar(plantilla)} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent"><Pencil size={15} /></button>
-            <button onClick={() => setObjetivoEliminar(plantilla)} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger"><Trash2 size={15} /></button>
+            <button onClick={() => abrirEditar(plantilla)} className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent"><Pencil size={15} /></button>
+            <button onClick={() => setObjetivoEliminar(plantilla)} className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger"><Trash2 size={15} /></button>
           </>)}
         />
         <Pagination page={pagina} pageSize={TAMANO_PAGINA} total={filtrados.length} onPageChange={setPagina} />

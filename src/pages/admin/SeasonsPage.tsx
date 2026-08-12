@@ -151,8 +151,8 @@ export default function SeasonsPage() {
                 <AdminTable columns={columnas} rows={paginados} getRowKey={(temporada) => temporada.id} isLoading={cargando} error={error} emptyTitle="No hay temporadas"
                     selectedIds={idsSeleccionados} onToggleSelect={alternarSeleccion} onSelectAll={seleccionarTodo}
                 actions={(temporada) => (<>
-                    <button onClick={() => abrirEditar(temporada)} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent"><Pencil size={15} /></button>
-                    <button onClick={() => setObjetivoEliminar(temporada)} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger"><Trash2 size={15} /></button>
+                    <button onClick={() => abrirEditar(temporada)} className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent"><Pencil size={15} /></button>
+                    <button onClick={() => setObjetivoEliminar(temporada)} className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger"><Trash2 size={15} /></button>
                 </>)}
                 />
                 <Pagination page={pagina} pageSize={TAMANO_PAGINA} total={filtrados.length} onPageChange={setPagina} />
@@ -161,7 +161,7 @@ export default function SeasonsPage() {
                 <div className="flex flex-col gap-4">
                 <Input label="Nombre" value={formulario.nombre} onChange={(e) => setFormulario((f) => ({ ...f, nombre: e.target.value }))} placeholder="Temporada 2026" />
                 <Input label="Fecha de inicio" type="date" value={formulario.fechaInicio} onChange={(e) => setFormulario((f) => ({ ...f, fechaInicio: e.target.value }))} />
-                <Input label="Fecha de fin (opcional)" type="date" value={formulario.fechaFin ?? ''} onChange={(e) => setFormulario((f) => ({ ...f, fechaFin: e.target.value || null }))} />
+                <Input label="Fecha de fin" type="date" value={formulario.fechaFin ?? ''} onChange={(e) => setFormulario((f) => ({ ...f, fechaFin: e.target.value || null }))} />
                 <label className="flex cursor-pointer items-center gap-2 text-sm font-bold text-rp-muted">
                     <input type="checkbox" checked={formulario.activa ?? false} onChange={(e) => setFormulario((f) => ({ ...f, activa: e.target.checked }))} className="size-4 accent-rp-accent" />
                     Temporada activa

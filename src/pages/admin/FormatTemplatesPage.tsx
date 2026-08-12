@@ -190,8 +190,8 @@ export default function FormatTemplatesPage() {
       <div className="mt-4">
         <AdminTable columns={columnas} rows={paginados} getRowKey={(plantilla) => plantilla.id} isLoading={cargando} error={error} emptyTitle="No hay plantillas de formato"
           actions={(plantilla) => (<>
-            <button onClick={() => abrirEditar(plantilla)} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent"><Pencil size={15} /></button>
-            <button onClick={() => setObjetivoEliminar(plantilla)} className="flex size-8 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger"><Trash2 size={15} /></button>
+            <button onClick={() => abrirEditar(plantilla)} className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent"><Pencil size={15} /></button>
+            <button onClick={() => setObjetivoEliminar(plantilla)} className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger"><Trash2 size={15} /></button>
           </>)}
         />
         <Pagination page={pagina} pageSize={TAMANO_PAGINA} total={filtrados.length} onPageChange={setPagina} />
@@ -200,7 +200,7 @@ export default function FormatTemplatesPage() {
       <Modal isOpen={modalAbierto} onClose={cerrarModal} onSubmit={manejarGuardar} title={objetivoEdicion ? 'Editar plantilla' : 'Nueva plantilla'} size="lg">
         <div className="grid gap-4">
           <Input label="Nombre" value={formulario.nombre} onChange={(e) => setFormulario((f) => ({ ...f, nombre: e.target.value }))} placeholder="12 parejas - 4 grupos" />
-          <Input label="Descripción" value={formulario.descripcion ?? ''} onChange={(e) => setFormulario((f) => ({ ...f, descripcion: e.target.value }))} placeholder="Fase de grupos y eliminación posterior" />
+          <Input label="Descripción" value={formulario.descripcion ?? ''} onChange={(e) => setFormulario((f) => ({ ...f, descripcion: e.target.value }))} placeholder="Grupos y eliminación" />
 
           <div className="grid gap-4 sm:grid-cols-2">
             <Select label="Formato" value={formulario.formatoTorneo} onChange={(e) => setFormulario((f) => ({ ...presetFormato(e.target.value as FormatoTorneo), nombre: f.nombre, descripcion: f.descripcion, tipoSorteo: f.tipoSorteo, activo: f.activo }))}>

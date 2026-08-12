@@ -4,7 +4,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { clientesApi, type ClienteFicha, type ClienteResponse } from '@/features/clientes/clientesApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
 import { formatearEnum, formatearFecha, formatearMoneda } from '@/shared/lib/formatters'
-import { enlaceWhatsApp } from '@/shared/lib/whatsapp'
+import { TelefonoWhatsApp } from '@/shared/ui/TelefonoWhatsApp'
+import { Upload } from 'lucide-react'
+
+import { ImportarCsvModal } from '@/pages/admin/ImportarCsvModal'
 import { AdminPageHeader } from '@/shared/ui/AdminPageHeader'
 import { AdminTable, type Column } from '@/shared/ui/AdminTable'
 import { Button } from '@/shared/ui/Button'
@@ -15,6 +18,7 @@ import { StatusBadge } from '@/shared/ui/StatusBadge'
 import { useToast } from '@/shared/ui/Toast'
 
 const TAMANO_PAGINA = 20
+const DIAS_SEMANA = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 
 function toneReserva(estado: string | null): 'neutral' | 'success' | 'warning' | 'danger' {
   if (estado === 'CONFIRMADA' || estado === 'FINALIZADA') return 'success'
@@ -39,6 +43,7 @@ export default function ClientesPage() {
   const [formulario, setFormulario] = useState({ nombre: '', telefono: '', email: '', notas: '' })
   const [guardando, setGuardando] = useState(false)
   const [errorFormulario, setErrorFormulario] = useState<string | null>(null)
+  const [importarAbierto, setImportarAbierto] = useState(false)
 
   // La búsqueda pega al servidor: la lista de clientes crece sin techo y no se puede
   // traer entera para filtrar en el navegador.
@@ -57,7 +62,16 @@ export default function ClientesPage() {
 
   function abrirFicha(cliente: ClienteResponse) {
     setCargandoFicha(true)
-    setFicha({ cliente, historial: [] })
+    // Se muestra lo que ya se sabe del listado y el resto entra cuando responde la API.
+    setFicha({
+      cliente,
+      historial: [],
+      otrosNombres: [],
+      deuda: 0,
+      consumoKiosco: 0,
+      ultimasCompras: [],
+      abonos: [],
+    })
     clientesApi.ficha(cliente.id)
       .then(setFicha)
       .catch((e: unknown) => setError(obtenerMensajeErrorApi(e)))
@@ -104,22 +118,17 @@ export default function ClientesPage() {
     {
       key: 'cliente',
       label: 'Cliente',
-      render: (cliente: ClienteResponse) => {
-        const enlace = enlaceWhatsApp(cliente.telefono, `Hola ${cliente.nombre}!`)
-        return (
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-rp-text">{cliente.nombre}</span>
-              {cliente.esJugador && (
-                <span title="También es jugador de torneos" className="text-rp-accent"><Trophy size={13} /></span>
-              )}
-            </div>
-            {enlace
-              ? <a href={enlace} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="text-xs text-rp-muted underline-offset-2 hover:text-rp-accent hover:underline">{cliente.telefono}</a>
-              : <p className="text-xs text-rp-muted">{cliente.telefono}</p>}
+      render: (cliente: ClienteResponse) => (
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-bold text-rp-text">{cliente.nombre}</span>
+            {cliente.esJugador && (
+              <span title="También es jugador de torneos" className="text-rp-accent"><Trophy size={13} /></span>
+            )}
           </div>
-        )
-      },
+          <TelefonoWhatsApp telefono={cliente.telefono} mensaje={`Hola ${cliente.nombre}!`} />
+        </div>
+      ),
     },
     {
       key: 'turnos',
@@ -152,7 +161,19 @@ export default function ClientesPage() {
 
   return (
     <section>
-      <AdminPageHeader title={<><Contact size={26} />Clientes</>} />
+      <AdminPageHeader
+        title={<><Contact size={26} />Clientes</>}
+        action={<Button variant="ghost" size="sm" onClick={() => setImportarAbierto(true)}><Upload size={16} />Importar</Button>}
+      />
+
+      <ImportarCsvModal
+        tipo="clientes"
+        abierto={importarAbierto}
+        onClose={() => setImportarAbierto(false)}
+        onImportado={() => clientesApi.listar(busquedaAplicada, pagina - 1, TAMANO_PAGINA)
+          .then((datos) => { setClientes(datos.content); setTotal(datos.totalElements) })
+          .catch((e: unknown) => setError(obtenerMensajeErrorApi(e)))}
+      />
 
       <p className="mt-3 max-w-2xl text-sm text-rp-muted">
         La ficha se arma sola con cada turno: el teléfono identifica a la persona aunque lo
@@ -217,6 +238,77 @@ export default function ClientesPage() {
               {ficha.cliente.notas && <p className="mt-1 italic">{ficha.cliente.notas}</p>}
             </div>
 
+            {ficha.otrosNombres?.length > 0 && (
+              <div className="rounded-md border border-rp-border bg-rp-surface-2 px-3 py-2">
+                <p className="text-xs font-bold uppercase tracking-wide text-rp-muted">
+                  Este teléfono también reservó como
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {ficha.otrosNombres.map((nombre) => (
+                    <button
+                      key={nombre}
+                      type="button"
+                      onClick={() => { abrirEdicion({ ...ficha.cliente, nombre }) }}
+                      title="Usar este nombre en la ficha"
+                      className="rounded-full border border-rp-border px-2.5 py-1 text-xs font-bold text-rp-text hover:border-rp-accent hover:text-rp-accent"
+                    >
+                      {nombre}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-2 text-xs text-rp-muted">
+                  Tocá un nombre para dejarlo como el principal de la ficha.
+                </p>
+              </div>
+            )}
+
+            {ficha.deuda > 0 && (
+              <div className="rounded-md border border-rp-danger/40 bg-rp-danger/10 px-3 py-2 text-sm">
+                <b className="text-rp-danger">Debe {formatearMoneda(ficha.deuda)}</b>
+                <span className="text-rp-muted"> entre canchas y consumo sin cobrar.</span>
+              </div>
+            )}
+
+            {ficha.abonos?.length > 0 && (
+              <div>
+                <p className="mb-2 text-xs font-bold uppercase tracking-wide text-rp-muted">Abonos</p>
+                <div className="flex flex-wrap gap-2">
+                  {ficha.abonos.map((abono) => (
+                    <span
+                      key={abono.id}
+                      className={abono.activo
+                        ? 'rounded-md border border-rp-accent/40 bg-rp-accent/10 px-2.5 py-1.5 text-xs font-bold text-rp-text'
+                        : 'rounded-md border border-rp-border px-2.5 py-1.5 text-xs text-rp-muted line-through'}
+                    >
+                      {DIAS_SEMANA[abono.diaSemana - 1]} {abono.horaInicio.slice(0, 5)}-{abono.horaFin.slice(0, 5)}
+                      <span className="ml-1.5 font-semibold text-rp-muted">{abono.canchaNombre}</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {ficha.ultimasCompras?.length > 0 && (
+              <div>
+                <p className="mb-2 text-xs font-bold uppercase tracking-wide text-rp-muted">
+                  Consumo del kiosco
+                  <span className="ml-2 font-black text-rp-accent">{formatearMoneda(ficha.consumoKiosco)}</span>
+                  <span className="ml-1 font-semibold normal-case text-rp-muted">en el último año</span>
+                </p>
+                <div className="max-h-40 overflow-y-auto">
+                  {ficha.ultimasCompras.map((compra) => (
+                    <div key={compra.id} className="flex items-center justify-between gap-2 border-b border-rp-border py-1.5 last:border-0">
+                      <span className="min-w-0 truncate text-sm text-rp-text">
+                        {compra.detalle}
+                        <span className="ml-1.5 text-xs text-rp-muted">{formatearFecha(compra.fecha.slice(0, 10))}</span>
+                      </span>
+                      <span className="shrink-0 text-sm font-bold text-rp-text">{formatearMoneda(compra.total)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div>
               <p className="mb-2 text-xs font-bold uppercase tracking-wide text-rp-muted">Historial</p>
               {cargandoFicha && <p className="text-sm text-rp-muted">Cargando...</p>}
@@ -249,8 +341,8 @@ export default function ClientesPage() {
         <div className="flex flex-col gap-4">
           <Input label="Nombre" value={formulario.nombre} onChange={(e) => setFormulario((f) => ({ ...f, nombre: e.target.value }))} />
           <Input label="Teléfono" value={formulario.telefono} onChange={(e) => setFormulario((f) => ({ ...f, telefono: e.target.value }))} />
-          <Input label="Email (opcional)" value={formulario.email} onChange={(e) => setFormulario((f) => ({ ...f, email: e.target.value }))} />
-          <Input label="Notas internas (opcional)" value={formulario.notas} onChange={(e) => setFormulario((f) => ({ ...f, notas: e.target.value }))} placeholder="Paga siempre en efectivo, juega con..." />
+          <Input label="Email" value={formulario.email} onChange={(e) => setFormulario((f) => ({ ...f, email: e.target.value }))} />
+          <Input label="Notas internas" value={formulario.notas} onChange={(e) => setFormulario((f) => ({ ...f, notas: e.target.value }))} placeholder="Paga en efectivo" />
           {errorFormulario && <p className="rounded-md border border-rp-danger/40 bg-rp-danger/10 px-3 py-2 text-sm font-bold text-rp-danger">{errorFormulario}</p>}
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="ghost" size="sm" onClick={() => setEditando(false)} disabled={guardando}>Cancelar</Button>
