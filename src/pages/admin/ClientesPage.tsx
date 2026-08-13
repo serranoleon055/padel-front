@@ -147,7 +147,11 @@ export default function ClientesPage() {
     },
     {
       key: 'gasto',
-      label: 'Gasto acumulado',
+      // Suma TODO lo confirmado o jugado, sin límite de fecha — incluye turnos futuros
+      // ya confirmados. Es distinto del "Lo que más dejan" de Estadísticas, que solo
+      // mira hasta hoy y los últimos 6 meses. Los dos números están bien; miden cosas
+      // distintas a propósito.
+      label: 'Gasto acumulado (histórico)',
       render: (cliente: ClienteResponse) => <span className="text-sm text-rp-muted">{formatearMoneda(cliente.gastoAcumulado)}</span>,
     },
     {
@@ -222,7 +226,12 @@ export default function ClientesPage() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-wide text-rp-muted">Gasto acumulado</p>
+                  <p
+                    className="text-xs font-bold uppercase tracking-wide text-rp-muted"
+                    title="Suma todo lo confirmado o jugado, sin límite de fecha (incluye turnos futuros ya confirmados)."
+                  >
+                    Gasto acumulado (histórico)
+                  </p>
                   <p className="text-lg font-black text-rp-text">{formatearMoneda(ficha.cliente.gastoAcumulado)}</p>
                 </div>
                 <div>

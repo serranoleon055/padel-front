@@ -453,6 +453,11 @@ export default function EstadisticasPage() {
           </Panel>
 
           <Panel titulo="Los que más gastan" icono={Users}>
+            {/* Solo hasta hoy y los últimos 6 meses — no incluye turnos futuros ya
+                confirmados. Es distinto del "Gasto acumulado" de la ficha del cliente,
+                que es histórico completo y sí los incluye. Los dos miden cosas
+                distintas a propósito. */}
+            <p className="mb-2 text-[11px] text-rp-muted">Turnos jugados o confirmados hasta hoy, últimos 6 meses.</p>
             {datos.mejoresClientes.length === 0 ? (
               <p className="py-4 text-center text-sm text-rp-muted">Sin turnos jugados en el período.</p>
             ) : (
