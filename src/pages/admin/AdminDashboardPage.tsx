@@ -435,7 +435,7 @@ export default function AdminDashboardPage() {
         />
         <Tarjeta
           icono={Package}
-          titulo="Por reponer"
+          titulo="Stock bajo mínimo"
           valor={String(bajoMinimo.length)}
           detalle={bajoMinimo.length > 0 ? bajoMinimo.slice(0, 2).map((p) => p.nombre).join(', ') : 'Todo con stock'}
           tono={bajoMinimo.length > 0 ? 'alerta' : 'normal'}
@@ -695,7 +695,7 @@ export default function AdminDashboardPage() {
         )}
       </Modal>
 
-      <Modal isOpen={detalle === 'reponer'} onClose={() => setDetalle(null)} title="Productos por reponer" size="md">
+      <Modal isOpen={detalle === 'reponer'} onClose={() => setDetalle(null)} title="Productos bajo el stock mínimo" size="md">
         {bajoMinimo.length === 0 ? (
           <p className="py-6 text-center text-sm text-rp-muted">Todos los productos están por encima de su mínimo.</p>
         ) : (

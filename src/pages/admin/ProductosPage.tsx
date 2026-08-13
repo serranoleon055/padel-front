@@ -247,7 +247,13 @@ export default function ProductosPage() {
       render: (producto: ProductoResponse) => (
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-sm font-bold text-rp-text">{producto.nombre}</span>
+            <button
+              type="button"
+              onClick={() => abrirHistorial(producto)}
+              className="text-left text-sm font-bold text-rp-text underline decoration-rp-border underline-offset-2 transition hover:text-rp-accent"
+            >
+              {producto.nombre}
+            </button>
             {!producto.activo && (
               <span className="rounded-full bg-rp-surface-2 px-2 py-0.5 text-[10px] font-bold text-rp-muted">De baja</span>
             )}
@@ -260,33 +266,57 @@ export default function ProductosPage() {
       ),
     },
     {
-      key: 'precio',
-      label: 'Precio',
+      key: 'costo',
+      label: 'Costo',
       render: (producto: ProductoResponse) => (
-        <div>
-          <p className="text-sm font-bold text-rp-text">{formatearMoneda(producto.precioVenta)}</p>
-          <p className="text-xs text-rp-muted">
-            {producto.margenUnitario != null
-              ? `Gana ${formatearMoneda(producto.margenUnitario)}`
-              : 'Sin costo cargado'}
-          </p>
-        </div>
+        <span className="text-sm text-rp-text">
+          {producto.costo != null ? formatearMoneda(producto.costo) : '—'}
+        </span>
       ),
+    },
+    {
+      key: 'precio',
+      label: 'Precio venta',
+      render: (producto: ProductoResponse) => (
+        <span className="text-sm font-bold text-rp-text">{formatearMoneda(producto.precioVenta)}</span>
+      ),
+    },
+    {
+      // Ganancia en columna propia y no como texto debajo del precio: es el número por el
+      // que el dueño ordena la lista para decidir qué conviene tener.
+      key: 'ganancia',
+      label: 'Ganancia',
+      render: (producto: ProductoResponse) => {
+        if (producto.margenUnitario == null) {
+          return <span className="text-xs text-rp-muted">Sin costo</span>
+        }
+        const porcentaje = producto.precioVenta > 0
+          ? (producto.margenUnitario / producto.precioVenta) * 100
+          : null
+        return (
+          <div>
+            <p className="text-sm font-bold text-rp-accent">{formatearMoneda(producto.margenUnitario)}</p>
+            {porcentaje != null && (
+              <p className="text-xs text-rp-muted">{porcentaje.toFixed(1).replace('.', ',')} %</p>
+            )}
+          </div>
+        )
+      },
     },
     {
       key: 'stock',
       label: 'Stock',
       render: (producto: ProductoResponse) => {
         if (!producto.controlaStock) {
-          return <span className="text-xs text-rp-muted">Sin control</span>
+          return <span className="text-xs text-rp-muted">No controla</span>
         }
         return (
           <div>
             <p className={`text-sm font-bold ${producto.necesitaReposicion ? 'text-rp-danger' : 'text-rp-text'}`}>
-              {producto.stock} {producto.stock === 1 ? 'unidad' : 'unidades'}
+              {producto.stock}
             </p>
             {producto.stockMinimo > 0 && (
-              <p className="text-xs text-rp-muted">Reponer con {producto.stockMinimo} o menos</p>
+              <p className="text-xs text-rp-muted">Mínimo {producto.stockMinimo}</p>
             )}
           </div>
         )
@@ -397,7 +427,7 @@ export default function ProductosPage() {
         <div className="mt-4 flex items-start gap-2 rounded-md border border-rp-danger/40 bg-rp-danger/10 px-3 py-2">
           <AlertTriangle size={16} className="mt-0.5 shrink-0 text-rp-danger" />
           <p className="text-sm text-rp-text">
-            <b className="text-rp-danger">Hay que reponer:</b>{' '}
+            <b className="text-rp-danger">Stock bajo mínimo:</b>{' '}
             {aReponer.map((p) => `${p.nombre} (${p.stock})`).join(', ')}
           </p>
         </div>
@@ -531,9 +561,9 @@ export default function ProductosPage() {
           {formProducto.controlaStock && (
             <div className="grid grid-cols-2 gap-3">
               {!editando && (
-                <Input label="Unidades que hay" value={formProducto.stockInicial} onChange={(e) => setFormProducto((f) => ({ ...f, stockInicial: e.target.value }))} placeholder="10" />
+                <Input label="Stock inicial" value={formProducto.stockInicial} onChange={(e) => setFormProducto((f) => ({ ...f, stockInicial: e.target.value }))} placeholder="10" />
               )}
-              <Input label="Avisar al llegar a" value={formProducto.stockMinimo} onChange={(e) => setFormProducto((f) => ({ ...f, stockMinimo: e.target.value }))} placeholder="3" />
+              <Input label="Stock mínimo" value={formProducto.stockMinimo} onChange={(e) => setFormProducto((f) => ({ ...f, stockMinimo: e.target.value }))} placeholder="3" />
             </div>
           )}
 
@@ -606,7 +636,33 @@ export default function ProductosPage() {
         )}
       </Modal>
 
-      <Modal isOpen={Boolean(productoHistorial)} onClose={() => setProductoHistorial(null)} title={`Movimientos · ${productoHistorial?.nombre ?? ''}`} size="md">
+      <Modal isOpen={Boolean(productoHistorial)} onClose={() => setProductoHistorial(null)} title={productoHistorial?.nombre ?? 'Producto'} size="md">
+        {productoHistorial && (
+          <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <DatoFicha titulo="Costo" valor={productoHistorial.costo != null ? formatearMoneda(productoHistorial.costo) : '—'} />
+            <DatoFicha titulo="Precio venta" valor={formatearMoneda(productoHistorial.precioVenta)} />
+            <DatoFicha
+              titulo="Ganancia"
+              valor={productoHistorial.margenUnitario != null ? formatearMoneda(productoHistorial.margenUnitario) : '—'}
+              destacado
+            />
+            <DatoFicha
+              titulo="Stock"
+              valor={productoHistorial.controlaStock ? String(productoHistorial.stock) : 'No controla'}
+              alerta={productoHistorial.necesitaReposicion}
+            />
+            {productoHistorial.controlaStock && productoHistorial.costo != null && (
+              <DatoFicha
+                titulo="Capital inmovilizado"
+                valor={formatearMoneda(productoHistorial.costo * productoHistorial.stock)}
+              />
+            )}
+            {productoHistorial.proveedorNombre && (
+              <DatoFicha titulo="Proveedor" valor={productoHistorial.proveedorNombre} />
+            )}
+          </div>
+        )}
+        <p className="mb-2 text-xs font-black uppercase tracking-[0.14em] text-rp-muted">Movimientos de stock</p>
         {historial == null ? (
           <p className="text-sm text-rp-muted">Cargando...</p>
         ) : historial.length === 0 ? (
@@ -660,5 +716,22 @@ export default function ProductosPage() {
         description={`"${proveedorADarDeBaja?.nombre ?? ''}" deja de aparecer al cargar compras, pero las compras ya hechas no se tocan.`}
       />
     </section>
+  )
+}
+
+/** Un número de la ficha del producto: rótulo arriba, valor grande abajo. */
+function DatoFicha({ titulo, valor, destacado = false, alerta = false }: {
+  titulo: string
+  valor: string
+  destacado?: boolean
+  alerta?: boolean
+}) {
+  return (
+    <div className="rounded-md border border-rp-border bg-rp-bg/55 px-3 py-2">
+      <p className="text-[10px] font-black uppercase tracking-[0.12em] text-rp-muted">{titulo}</p>
+      <p className={`mt-0.5 text-sm font-black ${alerta ? 'text-rp-danger' : destacado ? 'text-rp-accent' : 'text-rp-text'}`}>
+        {valor}
+      </p>
+    </div>
   )
 }

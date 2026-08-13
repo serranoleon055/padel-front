@@ -151,7 +151,7 @@ export function VentaRapidaModal({ abierto, onClose, onVendido, turno = null }: 
 
         <div className="rounded-md border border-rp-border bg-rp-surface-2 p-3">
           <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-rp-muted">
-            <ShoppingCart size={14} />Lo que se lleva
+            <ShoppingCart size={14} />Detalle
           </p>
           {Object.keys(carrito).length === 0 ? (
             <p className="text-sm text-rp-muted">Todavía no agregaste nada.</p>

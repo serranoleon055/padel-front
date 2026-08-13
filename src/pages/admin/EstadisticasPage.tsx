@@ -1,14 +1,38 @@
-import { BarChart3, CalendarClock, CalendarDays, Package, Percent, TrendingUp, Trophy, Users } from 'lucide-react'
+import { BarChart3, CalendarClock, CalendarDays, Download, Package, Percent, TrendingUp, Trophy, Users } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
 import { placesApi } from '@/features/catalog/catalogApi'
 import { estadisticasApi } from '@/features/estadisticas/estadisticasApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
-import { formatearMoneda } from '@/shared/lib/formatters'
+import { descargarCsv, numeroCsv } from '@/shared/lib/csv'
+import { fechaISO, formatearMoneda } from '@/shared/lib/formatters'
 import { horasDeLaJornada } from '@/shared/lib/jornada'
 import type { EstadisticasResponse, LugarResponse } from '@/shared/types/api'
+import { Button } from '@/shared/ui/Button'
 import { SegmentedToggle } from '@/shared/ui/SegmentedToggle'
 import { StatusMessage } from '@/shared/ui/StatusMessage'
+
+/**
+ * El estado de resultados en una planilla: una fila por concepto y una columna por mes,
+ * igual que en pantalla. Es lo que el dueño le pasa al contador.
+ */
+function exportarEstadoResultados(datos: EstadisticasResponse) {
+  const meses = datos.ingresosPorMes
+  const fila = (titulo: string, valores: number[]) => [titulo, ...valores.map(numeroCsv)]
+  descargarCsv(`estado-de-resultados-${fechaISO()}`, [
+    ['Concepto', ...meses.map((m) => m.mes)],
+    fila('Turnos', meses.map((m) => m.turnos)),
+    fila('Inscripciones', meses.map((m) => m.inscripciones)),
+    fila('Mostrador', meses.map((m) => m.ventas)),
+    fila('Ingresos', meses.map((m) => m.ingresos)),
+    fila('Costo de lo vendido', meses.map((m) => -m.costoMercaderia)),
+    fila('Ganancia bruta', meses.map((m) => m.gananciaBruta)),
+    fila('Gastos operativos', meses.map((m) => -m.gastosOperativos)),
+    fila('Resultado', meses.map((m) => m.resultado)),
+    [],
+    fila('Compras de mercadería (inventario, no gasto)', meses.map((m) => m.comprasMercaderia)),
+  ])
+}
 
 const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 const CLAVE_SECCION = 'rp-estadisticas-seccion'
@@ -109,7 +133,7 @@ export default function EstadisticasPage() {
   const maxCategoria = useMemo(() => Math.max(1, ...(datos?.categoriasDemandadas.map((c) => c.inscriptos) ?? [1])), [datos])
   const maxIngreso = useMemo(
     // Los gastos entran en la escala: si no, una barra de egresos alta se saldría del panel.
-    () => Math.max(1, ...(datos?.ingresosPorMes.flatMap((m) => [m.turnos, m.inscripciones, m.ventas, m.egresos]) ?? [1])),
+    () => Math.max(1, ...(datos?.ingresosPorMes.flatMap((m) => [m.turnos, m.inscripciones, m.ventas, m.gastosOperativos]) ?? [1])),
     [datos],
   )
 
@@ -139,8 +163,13 @@ export default function EstadisticasPage() {
         ))}
       </div>
 
-      <div className="mt-3">
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
         <SegmentedToggle valor={seccion} onChange={(valor) => setSeccion(valor as Seccion)} opciones={SECCIONES} />
+        {datos && seccion === 'dinero' && (
+          <Button variant="subtle" size="sm" onClick={() => exportarEstadoResultados(datos)}>
+            <Download size={15} />Exportar a Excel
+          </Button>
+        )}
       </div>
 
       {cargando && !datos ? (
@@ -202,7 +231,7 @@ export default function EstadisticasPage() {
                     <div className="w-1/4 rounded-t bg-rp-accent/70" style={{ height: `${Math.max(2, (mes.turnos / maxIngreso) * 130)}px` }} title={`Turnos ${formatearMoneda(mes.turnos)}`} />
                     <div className="w-1/4 rounded-t bg-rp-amber/70" style={{ height: `${Math.max(2, (mes.inscripciones / maxIngreso) * 130)}px` }} title={`Inscripciones ${formatearMoneda(mes.inscripciones)}`} />
                     <div className="w-1/4 rounded-t bg-rp-accent/35" style={{ height: `${Math.max(2, (mes.ventas / maxIngreso) * 130)}px` }} title={`Mostrador ${formatearMoneda(mes.ventas)}`} />
-                    <div className="w-1/4 rounded-t bg-rp-danger/60" style={{ height: `${Math.max(2, (mes.egresos / maxIngreso) * 130)}px` }} title={`Gastos ${formatearMoneda(mes.egresos)}`} />
+                    <div className="w-1/4 rounded-t bg-rp-danger/60" style={{ height: `${Math.max(2, (mes.gastosOperativos / maxIngreso) * 130)}px` }} title={`Gastos operativos ${formatearMoneda(mes.gastosOperativos)}`} />
                   </div>
                   <span className="text-[10px] font-bold uppercase text-rp-muted">{etiquetaMes(mes.mes)}</span>
                 </div>
@@ -212,7 +241,7 @@ export default function EstadisticasPage() {
               <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded-sm bg-rp-accent/70" />Turnos</span>
               <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded-sm bg-rp-amber/70" />Inscripciones</span>
               <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded-sm bg-rp-accent/35" />Mostrador</span>
-              <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded-sm bg-rp-danger/60" />Gastos</span>
+              <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded-sm bg-rp-danger/60" />Gastos operativos</span>
             </div>
 
             <div className="mt-4 border-t border-rp-border pt-3">
@@ -227,6 +256,45 @@ export default function EstadisticasPage() {
                 ))}
               </div>
             </div>
+          </Panel>
+
+          {/* El estado de resultados, línea por línea. Es la pantalla que contesta "¿cuánto
+              me quedó?" sin que el dueño tenga que armar la cuenta de cabeza. */}
+          <Panel titulo="Estado de resultados" icono={TrendingUp}>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[520px] text-sm">
+                <thead>
+                  <tr className="border-b border-rp-border text-left text-[10px] font-black uppercase tracking-[0.12em] text-rp-muted">
+                    <th className="pb-2">Concepto</th>
+                    {datos.ingresosPorMes.map((mes) => (
+                      <th key={mes.mes} className="pb-2 text-right">{etiquetaMes(mes.mes)}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  <FilaResultado titulo="Turnos" valores={datos.ingresosPorMes.map((m) => m.turnos)} />
+                  <FilaResultado titulo="Inscripciones" valores={datos.ingresosPorMes.map((m) => m.inscripciones)} />
+                  <FilaResultado titulo="Mostrador" valores={datos.ingresosPorMes.map((m) => m.ventas)} />
+                  <FilaResultado titulo="Ingresos" valores={datos.ingresosPorMes.map((m) => m.ingresos)} destacada />
+                  <FilaResultado titulo="Costo de lo vendido" valores={datos.ingresosPorMes.map((m) => -m.costoMercaderia)} />
+                  <FilaResultado titulo="Ganancia bruta" valores={datos.ingresosPorMes.map((m) => m.gananciaBruta)} destacada />
+                  <FilaResultado titulo="Gastos operativos" valores={datos.ingresosPorMes.map((m) => -m.gastosOperativos)} />
+                  <FilaResultado titulo="Resultado" valores={datos.ingresosPorMes.map((m) => m.resultado)} destacada resaltarNegativo />
+                </tbody>
+              </table>
+            </div>
+            <p className="mt-3 text-xs text-rp-muted">
+              El <b className="text-rp-text">costo de lo vendido</b> es lo que costó la mercadería que
+              efectivamente se vendió. La mercadería comprada y todavía no vendida no es un gasto:
+              es capital en stock.
+              {datos.ingresosPorMes.some((m) => m.comprasMercaderia > 0) && (
+                <> Este semestre se compró mercadería por{' '}
+                  <b className="text-rp-text">
+                    {formatearMoneda(datos.ingresosPorMes.reduce((suma, m) => suma + m.comprasMercaderia, 0))}
+                  </b>.
+                </>
+              )}
+            </p>
           </Panel>
           </>}
 
@@ -354,8 +422,8 @@ export default function EstadisticasPage() {
             <div className="grid grid-cols-2 gap-3">
               <Mini titulo="Facturado" valor={formatearMoneda(datos.kiosco.facturado)} />
               <Mini titulo="Ganancia" valor={formatearMoneda(datos.kiosco.ganancia)} destacado />
-              <Mini titulo="Plata parada en stock" valor={formatearMoneda(datos.kiosco.capitalEnStock)} />
-              <Mini titulo="Por reponer" valor={String(datos.kiosco.productosBajoMinimo)} alerta={datos.kiosco.productosBajoMinimo > 0} />
+              <Mini titulo="Capital en stock" valor={formatearMoneda(datos.kiosco.capitalEnStock)} />
+              <Mini titulo="Bajo mínimo" valor={String(datos.kiosco.productosBajoMinimo)} alerta={datos.kiosco.productosBajoMinimo > 0} />
             </div>
             {datos.rendimientoProductos.length === 0 ? (
               <p className="mt-4 text-sm text-rp-muted">Todavía no se vendió nada en el mostrador.</p>
@@ -495,6 +563,35 @@ function Indicador({ titulo, valor, pie, tono = 'neutro' }: {
       <p className="mt-1 text-2xl font-black text-rp-text">{valor}</p>
       <p className={`mt-0.5 text-xs font-bold ${colorPie}`}>{pie}</p>
     </div>
+  )
+}
+
+/**
+ * Una línea del estado de resultados. Los importes que restan se pasan en negativo y se
+ * muestran entre paréntesis, que es como se leen los egresos en cualquier balance.
+ */
+function FilaResultado({ titulo, valores, destacada = false, resaltarNegativo = false }: {
+  titulo: string
+  valores: number[]
+  destacada?: boolean
+  resaltarNegativo?: boolean
+}) {
+  return (
+    <tr className={destacada ? 'border-t border-rp-border' : ''}>
+      <td className={`py-1.5 pr-3 ${destacada ? 'text-sm font-black text-rp-text' : 'text-xs text-rp-muted'}`}>
+        {titulo}
+      </td>
+      {valores.map((valor, i) => (
+        <td
+          key={i}
+          className={`py-1.5 text-right tabular-nums ${destacada ? 'text-sm font-black' : 'text-xs'} ${
+            resaltarNegativo && valor < 0 ? 'text-rp-danger' : destacada ? 'text-rp-text' : 'text-rp-muted'
+          }`}
+        >
+          {valor < 0 ? `(${formatearMoneda(Math.abs(valor))})` : formatearMoneda(valor)}
+        </td>
+      ))}
+    </tr>
   )
 }
 

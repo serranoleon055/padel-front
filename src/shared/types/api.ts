@@ -559,7 +559,24 @@ export type EstadisticasResponse = {
   /** Hora en que arranca la jornada: el gráfico de horas se dibuja desde acá. */
   horaApertura: number
   canchasMasUsadas: { canchaNombre: string; reservas: number }[]
-  ingresosPorMes: { mes: string; turnos: number; inscripciones: number; ventas: number; egresos: number; resultado: number }[]
+  /**
+   * Estado de resultados del mes, con criterio devengado:
+   * `ingresos − costoMercaderia = gananciaBruta`, y `gananciaBruta − gastosOperativos = resultado`.
+   * Las compras de mercadería NO son gasto (son inventario): viajan aparte en
+   * `comprasMercaderia` solo para informar.
+   */
+  ingresosPorMes: {
+    mes: string
+    turnos: number
+    inscripciones: number
+    ventas: number
+    ingresos: number
+    costoMercaderia: number
+    gananciaBruta: number
+    gastosOperativos: number
+    comprasMercaderia: number
+    resultado: number
+  }[]
   reservasTotales: number
   reservasCanceladas: number
   tasaCancelacion: number
