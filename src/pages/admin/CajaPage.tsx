@@ -1,8 +1,10 @@
-import { Banknote, ChevronLeft, ChevronRight, Lock, Plus, ShoppingCart, Trash2 } from 'lucide-react'
+import { Banknote, ChevronLeft, ChevronRight, History, Lock, Plus, ShoppingCart, Trash2, Wallet } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { NavLink } from 'react-router-dom'
 
+import { useConfiguracionSede } from '@/app/providers/ConfiguracionSedeContext'
 import { authApi } from '@/features/auth/authApi'
-import { cajaApi, CATEGORIAS_GASTO, MEDIOS, type CategoriaGasto, type CierreCaja, type MedioPago, type MovimientoCaja } from '@/features/caja/cajaApi'
+import { cajaApi, CATEGORIAS_GASTO, CONCEPTOS_MOVIMIENTO, MEDIOS, type CategoriaGasto, type CierreCaja, type ConceptoMovimiento, type MedioPago, type MovimientoCaja, type MovimientoSuelto, type TipoMovimiento } from '@/features/caja/cajaApi'
 import { reservasApi } from '@/features/reservas/reservasApi'
 import { ventasApi, type VentaResponse } from '@/features/ventas/ventasApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
@@ -56,6 +58,20 @@ function hora(valor: string | null) {
 
 const MOVIMIENTOS_POR_PAGINA = 8
 
+const MOVIMIENTO_VACIO = {
+  concepto: 'COBRO_VARIO' as ConceptoMovimiento,
+  tipo: '' as TipoMovimiento | '',
+  descripcion: '',
+  monto: '',
+  medio: 'EFECTIVO' as MedioPago,
+  notas: '',
+}
+
+function nombreConcepto(concepto: string) {
+  return CONCEPTOS_MOVIMIENTO.find((c) => c.valor === concepto)?.nombre
+    ?? (concepto === 'APERTURA' ? 'Apertura de caja' : concepto)
+}
+
 export default function CajaPage() {
   const [fecha, setFecha] = useState(aISO(new Date()))
   const [datos, setDatos] = useState<CierreCaja | null>(null)
@@ -64,6 +80,7 @@ export default function CajaPage() {
   const [aAnular, setAAnular] = useState<MovimientoCaja | null>(null)
   const [anulando, setAnulando] = useState(false)
   const [paginaMovimientos, setPaginaMovimientos] = usePaginaEnUrl('paginaMovimientos')
+  const { configuracion } = useConfiguracionSede()
   const [ventaAbierta, setVentaAbierta] = useState(false)
   const [aAnularVenta, setAAnularVenta] = useState<VentaResponse | null>(null)
   const { success: avisoExito } = useToast()
@@ -82,6 +99,20 @@ export default function CajaPage() {
   const [errorCierre, setErrorCierre] = useState<string | null>(null)
   const [aReabrir, setAReabrir] = useState(false)
   const [anuladosAbierto, setAnuladosAbierto] = useState(false)
+
+  const [movimientoAbierto, setMovimientoAbierto] = useState<'apertura' | 'suelto' | null>(null)
+  const [formMovimiento, setFormMovimiento] = useState({ ...MOVIMIENTO_VACIO })
+  const [guardandoMovimiento, setGuardandoMovimiento] = useState(false)
+  const [errorMovimiento, setErrorMovimiento] = useState<string | null>(null)
+  const [aAnularMovimiento, setAAnularMovimiento] = useState<MovimientoSuelto | null>(null)
+  const [anulandoMovimiento, setAnulandoMovimiento] = useState(false)
+
+  /** Los conceptos que puede cargar quien está mirando la pantalla. */
+  const conceptosDisponibles = useMemo(
+    () => CONCEPTOS_MOVIMIENTO.filter((concepto) => !concepto.soloDuenio || authApi.esDuenio()),
+    [],
+  )
+  const conceptoElegido = CONCEPTOS_MOVIMIENTO.find((c) => c.valor === formMovimiento.concepto)
 
   function cargar() {
     setCargando(true)
@@ -147,6 +178,71 @@ export default function CajaPage() {
     } catch (e: unknown) {
       setErrorGasto(obtenerMensajeErrorApi(e))
     } finally { setGuardandoGasto(false) }
+  }
+
+  function abrirFormularioApertura() {
+    setFormMovimiento({
+      ...MOVIMIENTO_VACIO,
+      concepto: 'APERTURA',
+      descripcion: 'Fondo del día',
+      monto: configuracion.fondoFijo != null ? String(configuracion.fondoFijo) : '',
+    })
+    setErrorMovimiento(null)
+    setMovimientoAbierto('apertura')
+  }
+
+  function abrirFormularioMovimiento() {
+    setFormMovimiento({ ...MOVIMIENTO_VACIO, concepto: conceptosDisponibles[0].valor })
+    setErrorMovimiento(null)
+    setMovimientoAbierto('suelto')
+  }
+
+  async function guardarMovimiento() {
+    const monto = aNumero(formMovimiento.monto)
+    if (!formMovimiento.descripcion.trim()) { setErrorMovimiento('Escribí de qué es el movimiento.'); return }
+    if (monto == null || monto <= 0) { setErrorMovimiento('El monto tiene que ser mayor a cero.'); return }
+    const fijo = CONCEPTOS_MOVIMIENTO.find((c) => c.valor === formMovimiento.concepto)?.tipoFijo ?? null
+    if (movimientoAbierto === 'suelto' && fijo == null && !formMovimiento.tipo) {
+      setErrorMovimiento('Indicá si la plata entra o sale.')
+      return
+    }
+    setGuardandoMovimiento(true)
+    setErrorMovimiento(null)
+    try {
+      const cuerpo = {
+        concepto: formMovimiento.concepto,
+        tipo: fijo ?? (formMovimiento.tipo || null),
+        descripcion: formMovimiento.descripcion.trim(),
+        monto,
+        medio: formMovimiento.medio,
+        clienteId: null,
+        notas: formMovimiento.notas.trim() || null,
+      }
+      if (movimientoAbierto === 'apertura') {
+        await cajaApi.abrirCaja(cuerpo)
+        avisoExito('Caja abierta')
+      } else {
+        await cajaApi.registrarMovimiento(cuerpo)
+        avisoExito('Movimiento registrado')
+      }
+      setMovimientoAbierto(null)
+      cargar()
+    } catch (e: unknown) {
+      setErrorMovimiento(obtenerMensajeErrorApi(e))
+    } finally { setGuardandoMovimiento(false) }
+  }
+
+  async function anularMovimiento(motivo: string) {
+    if (aAnularMovimiento == null) return
+    setAnulandoMovimiento(true)
+    try {
+      await cajaApi.anularMovimiento(aAnularMovimiento.id, motivo)
+      setAAnularMovimiento(null)
+      cargar()
+      avisoExito('Movimiento anulado')
+    } catch (e: unknown) {
+      setError(obtenerMensajeErrorApi(e)); setAAnularMovimiento(null)
+    } finally { setAnulandoMovimiento(false) }
   }
 
   async function anularGasto(motivo: string) {
@@ -234,7 +330,16 @@ export default function CajaPage() {
     <section>
       <AdminPageHeader
         title={<><Banknote size={26} />Caja</>}
-        action={<Button size="sm" onClick={() => setVentaAbierta(true)}><ShoppingCart size={16} />Vender</Button>}
+        action={<>
+          <Button size="sm" onClick={() => setVentaAbierta(true)}><ShoppingCart size={16} />Vender</Button>
+          {/* El historial de arqueos es del dueño: el menú no se lo ofrece al empleado
+              para no mandarlo a un 403, pero el backend lo rechaza igual. */}
+          {authApi.esDuenio() && (
+            <Button size="sm" variant="subtle" asChild>
+              <NavLink to="/admin/caja/historial"><History size={16} />Historial</NavLink>
+            </Button>
+          )}
+        </>}
       />
 
       <div className="mt-4 flex items-center gap-2">
@@ -275,10 +380,26 @@ export default function CajaPage() {
               <Button size="sm" variant="ghost" onClick={() => setAReabrir(true)}>Reabrir</Button>
             )}
           </div>
+        ) : !datos.cajaAbierta ? (
+          // Sin declarar el fondo, el efectivo esperado arranca de cero y la diferencia
+          // del arqueo sale sobrando por el cambio que quedó en el cajón de ayer.
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-rp-accent/40 bg-rp-accent/5 px-4 py-3">
+            <div>
+              <p className="text-sm font-bold text-rp-text">Falta abrir la caja</p>
+              <p className="mt-0.5 text-xs text-rp-muted">
+                Deciles con cuánto arranca el cajón. Sin eso, el arqueo de esta noche va a
+                dar sobrando justo por el cambio que dejaron para dar vuelto.
+              </p>
+            </div>
+            <Button size="sm" onClick={abrirFormularioApertura}>
+              <Wallet size={15} />Abrir caja
+            </Button>
+          </div>
         ) : (
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-rp-border bg-rp-surface px-4 py-3">
             <p className="text-sm text-rp-muted">
-              El día está abierto. Al cerrarlo se guarda cuánto había en el cajón y los movimientos quedan fijos.
+              El día está abierto con {formatearMoneda(datos.fondoInicial)} de fondo. Al
+              cerrarlo se guarda cuánto había en el cajón y los movimientos quedan fijos.
             </p>
             <Button size="sm" onClick={() => { setEfectivoContado(''); setNotasCierre(''); setErrorCierre(null); setCierreAbierto(true) }}>
               <Lock size={15} />Cerrar caja
@@ -414,7 +535,82 @@ export default function CajaPage() {
               )}
             </div>
           </div>
+
+          {/* Quién cobró qué. El dato estaba en la base desde siempre y no se mostraba,
+              así que no había forma de ver si el faltante aparece siempre en el mismo
+              turno. El backend se lo manda vacío al empleado. */}
+          {datos.porUsuario.length > 0 && (
+            <div className="mt-6 rounded-lg border border-rp-border bg-rp-surface p-4">
+              <p className="text-xs font-bold uppercase tracking-wide text-rp-muted">Quién cobró</p>
+              <div className="mt-3">
+                {datos.porUsuario.map((fila) => (
+                  <div key={fila.usuario} className="flex items-center justify-between gap-3 border-b border-rp-border py-2 last:border-0">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-bold text-rp-text">{fila.usuario}</p>
+                      <p className="text-xs text-rp-muted">
+                        {fila.operaciones === 1 ? '1 operación' : `${fila.operaciones} operaciones`}
+                        {' · '}turnos {formatearMoneda(fila.cobros)}
+                        {fila.ventas !== 0 ? ` · kiosco ${formatearMoneda(fila.ventas)}` : ''}
+                        {fila.movimientos !== 0 ? ` · otros ${formatearMoneda(fila.movimientos)}` : ''}
+                      </p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className="text-sm font-bold text-rp-text">{formatearMoneda(fila.total)}</p>
+                      {/* Lo que se le pide al entregar el turno es el efectivo. */}
+                      <p className="text-xs text-rp-muted">{formatearMoneda(fila.efectivo)} en efectivo</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </>
+      )}
+
+      {datos && !cargando && (
+        <div className="mt-6 rounded-lg border border-rp-border bg-rp-surface p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wide text-rp-muted">
+                Plata que no es un turno ni el kiosco
+              </p>
+              <p className="mt-0.5 text-xs text-rp-muted">
+                El fondo de apertura, un depósito al banco, el alquiler del salón. Mueven el
+                cajón; solo los cobros mueven la facturación.
+              </p>
+            </div>
+            <Button size="sm" variant="subtle" onClick={abrirFormularioMovimiento}>
+              <Plus size={15} />Movimiento
+            </Button>
+          </div>
+          {datos.movimientosSueltos.length === 0 ? (
+            <p className="mt-3 text-sm text-rp-muted">No hay movimientos cargados en el día.</p>
+          ) : (
+            <div className="mt-3">
+              {datos.movimientosSueltos.map((mov) => (
+                <div key={mov.id} className="flex items-center justify-between gap-3 border-b border-rp-border py-2 last:border-0">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold text-rp-text">{mov.descripcion}</p>
+                    <p className="text-xs text-rp-muted">
+                      {nombreConcepto(mov.concepto)} · {nombreMedio(mov.medio)} · {hhmm(mov.fecha)}
+                      {mov.registradoPor ? ` por ${mov.registradoPor}` : ''}
+                    </p>
+                    {mov.notas && <p className="text-xs italic text-rp-muted">{mov.notas}</p>}
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <span className={`text-sm font-bold ${mov.tipo === 'EGRESO' ? 'text-rp-danger' : 'text-rp-accent'}`}>
+                      {mov.tipo === 'EGRESO' ? '−' : '+'}{formatearMoneda(mov.monto)}
+                    </span>
+                    {/* Anular es solo del dueño, por lo mismo que reabrir un cierre. */}
+                    {authApi.esDuenio() && (
+                      <button onClick={() => setAAnularMovimiento(mov)} className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger" aria-label="Anular movimiento" title="Anular movimiento"><Trash2 size={14} /></button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       {datos && !cargando && (
@@ -597,6 +793,102 @@ export default function CajaPage() {
           </div>
         </div>
       </Modal>
+
+      <Modal
+        isOpen={movimientoAbierto != null}
+        onClose={() => setMovimientoAbierto(null)}
+        title={movimientoAbierto === 'apertura' ? 'Abrir la caja del día' : 'Movimiento de caja'}
+        onSubmit={guardarMovimiento}
+      >
+        <div className="flex flex-col gap-4">
+          {movimientoAbierto === 'apertura' ? (
+            <p className="text-sm text-rp-muted">
+              El efectivo con el que arranca el cajón. Es el cambio que quedó para dar
+              vuelto: si no se declara, el arqueo de esta noche va a dar sobrando justo por
+              ese monto.
+            </p>
+          ) : (
+            <Select
+              label="De qué se trata"
+              value={formMovimiento.concepto}
+              onChange={(e) => setFormMovimiento((f) => ({
+                ...f, concepto: e.target.value as ConceptoMovimiento, tipo: '',
+              }))}
+            >
+              {conceptosDisponibles.map((concepto) => (
+                <option key={concepto.valor} value={concepto.valor}>{concepto.nombre}</option>
+              ))}
+            </Select>
+          )}
+
+          {movimientoAbierto === 'suelto' && conceptoElegido && (
+            <p className="-mt-2 text-xs text-rp-muted">{conceptoElegido.ayuda}</p>
+          )}
+
+          {/* Solo los conceptos que van en los dos sentidos piden elegir. En los demás lo
+              impone el servidor: un retiro del dueño que sume plata no existe. */}
+          {movimientoAbierto === 'suelto' && conceptoElegido && conceptoElegido.tipoFijo == null && (
+            <Select
+              label="¿La plata entra o sale?"
+              value={formMovimiento.tipo}
+              onChange={(e) => setFormMovimiento((f) => ({ ...f, tipo: e.target.value as TipoMovimiento }))}
+            >
+              <option value="">Elegí una opción</option>
+              <option value="INGRESO">Entra al cajón</option>
+              <option value="EGRESO">Sale del cajón</option>
+            </Select>
+          )}
+
+          <Input
+            label="Descripción"
+            value={formMovimiento.descripcion}
+            onChange={(e) => setFormMovimiento((f) => ({ ...f, descripcion: e.target.value }))}
+            placeholder={movimientoAbierto === 'apertura' ? 'Fondo del día' : 'Alquiler del salón del sábado'}
+          />
+          <Input
+            label="Monto"
+            value={formMovimiento.monto}
+            onChange={(e) => setFormMovimiento((f) => ({ ...f, monto: e.target.value }))}
+            placeholder="20000"
+          />
+          <Select
+            label="Medio"
+            value={formMovimiento.medio}
+            onChange={(e) => setFormMovimiento((f) => ({ ...f, medio: e.target.value as MedioPago }))}
+          >
+            {MEDIOS.map((medio) => <option key={medio.valor} value={medio.valor}>{medio.nombre}</option>)}
+          </Select>
+          <Input
+            label="Notas (opcional)"
+            value={formMovimiento.notas}
+            onChange={(e) => setFormMovimiento((f) => ({ ...f, notas: e.target.value }))}
+          />
+
+          {errorMovimiento && <p role="alert" className="text-sm text-rp-danger">{errorMovimiento}</p>}
+
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" type="button" onClick={() => setMovimientoAbierto(null)}>Cancelar</Button>
+            <Button type="submit" disabled={guardandoMovimiento}>
+              {guardandoMovimiento ? 'Guardando...' : movimientoAbierto === 'apertura' ? 'Abrir caja' : 'Registrar'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <ConfirmDialog
+        isOpen={aAnularMovimiento != null}
+        onClose={() => setAAnularMovimiento(null)}
+        onConfirm={anularMovimiento}
+        title="Anular movimiento"
+        description={aAnularMovimiento
+          ? `${aAnularMovimiento.descripcion} por ${formatearMoneda(aAnularMovimiento.monto)} deja de contar en el arqueo. Queda registrado como anulado.`
+          : ''}
+        confirmLabel="Anular"
+        loadingLabel="Anulando..."
+        pedirMotivo
+        motivoPlaceholder="Lo cargué mal"
+        isLoading={anulandoMovimiento}
+      />
 
       <ConfirmDialog
         isOpen={aBorrarGasto != null}

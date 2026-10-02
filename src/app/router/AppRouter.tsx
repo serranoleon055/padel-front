@@ -40,6 +40,7 @@ const MiTurnoPage = lazy(() => import('@/pages/public/MiTurnoPage'))
 const TurnosPage = lazy(() => import('@/pages/admin/TurnosPage'))
 const ClientesPage = lazy(() => import('@/pages/admin/ClientesPage'))
 const CajaPage = lazy(() => import('@/pages/admin/CajaPage'))
+const HistorialCajaPage = lazy(() => import('@/pages/admin/HistorialCajaPage'))
 const ProductosPage = lazy(() => import('@/pages/admin/ProductosPage'))
 const InscribirmePage = lazy(() => import('@/pages/public/InscribirmePage'))
 const PagoResultadoPage = lazy(() => import('@/pages/public/PagoResultadoPage'))
@@ -99,6 +100,7 @@ export function AppRouter() {
           <Route path="turnos" element={<TurnosPage />} />
           <Route path="clientes" element={<ClientesPage />} />
           <Route path="caja" element={<CajaPage />} />
+          <Route path="caja/historial" element={<HistorialCajaPage />} />
           <Route path="productos" element={<ProductosPage />} />
           <Route path="temporadas" element={<SeasonsPage />} />
           <Route path="torneos" element={<TournamentsAdminPage />} />

@@ -493,6 +493,8 @@ export type ConfiguracionSede = {
   mapsEmbedUrl: string | null
   /** Hasta cuántas horas antes puede el jugador cancelar su turno solo. 0 = lo apaga. */
   cancelacionHorasMinimas: number | null
+  /** Propuesta de fondo para el formulario de apertura de caja. */
+  fondoFijo: number | null
   horarios: HorarioSede[]
   galeria: FotoSede[]
   formasPago: string[]
