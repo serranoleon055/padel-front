@@ -1,20 +1,19 @@
 import './RankingPage.css'
-import { Search, Trophy, Users } from 'lucide-react'
+import { Search, Users } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 
 import { brand } from '@/config/brand'
-import { categoriesApi, seasonsApi } from '@/features/catalog/catalogApi'
-import { homeApi } from '@/features/home/homeApi'
+import { categoriesApi } from '@/features/catalog/catalogApi'
 import { rankingApi } from '@/features/ranking/rankingApi'
-import { elementosTickerInicio } from '@/shared/lib/ticker'
 import { resolveApiAssetUrl } from '@/shared/api/apiClient'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
-import type { CategoriaResponse, HomeResponse, RankingResponse } from '@/shared/types/api'
+import type { CategoriaResponse, RankingResponse } from '@/shared/types/api'
 import { Pagination } from '@/shared/ui/Pagination'
 import { SegmentedToggle } from '@/shared/ui/SegmentedToggle'
 import { StatusMessage } from '@/shared/ui/StatusMessage'
-import { TickerBar } from '@/pages/public/components/TickerBar'
+import { usePaginaEnUrl } from '@/shared/lib/paginacion'
+import { useUrlActual } from '@/shared/lib/volverA'
 
 const TAMANO_PAGINA = 10
 
@@ -46,34 +45,17 @@ export default function RankingPage() {
   const categoriaParam = searchParams.get('categoria') ?? ''
   const generoParam = searchParams.get('genero') === 'FEMENINO' ? 'FEMENINO' : 'MASCULINO'
   const [ranking, setRanking] = useState<RankingResponse[]>([])
-  const [rankingGeneral, setRankingGeneral] = useState<RankingResponse[]>([])
   const [categorias, setCategorias] = useState<CategoriaResponse[]>([])
   const [busqueda, setBusqueda] = useState('')
   const [genero, setGenero] = useState<'MASCULINO' | 'FEMENINO'>(generoParam)
   const [categoriaId, setCategoriaId] = useState(categoriaParam)
   const categoriaPorGenero = useRef<Record<string, string>>({})
-  const [pagina, setPagina] = useState(1)
+  const [pagina, setPagina] = usePaginaEnUrl()
+  /* Género, categoría y página viajan con el enlace al jugador: el "Volver al ranking"
+     del perfil tiene que devolver a la tabla que estaba mirando. */
+  const urlRanking = useUrlActual()
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [temporadaActiva, setTemporadaActiva] = useState<string | null>(null)
-  const [datosInicio, setDatosInicio] = useState<HomeResponse | null>(null)
-
-  useEffect(() => {
-    let montado = true
-    homeApi.getHome()
-      .then((datos) => { if (montado) setDatosInicio(datos) })
-      .catch(() => { if (montado) setDatosInicio(null) })
-    return () => { montado = false }
-  }, [])
-
-  useEffect(() => {
-    let montado = true
-    seasonsApi.getAll()
-      .then((temporadas) => { if (montado) setTemporadaActiva(temporadas.find((t) => t.activa)?.nombre ?? null) })
-      .catch(() => { if (montado) setTemporadaActiva(null) })
-    return () => { montado = false }
-  }, [])
-
   useEffect(() => {
     let montado = true
 
@@ -91,24 +73,6 @@ export default function RankingPage() {
         if (!montado) return
         setError(obtenerMensajeErrorApi(errorCapturado))
         setCargando(false)
-      })
-
-    return () => {
-      montado = false
-    }
-  }, [])
-
-  useEffect(() => {
-    let montado = true
-
-    rankingApi.getRanking()
-      .then((datosRanking) => {
-        if (!montado) return
-        setRankingGeneral(datosRanking)
-      })
-      .catch((errorCapturado: unknown) => {
-        if (!montado) return
-        setError(obtenerMensajeErrorApi(errorCapturado))
       })
 
     return () => {
@@ -166,15 +130,6 @@ export default function RankingPage() {
     return ranking.filter((entrada) => entrada.jugadorNombre.toLowerCase().includes(busquedaNormalizada))
   }, [ranking, busqueda])
 
-  const metricas = useMemo(() => {
-    const totalJugadores = new Set(rankingGeneral.map((entrada) => entrada.jugadorId)).size
-    const totalPartidos = rankingGeneral.reduce((acumulado, entrada) => acumulado + entrada.victorias + entrada.derrotas, 0)
-    const categoriasUnicas = new Set(rankingGeneral.map((entrada) => entrada.categoriaNombre)).size
-    const mayorGanador = rankingGeneral.reduce<RankingResponse | null>((mejor, entrada) => (!mejor || entrada.victorias > mejor.victorias ? entrada : mejor), null)
-
-    return { totalJugadores, totalPartidos, categoriasUnicas, mayorGanador }
-  }, [rankingGeneral])
-
   const rankingPaginado = useMemo(() => {
     const inicio = (pagina - 1) * TAMANO_PAGINA
     return rankingFiltrado.slice(inicio, inicio + TAMANO_PAGINA)
@@ -213,34 +168,8 @@ export default function RankingPage() {
     return { categoriaSeleccionada, mayorGanador, mejorRacha }
   }, [categoriaId, ranking, categoriasDelGenero])
 
-  const elementosTicker = useMemo(() => elementosTickerInicio(datosInicio), [datosInicio])
-
   return (
     <>
-      <header className="rank-hero">
-        <div className="hero-inner">
-          <div className="eyebrow">
-            <Trophy size={13} />
-            {temporadaActiva ? temporadaActiva.toUpperCase() : 'SIN TEMPORADA ACTIVA'}
-          </div>
-          <h1 className="rank-title">Ranking oficial <span>{brand.name}</span></h1>
-          <p className="rank-lead">
-            {temporadaActiva
-              ? `Posiciones de la temporada ${temporadaActiva}, por categoría, rendimiento y participación en torneos del circuito.`
-              : 'El ranking se muestra por temporada. Cuando se active una temporada vas a ver las posiciones acá.'}
-          </p>
-
-          <div className="hero-metrics">
-            <div className="metric"><b>{metricas.totalJugadores}</b><span>Jugadores activos</span></div>
-            <div className="metric"><b>{metricas.categoriasUnicas || categorias.length}</b><span>Categorías</span></div>
-            <div className="metric"><b>{metricas.mayorGanador?.victorias ?? '-'}</b><span>Mayor cantidad de victorias</span></div>
-            <div className="metric"><b>{metricas.totalPartidos || '-'}</b><span>Partidos registrados</span></div>
-          </div>
-        </div>
-      </header>
-
-      <TickerBar items={elementosTicker} label="RANKING" />
-
       <section className="ranking-section">
         <div className="ranking-inner">
           <div className="section-head">
@@ -289,30 +218,29 @@ export default function RankingPage() {
               <table className="ranking-table">
                 <thead>
                   <tr>
-                    {['#', 'Jugador', 'Categoría', 'Puntos', 'Torneos', 'Victorias', 'Derrotas', 'Mov.'].map((encabezado) => (
+                    {['#', 'Jugador', 'Puntos', 'Torneos', 'Victorias', 'Derrotas', 'Mov.'].map((encabezado) => (
                       <th key={encabezado}>{encabezado}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {cargaInicial ? (
-                    <tr><td colSpan={8}><StatusMessage title="Cargando ranking..." type="loading" /></td></tr>
+                    <tr><td colSpan={7}><StatusMessage title="Cargando ranking..." type="loading" /></td></tr>
                   ) : error ? (
-                    <tr><td colSpan={8}><StatusMessage title="Error" description={error} type="error" /></td></tr>
+                    <tr><td colSpan={7}><StatusMessage title="Error" description={error} type="error" /></td></tr>
                   ) : rankingFiltrado.length > 0 ? (
                     rankingPaginado.map((entrada) => (
-                      <tr key={`${entrada.categoriaId}-${entrada.jugadorId}`} style={{ cursor: 'pointer' }} onClick={() => navigate(`/jugadores/${entrada.jugadorId}`)}>
+                      <tr key={`${entrada.categoriaId}-${entrada.jugadorId}`} style={{ cursor: 'pointer' }} onClick={() => navigate(`/jugadores/${entrada.jugadorId}`, { state: { volverA: urlRanking } })}>
                         <td><span className="rank-position">{entrada.posicion}</span></td>
                         <td>
                           <div className="player-cell">
                             <AvatarJugador entrada={entrada} />
                             <div>
-                              <Link to={`/jugadores/${entrada.jugadorId}`} className="player-name hover:text-rp-accent" onClick={(event) => event.stopPropagation()}>{entrada.jugadorNombre}</Link>
+                              <Link to={`/jugadores/${entrada.jugadorId}`} state={{ volverA: urlRanking }} className="player-name hover:text-rp-accent" onClick={(event) => event.stopPropagation()}>{entrada.jugadorNombre}</Link>
                               <div className="player-sub"><Users size={13} />Circuito {brand.name}</div>
                             </div>
                           </div>
                         </td>
-                        <td><span className="category-pill">{entrada.categoriaNombre}</span></td>
                         <td><strong className="points">{entrada.puntosTotales}</strong></td>
                         <td>{entrada.torneosJugados}</td>
                         <td className="wins">{entrada.victorias}</td>
@@ -322,7 +250,7 @@ export default function RankingPage() {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={8} className="ranking-empty">
+                      <td colSpan={7} className="ranking-empty">
                         <strong>No hay jugadores en el ranking para esos filtros</strong>
                         <span>El ranking se alimenta cuando se cargan resultados.</span>
                       </td>
@@ -344,11 +272,11 @@ export default function RankingPage() {
                   role="link"
                   tabIndex={0}
                   style={{ cursor: 'pointer' }}
-                  onClick={() => navigate(`/jugadores/${entrada.jugadorId}`)}
+                  onClick={() => navigate(`/jugadores/${entrada.jugadorId}`, { state: { volverA: urlRanking } })}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter' || event.key === ' ') {
                       event.preventDefault()
-                      navigate(`/jugadores/${entrada.jugadorId}`)
+                      navigate(`/jugadores/${entrada.jugadorId}`, { state: { volverA: urlRanking } })
                     }
                   }}
                 >
@@ -357,7 +285,6 @@ export default function RankingPage() {
                     <AvatarJugador entrada={entrada} />
                     <div className="rank-card-player">
                       <strong>{entrada.jugadorNombre}</strong>
-                      <span>{entrada.categoriaNombre}</span>
                     </div>
                     <div className="rank-card-points">
                       <b>{entrada.puntosTotales}</b>

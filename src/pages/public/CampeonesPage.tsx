@@ -11,6 +11,7 @@ import type { CampeonResponse, CategoriaResponse, Genero } from '@/shared/types/
 import { Pagination } from '@/shared/ui/Pagination'
 import { StatusMessage } from '@/shared/ui/StatusMessage'
 import { ParejaCampeona } from '@/pages/public/components/ParejaCampeona'
+import { usePaginaEnUrl, useReiniciarPaginaAlFiltrar } from '@/shared/lib/paginacion'
 
 const TAMANO_PAGINA = 10
 
@@ -25,7 +26,7 @@ export default function CampeonesPage() {
   const [total, setTotal] = useState(0)
   const [genero, setGenero] = useState<Genero>('MASCULINO')
   const [categoriaId, setCategoriaId] = useState('')
-  const [pagina, setPagina] = useState(1)
+  const [pagina, setPagina] = usePaginaEnUrl()
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -35,9 +36,7 @@ export default function CampeonesPage() {
       .catch(() => {})
   }, [])
 
-  useEffect(() => {
-    setPagina(1)
-  }, [categoriaId, genero])
+  useReiniciarPaginaAlFiltrar(setPagina, [categoriaId, genero])
 
   useEffect(() => {
     let montado = true

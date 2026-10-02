@@ -1,4 +1,4 @@
-import { Activity, ArrowLeft, Calendar, CalendarRange, ClipboardList, Flag, LayoutGrid, MapPin, Settings, Shuffle, Star, Swords, Tag, Trophy, Users } from 'lucide-react'
+import { Activity, ArrowLeft, Calendar, CalendarRange, ClipboardList, Flag, LayoutGrid, MapPin, Settings, Shuffle, Star, Swords, Tag, Trophy, Undo2, Users } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { NavLink, useParams, useSearchParams } from 'react-router-dom'
 
@@ -6,6 +6,7 @@ import { categoriesApi } from '@/features/catalog/catalogApi'
 import { playersApi } from '@/features/players/playersApi'
 import { tournamentsApi } from '@/features/tournaments/tournamentsApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
+import { useVolverA } from '@/shared/lib/volverA'
 import { useToast } from '@/shared/ui/Toast'
 import { formatearFecha, formatearEnum, formatearEtapaPartido, formatearPareja, formatearMoneda } from '@/shared/lib/formatters'
 import type {
@@ -18,7 +19,7 @@ import type {
     PartidoResponse,
     TorneoDetalleResponse,
 } from '@/shared/types/api'
-import { ETIQUETA_RETROCESO, PUEDE_RETROCEDER, puedeSortear, puedeCargarResultados, ETIQUETA_SIGUIENTE, ESTADO_SIGUIENTE, tono } from '@/shared/lib/tournamentState'
+import { AVISO_RETROCESO, ETIQUETA_RETROCESO, PUEDE_RETROCEDER, puedeSortear, puedeCargarResultados, ETIQUETA_SIGUIENTE, ESTADO_SIGUIENTE, tono } from '@/shared/lib/tournamentState'
 import { Button } from '@/shared/ui/Button'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
 import { Input } from '@/shared/ui/Input'
@@ -38,6 +39,7 @@ const PAREJA_VACIA: ParejaRequest = { jugador1Id: 0, jugador2Id: 0, categoriaId:
 export default function TournamentAdminDetailPage() {
     const { torneoId } = useParams()
     const id = Number(torneoId)
+    const volverAlListado = useVolverA('/admin/torneos')
 
     const [detalle, setDetalle] = useState<TorneoDetalleResponse | null>(null)
     const [jugadores, setJugadores] = useState<JugadorResponse[]>([])
@@ -58,6 +60,9 @@ export default function TournamentAdminDetailPage() {
     const [cambiandoEstado, setCambiandoEstado] = useState(false)
     const [retrocediendo, setRetrocediendo] = useState(false)
     const [confirmarSorteo, setConfirmarSorteo] = useState(false)
+    const [confirmarDeshacerSorteo, setConfirmarDeshacerSorteo] = useState(false)
+    const [deshaciendoSorteo, setDeshaciendoSorteo] = useState(false)
+    const [confirmarRetroceso, setConfirmarRetroceso] = useState(false)
     const [sorteando, setSorteando] = useState(false)
 
     const [parejaAbierta, setParejaAbierta] = useState(false)
@@ -136,9 +141,25 @@ export default function TournamentAdminDetailPage() {
         const previo = PUEDE_RETROCEDER[detalle.torneo.estado]
         if (!previo) return
         setRetrocediendo(true); setErrorAccion(null)
-        try { await tournamentsApi.changeStatus(id, { estado: previo }); recargarDetalle() }
-        catch (e: unknown) { setErrorAccion(obtenerMensajeErrorApi(e)) }
+        try { await tournamentsApi.changeStatus(id, { estado: previo }); setConfirmarRetroceso(false); recargarDetalle() }
+        catch (e: unknown) { setErrorAccion(obtenerMensajeErrorApi(e)); setConfirmarRetroceso(false) }
         finally { setRetrocediendo(false) }
+    }
+
+    /**
+     * Deshacer el sorteo borra el cuadro y devuelve el torneo a INSCRIPCION. Antes, un
+     * sorteo mal hecho no tenía arreglo: había que cancelar el torneo y rehacerlo entero.
+     */
+    async function manejarDeshacerSorteo() {
+        setDeshaciendoSorteo(true); setErrorAccion(null)
+        try {
+            await tournamentsApi.undoDraw(id)
+            setConfirmarDeshacerSorteo(false)
+            recargarDetalleYGrupos()
+            avisoExito('Sorteo deshecho, el torneo volvió a inscripción')
+        }
+        catch (e: unknown) { setErrorAccion(obtenerMensajeErrorApi(e)); setConfirmarDeshacerSorteo(false) }
+        finally { setDeshaciendoSorteo(false) }
     }
 
     async function manejarSorteo() {
@@ -270,7 +291,7 @@ export default function TournamentAdminDetailPage() {
     return (
         <section>
             <Button variant="ghost" size="sm" asChild>
-                <NavLink to="/admin/torneos"><ArrowLeft size={16} />Volver a torneos</NavLink>
+                <NavLink to={volverAlListado}><ArrowLeft size={16} />Volver a torneos</NavLink>
             </Button>
 
             <div className="mt-5 rounded-lg border border-rp-border bg-rp-surface/82 p-5">
@@ -289,8 +310,20 @@ export default function TournamentAdminDetailPage() {
                     </Button>
                     )}
                     {PUEDE_RETROCEDER[torneo.estado] && (
-                    <Button size="sm" variant="ghost" onClick={manejarRetroceso} disabled={retrocediendo}>
+                    <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={retrocediendo}
+                        onClick={() => (AVISO_RETROCESO[torneo.estado] ? setConfirmarRetroceso(true) : manejarRetroceso())}
+                    >
                         {retrocediendo ? 'Actualizando...' : ETIQUETA_RETROCESO[torneo.estado]}
+                    </Button>
+                    )}
+                    {/* Un sorteo mal hecho no tenía arreglo: la única salida era cancelar el
+                        torneo entero, y cancelado tampoco vuelve. */}
+                    {torneo.estado === 'SORTEADO' && (
+                    <Button size="sm" variant="ghost" onClick={() => setConfirmarDeshacerSorteo(true)} disabled={deshaciendoSorteo}>
+                        <Undo2 size={15} />{deshaciendoSorteo ? 'Deshaciendo...' : 'Deshacer sorteo'}
                     </Button>
                     )}
                     {mostrarSorteo && (
@@ -299,10 +332,10 @@ export default function TournamentAdminDetailPage() {
                     </Button>
                     )}
                     <Button size="sm" variant="ghost" asChild>
-                        <NavLink to={`/admin/torneos/${torneoId}/inscripciones`}><ClipboardList size={15} />Inscripciones</NavLink>
+                        <NavLink to={`/admin/torneos/${torneoId}/inscripciones`} state={{ volverA: volverAlListado }}><ClipboardList size={15} />Inscripciones</NavLink>
                     </Button>
                     <Button size="sm" variant="ghost" asChild>
-                        <NavLink to={`/admin/torneos/${torneoId}/editar`}><Settings size={15} />Configuración</NavLink>
+                        <NavLink to={`/admin/torneos/${torneoId}/editar`} state={{ volverA: volverAlListado }}><Settings size={15} />Configuración</NavLink>
                     </Button>
                 </div>
                 </div>
@@ -458,6 +491,18 @@ export default function TournamentAdminDetailPage() {
                     `¿Generás el sorteo para "${torneo.nombre}"?\n${infoSorteo?.join('\n') ?? ''}\n\nSe crearán los partidos automáticamente. Si una categoría no llegó al cupo, el torneo se juega igual con las parejas anotadas.`
                 }
                 confirmLabel="Generar" tono="normal" loadingLabel="Generando..." isLoading={sorteando} />
+
+            <ConfirmDialog isOpen={confirmarDeshacerSorteo} onClose={() => setConfirmarDeshacerSorteo(false)} onConfirm={manejarDeshacerSorteo}
+                title="Deshacer sorteo" description={
+                    `¿Deshacés el sorteo de "${torneo.nombre}"?\n\nSe borra el cuadro generado —grupos, llaves y partidos— y el torneo vuelve a inscripción. Las parejas anotadas no se tocan: podés corregirlas y volver a sortear.`
+                }
+                confirmLabel="Deshacer sorteo" loadingLabel="Deshaciendo..." isLoading={deshaciendoSorteo} />
+
+            <ConfirmDialog isOpen={confirmarRetroceso} onClose={() => setConfirmarRetroceso(false)} onConfirm={manejarRetroceso}
+                title={ETIQUETA_RETROCESO[torneo.estado] ?? 'Volver atrás'}
+                description={AVISO_RETROCESO[torneo.estado] ?? ''}
+                confirmLabel={ETIQUETA_RETROCESO[torneo.estado] ?? 'Confirmar'}
+                loadingLabel="Actualizando..." isLoading={retrocediendo} />
 
             <ConfirmDialog isOpen={Boolean(parejaAEliminar)} onClose={() => setParejaAEliminar(null)} onConfirm={manejarEliminarPareja}
                 title="Eliminar pareja" description={`¿Eliminás la pareja "${parejaAEliminar?.name}" del torneo?`} isLoading={eliminandoPareja} />

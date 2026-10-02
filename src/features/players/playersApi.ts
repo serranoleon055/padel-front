@@ -9,9 +9,40 @@ export function invalidatePlayersCache() {
   _cache.invalidate()
 }
 
+/** Una página del listado, con el total para poder dibujar el paginador. */
+export interface PaginaJugadores {
+  contenido: JugadorResponse[]
+  totalElementos: number
+}
+
 export const playersApi = {
   async getAll() {
     return _cache.fetch(() => apiClient.get<JugadorResponse[]>('/api/jugadores').then(({ data }) => data))
+  },
+
+  /**
+   * Página del listado con la búsqueda y los filtros resueltos en el servidor. La pantalla
+   * de jugadores usa esto y no `getAll`: traerse la tabla entera para mostrar ocho filas
+   * es una respuesta que crece sin techo con cada torneo que pasa.
+   */
+  async getPagina(params: { busqueda?: string; genero?: string; categoriaId?: number | null; incluirBajas?: boolean; pagina: number; tamanio: number }) {
+    const { data } = await apiClient.get<PaginaJugadores>('/api/jugadores/paginado', {
+      params: {
+        busqueda: params.busqueda?.trim() || undefined,
+        genero: params.genero || undefined,
+        categoriaId: params.categoriaId ?? undefined,
+        incluirBajas: params.incluirBajas ? true : undefined,
+        pagina: params.pagina,
+        tamanio: params.tamanio,
+      },
+    })
+    return data
+  },
+
+  /** Devuelve al listado a un jugador dado de baja. */
+  async reactivar(id: number) {
+    const { data } = await apiClient.patch<JugadorResponse>(`/api/jugadores/${id}/reactivar`)
+    return data
   },
 
   async getById(id: number) {

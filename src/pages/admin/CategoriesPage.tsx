@@ -15,6 +15,7 @@ import { Input } from '@/shared/ui/Input'
 import { Modal } from '@/shared/ui/Modal'
 import { Pagination } from '@/shared/ui/Pagination'
 import { Select } from '@/shared/ui/Select'
+import { usePaginaEnUrl, useReiniciarPaginaAlFiltrar } from '@/shared/lib/paginacion'
 
 const TAMANO_PAGINA = 8
 const VACIO: CategoriaRequest = { nombre: '', nivel: 0, genero: 'MASCULINO' }
@@ -38,7 +39,7 @@ export default function CategoriesPage() {
 
     const [busqueda, setBusqueda] = useState('')
     const [filtroGenero, setFiltroGenero] = useState<Genero>('MASCULINO')
-    const [pagina, setPagina] = useState(1)
+    const [pagina, setPagina] = usePaginaEnUrl()
 
     const refTabla = useRef<HTMLDivElement>(null)
     const refScrollY = useRef(0)
@@ -56,9 +57,7 @@ export default function CategoriesPage() {
     }
     useEffect(cargar, [])
 
-    useEffect(() => {
-        setPagina(1)
-    }, [busqueda, filtroGenero])
+    useReiniciarPaginaAlFiltrar(setPagina, [busqueda, filtroGenero])
 
     const filtrados = useMemo(() => elementos.filter((categoria) => {
         const coincideNombre = coincidePrefijoNombre(categoria.nombre, busqueda)

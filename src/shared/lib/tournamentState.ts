@@ -19,12 +19,32 @@ export function tono(estado: EstadoTorneo): 'neutral' | 'warning' | 'live' | 'su
     return 'neutral'
 }
 
+/**
+ * Cómo se vuelve atrás desde cada estado.
+ *
+ * <p>SORTEADO no está acá: deshacer un sorteo no es cambiar de estado, es borrar el cuadro
+ * generado, y va por su propio endpoint ({@code undoDraw}).
+ *
+ * <p>Reabrir un torneo finalizado lo soportaba el backend desde siempre —reabre el ranking
+ * y borra los campeones— pero la pantalla no ofrecía el botón, así que un torneo cerrado
+ * por error quedaba cerrado para siempre.
+ */
 export const PUEDE_RETROCEDER: Partial<Record<EstadoTorneo, EstadoTorneo>> = {
     INSCRIPCION: 'BORRADOR',
+    FINALIZADO: 'EN_CURSO',
 }
 
 export const ETIQUETA_RETROCESO: Partial<Record<EstadoTorneo, string>> = {
     INSCRIPCION: 'Cancelar inscripciones',
+    FINALIZADO: 'Reabrir torneo',
+}
+
+/**
+ * Lo que hay que advertir antes de retroceder, cuando el paso atrás borra algo. Cancelar
+ * inscripciones no destruye nada, así que no lleva aviso.
+ */
+export const AVISO_RETROCESO: Partial<Record<EstadoTorneo, string>> = {
+    FINALIZADO: 'Se va a reabrir el ranking de este torneo y se van a borrar sus campeones. Los resultados cargados no se tocan.',
 }
 
 export function puedeSortear(estado: EstadoTorneo, cantidadParejas: number, _cantidadPartidos: number): boolean {

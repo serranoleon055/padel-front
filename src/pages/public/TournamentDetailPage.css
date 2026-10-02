@@ -3,8 +3,8 @@
   overflow-x: hidden;
   padding: 96px 40px 78px;
   background:
-    linear-gradient(rgba(7, 17, 10, .86), rgba(7, 17, 10, .82)),
-    url('/images/fondo cancha.jpg') center / cover no-repeat;
+    linear-gradient(color-mix(in srgb, var(--rp-green-900) 86%, transparent), color-mix(in srgb, var(--rp-green-900) 82%, transparent)),
+    var(--rp-img-cancha) center / cover no-repeat;
   background-attachment: fixed;
 }
 
@@ -14,8 +14,8 @@
 }
 
 .td-back-button {
-  border: 1px solid rgba(185, 154, 88, .34);
-  background: rgba(13, 27, 20, .96);
+  border: 1px solid color-mix(in srgb, var(--rp-gold) 34%, transparent);
+  background: color-mix(in srgb, var(--rp-green-800) 96%, transparent);
   color: #fff;
   box-shadow: 0 10px 24px rgba(0, 0, 0, .18);
 }
@@ -65,10 +65,10 @@
 
 .td-categories > span,
 .td-categories > a {
-  border: 1px solid rgba(32, 72, 43, .18);
+  border: 1px solid color-mix(in srgb, var(--rp-green-700) 18%, transparent);
   border-radius: 999px;
   padding: 6px 10px;
-  background: rgba(32, 72, 43, .08);
+  background: color-mix(in srgb, var(--rp-green-700) 8%, transparent);
   color: var(--rp-green-700);
   font-size: 12px;
   font-weight: 800;
@@ -76,7 +76,7 @@
 }
 
 .td-categories > a:hover {
-  background: rgba(32, 72, 43, .16);
+  background: color-mix(in srgb, var(--rp-green-700) 16%, transparent);
 }
 
 /* Parejas anotadas sobre el cupo de esa categoría, no del torneo entero. */
@@ -94,7 +94,7 @@
 }
 
 .td-info-grid div {
-  border: 1px solid rgba(198, 211, 196, .86);
+  border: 1px solid color-mix(in srgb, var(--rp-border-light) 86%, transparent);
   border-radius: 12px;
   padding: 14px;
   background: rgba(255, 255, 255, .42);
@@ -134,7 +134,7 @@
 }
 
 .td-champion-card {
-  border: 1px solid rgba(198, 211, 196, .86);
+  border: 1px solid color-mix(in srgb, var(--rp-border-light) 86%, transparent);
   border-radius: 12px;
   padding: 16px;
   background: rgba(255, 255, 255, .46);
@@ -215,7 +215,7 @@
 .td-pair-card,
 .td-group-card,
 .td-match-card {
-  border: 1px solid rgba(198, 211, 196, .86);
+  border: 1px solid color-mix(in srgb, var(--rp-border-light) 86%, transparent);
   border-radius: 12px;
   background: var(--rp-cream);
 }
@@ -268,7 +268,7 @@
   align-items: center;
   gap: 4px;
   padding: 10px 14px;
-  border-bottom: 1px solid rgba(198, 211, 196, .6);
+  border-bottom: 1px solid color-mix(in srgb, var(--rp-border-light) 60%, transparent);
 }
 
 .td-standing-row:last-child {
@@ -315,7 +315,7 @@
 }
 
 .td-standings-head {
-  background: rgba(32, 72, 43, .04);
+  background: color-mix(in srgb, var(--rp-green-700) 4%, transparent);
 }
 
 .td-standings-head .td-st-name,
@@ -353,7 +353,7 @@
 }
 
 .td-sb-row + .td-sb-row {
-  border-top: 1px solid rgba(180, 195, 178, .5);
+  border-top: 1px solid color-mix(in srgb, var(--rp-border-soft) 50%, transparent);
 }
 
 .td-sb-nombres {
@@ -396,7 +396,7 @@
   place-items: center;
   border: 1px solid var(--rp-border-light);
   border-radius: 4px;
-  background: #f4f7ee;
+  background: var(--rp-tint-1);
   color: var(--rp-muted-light);
   font-family: var(--font-mono);
   font-size: 11.5px;
@@ -511,9 +511,9 @@
 
 .td-match-card.is-empty {
   border-style: dashed;
-  border-left: 3px dashed rgba(180, 195, 178, .6);
-  border-color: rgba(180, 195, 178, .45);
-  background: rgba(248, 250, 247, .55);
+  border-left: 3px dashed color-mix(in srgb, var(--rp-border-soft) 60%, transparent);
+  border-color: color-mix(in srgb, var(--rp-border-soft) 45%, transparent);
+  background: color-mix(in srgb, var(--rp-paper) 55%, transparent);
 }
 
 .td-empty-slot {
@@ -523,13 +523,13 @@
 }
 
 .td-empty-pair {
-  color: rgba(130, 160, 130, .55);
+  color: color-mix(in srgb, var(--rp-faint) 55%, transparent);
   font-size: 12px;
   font-weight: 700;
 }
 
 .td-empty-vs {
-  color: rgba(130, 160, 130, .35);
+  color: color-mix(in srgb, var(--rp-faint) 35%, transparent);
   font-size: 9px;
   font-weight: 600;
   letter-spacing: 1px;

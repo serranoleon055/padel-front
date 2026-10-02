@@ -16,6 +16,7 @@ import { Modal } from '@/shared/ui/Modal'
 import { Pagination } from '@/shared/ui/Pagination'
 import { Select } from '@/shared/ui/Select'
 import { StatusBadge } from '@/shared/ui/StatusBadge'
+import { usePaginaEnUrl, useReiniciarPaginaAlFiltrar } from '@/shared/lib/paginacion'
 
 const TAMANO_PAGINA = 8
 const RONDAS_DISPONIBLES = [
@@ -109,8 +110,8 @@ const PlantillaPuntosModal = memo(function PlantillaPuntosModal({ abierto, objet
                   <option value={fila.nombreRonda}>{fila.nombreRonda} (personalizada)</option>
                 )}
               </Select>
-              <Input label="Ganador" type="number" min={0} value={Number.isNaN(fila.puntosGanador) ? '' : fila.puntosGanador} onChange={(e) => actualizarFila(i, { puntosGanador: e.target.value === '' ? NaN : Number(e.target.value) })} />
-              <Input label="Perdedor" type="number" title="Puede ser negativo para penalizar la derrota" value={Number.isNaN(fila.puntosPerdedor) ? '' : fila.puntosPerdedor} onChange={(e) => actualizarFila(i, { puntosPerdedor: e.target.value === '' ? NaN : Number(e.target.value) })} />
+              <Input label="Ganador" soloNumeros value={Number.isNaN(fila.puntosGanador) ? '' : fila.puntosGanador} onChange={(e) => actualizarFila(i, { puntosGanador: e.target.value === '' ? NaN : Number(e.target.value) })} />
+              <Input label="Perdedor" soloNumeros permiteNegativo title="Puede ser negativo para penalizar la derrota" value={Number.isNaN(fila.puntosPerdedor) ? '' : fila.puntosPerdedor} onChange={(e) => actualizarFila(i, { puntosPerdedor: e.target.value === '' || e.target.value === '-' ? NaN : Number(e.target.value) })} />
               <button type="button" onClick={() => quitarFila(i)} className="mb-0.5 flex size-9 self-end items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger"><Minus size={15} /></button>
             </div>
           ))}
@@ -137,7 +138,7 @@ export default function PointTemplatesPage() {
   const [objetivoEliminar, setObjetivoEliminar] = useState<PlantillaPuntosResponse | null>(null)
   const [eliminando, setEliminando] = useState(false)
   const [busqueda, setBusqueda] = useState('')
-  const [pagina, setPagina] = useState(1)
+  const [pagina, setPagina] = usePaginaEnUrl('paginaPuntos')
   const refScrollY = useRef(0)
 
   function cargar() {
@@ -153,7 +154,7 @@ export default function PointTemplatesPage() {
   }
 
   useEffect(cargar, [])
-  useEffect(() => setPagina(1), [busqueda])
+  useReiniciarPaginaAlFiltrar(setPagina, [busqueda])
 
   const filtrados = useMemo(() => elementos
     .filter((plantilla) => coincidePrefijoNombre(plantilla.nombre, busqueda))

@@ -1,4 +1,4 @@
-import { Pencil, Plus, Trash2, Upload } from 'lucide-react'
+import { Pencil, Plus, RotateCcw, Trash2, Upload } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { categoriesApi } from '@/features/catalog/catalogApi'
@@ -6,7 +6,6 @@ import { playersApi } from '@/features/players/playersApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
 import { useToast } from '@/shared/ui/Toast'
 import { formatearFecha, formatearEnum } from '@/shared/lib/formatters'
-import { nombreCompletoEmpiezaCon } from '@/shared/lib/tournamentView'
 import { ordenarCategorias } from '@/shared/lib/categorias'
 import type { CategoriaResponse, Genero, JugadorRequest, JugadorResponse, PosicionJuego } from '@/shared/types/api'
 import { ImportarCsvModal } from '@/pages/admin/ImportarCsvModal'
@@ -18,12 +17,14 @@ import { Input } from '@/shared/ui/Input'
 import { Modal } from '@/shared/ui/Modal'
 import { Pagination } from '@/shared/ui/Pagination'
 import { Select } from '@/shared/ui/Select'
+import { usePaginaEnUrl, useReiniciarPaginaAlFiltrar } from '@/shared/lib/paginacion'
 
 const TAMANO_PAGINA = 8
 const VACIO: JugadorRequest = { nombre: '', apellido: '', genero: 'MASCULINO', fotoUrl: null, categoriaId: null, fechaNacimiento: '', posicionJuego: null }
 
 export default function PlayersPage() {
   const [jugadores, setJugadores] = useState<JugadorResponse[]>([])
+  const [totalJugadores, setTotalJugadores] = useState(0)
   const [categorias, setCategorias] = useState<CategoriaResponse[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -45,22 +46,60 @@ export default function PlayersPage() {
   const [importarAbierto, setImportarAbierto] = useState(false)
   const [filtroGenero, setFiltroGenero] = useState<Genero>('MASCULINO')
   const [filtroCategoria, setFiltroCategoria] = useState('')
-  const [pagina, setPagina] = useState(1)
+  const [pagina, setPagina] = usePaginaEnUrl()
+  const [verBajas, setVerBajas] = useState(false)
+  const [reactivandoId, setReactivandoId] = useState<number | null>(null)
   const refScrollY = useRef(0)
 
-  function cargar() {
+  /**
+   * Trae la página actual. La búsqueda y los filtros los resuelve el servidor: la pantalla
+   * ya no se baja la tabla entera de jugadores para mostrar ocho filas.
+   */
+  /** Dar de baja era de ida: sin ver a los dados de baja no había forma de reactivarlos. */
+  const reactivar = async (jugador: JugadorResponse) => {
+    setReactivandoId(jugador.id)
+    try {
+      await playersApi.reactivar(jugador.id)
+      cargar()
+      avisoExito('Jugador reactivado')
+    } catch (e: unknown) {
+      setError(obtenerMensajeErrorApi(e))
+    } finally { setReactivandoId(null) }
+  }
+
+  const cargar = useCallback(() => {
     refScrollY.current = window.scrollY
     setCargando(true)
-    Promise.all([playersApi.getAll(), categoriesApi.getAll()])
-      .then(([datosJugadores, datosCategorias]) => { setJugadores(datosJugadores); setCategorias(datosCategorias); setError(null) })
+    Promise.all([
+      playersApi.getPagina({
+        busqueda,
+        genero: filtroGenero,
+        categoriaId: filtroCategoria ? Number(filtroCategoria) : null,
+        incluirBajas: verBajas,
+        pagina: pagina - 1,
+        tamanio: TAMANO_PAGINA,
+      }),
+      categoriesApi.getAll(),
+    ])
+      .then(([paginaJugadores, datosCategorias]) => {
+        setJugadores(paginaJugadores.contenido)
+        setTotalJugadores(paginaJugadores.totalElementos)
+        setCategorias(datosCategorias)
+        setError(null)
+      })
       .catch((errorCapturado: unknown) => setError(obtenerMensajeErrorApi(errorCapturado)))
       .finally(() => {
         setCargando(false)
         requestAnimationFrame(() => window.scrollTo(0, refScrollY.current))
       })
-  }
+  }, [busqueda, filtroGenero, filtroCategoria, verBajas, pagina])
 
-  useEffect(cargar, [])
+  // Se espera a que la persona termine de tipear: una consulta por tecla sería una
+  // consulta a la base por cada letra del apellido.
+  useEffect(() => {
+    const temporizador = setTimeout(cargar, 250)
+    return () => clearTimeout(temporizador)
+  }, [cargar])
 
   const opcionesCategoria = useMemo(
     () => ordenarCategorias(categorias.filter((categoria) => categoria.genero === filtroGenero)),
@@ -72,9 +111,7 @@ export default function PlayersPage() {
     [categorias, formulario.genero],
   )
 
-  useEffect(() => {
-    setPagina(1)
-  }, [busqueda, filtroGenero, filtroCategoria])
+  useReiniciarPaginaAlFiltrar(setPagina, [busqueda, filtroGenero, filtroCategoria, verBajas])
 
   useEffect(() => {
     if (filtroCategoria && !opcionesCategoria.some((categoria) => categoria.id === Number(filtroCategoria))) {
@@ -88,14 +125,8 @@ export default function PlayersPage() {
     }
   }, [formulario.categoriaId, opcionesCategoriaFormulario])
 
-  const filtrados = useMemo(() => jugadores.filter((jugador) => {
-    const coincideNombre = nombreCompletoEmpiezaCon(jugador.nombre, jugador.apellido, busqueda)
-    const coincideGenero = jugador.genero === filtroGenero
-    const coincideCategoria = !filtroCategoria || jugador.categoriaId === Number(filtroCategoria)
-    return coincideNombre && coincideGenero && coincideCategoria
-  }).sort((a, b) => `${a.nombre} ${a.apellido}`.localeCompare(`${b.nombre} ${b.apellido}`, 'es', { sensitivity: 'base' })), [filtroCategoria, filtroGenero, jugadores, busqueda])
-
-  const paginados = filtrados.slice((pagina - 1) * TAMANO_PAGINA, pagina * TAMANO_PAGINA)
+  // Lo que llega ya viene filtrado y ordenado por el servidor.
+  const paginados = jugadores
 
   function abrirCrear() {
     setObjetivoEdicion(null)
@@ -247,6 +278,10 @@ export default function PlayersPage() {
           <option value="">Todas las categorías</option>
           {opcionesCategoria.map((categoria) => <option key={categoria.id} value={categoria.id}>{categoria.nombre}</option>)}
         </Select>
+        <label className="flex cursor-pointer items-center gap-2 text-sm font-bold text-rp-muted">
+          <input type="checkbox" checked={verBajas} onChange={(e) => setVerBajas(e.target.checked)} />
+          Ver dados de baja
+        </label>
         {idsSeleccionados.size > 0 && (
           <Button size="sm" variant="subtle" onClick={() => setEliminarLoteAbierto(true)}>
             <Trash2 size={15} />Archivar seleccionados ({idsSeleccionados.size})
@@ -269,11 +304,13 @@ export default function PlayersPage() {
           actions={(jugador) => (
             <>
               <button onClick={() => abrirEditar(jugador)} className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent"><Pencil size={15} /></button>
-              <button onClick={() => setObjetivoEliminar(jugador)} className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger"><Trash2 size={15} /></button>
+              {jugador.activo === false
+                ? <button onClick={() => reactivar(jugador)} disabled={reactivandoId === jugador.id} title="Reactivar" className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent disabled:opacity-40"><RotateCcw size={15} /></button>
+                : <button onClick={() => setObjetivoEliminar(jugador)} title="Archivar" className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger"><Trash2 size={15} /></button>}
             </>
           )}
         />
-        <Pagination page={pagina} pageSize={TAMANO_PAGINA} total={filtrados.length} onPageChange={setPagina} />
+        <Pagination page={pagina} pageSize={TAMANO_PAGINA} total={totalJugadores} onPageChange={setPagina} />
       </div>
 
       <Modal isOpen={modalAbierto} onClose={cerrarModal} onSubmit={manejarGuardar} title={objetivoEdicion ? 'Editar jugador' : 'Nuevo jugador'} size="lg">

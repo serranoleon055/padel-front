@@ -13,6 +13,7 @@ import { Input } from '@/shared/ui/Input'
 import { Modal } from '@/shared/ui/Modal'
 import { Pagination } from '@/shared/ui/Pagination'
 import { Select } from '@/shared/ui/Select'
+import { usePaginaEnUrl, useReiniciarPaginaAlFiltrar } from '@/shared/lib/paginacion'
 
 const TAMANO_PAGINA = 8
 const VACIO: AdminUserRequest = { username: '', password: '', rol: 'DUENIO' }
@@ -34,7 +35,7 @@ export default function AdminUsersPage() {
   const [objetivoEliminar, setObjetivoEliminar] = useState<AdminUserResponse | null>(null)
   const [eliminando, setEliminando] = useState(false)
   const [busqueda, setBusqueda] = useState('')
-  const [pagina, setPagina] = useState(1)
+  const [pagina, setPagina] = usePaginaEnUrl()
   const refScrollY = useRef(0)
 
   function cargar() {
@@ -53,7 +54,7 @@ export default function AdminUsersPage() {
   }
 
   useEffect(cargar, [])
-  useEffect(() => setPagina(1), [busqueda])
+  useReiniciarPaginaAlFiltrar(setPagina, [busqueda])
 
   const filtrados = useMemo(() => elementos
     .filter((usuario) => coincidePrefijoNombre(usuario.username, busqueda))

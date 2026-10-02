@@ -5,9 +5,9 @@
   padding: 132px 40px 78px;
   overflow: hidden;
   background:
-    linear-gradient(to bottom, rgba(5, 14, 8, .78), rgba(5, 14, 8, .58) 40%, rgba(5, 14, 8, .84)),
-    linear-gradient(to right, rgba(6, 15, 9, .52), rgba(6, 15, 9, .06) 42%, rgba(6, 15, 9, .44)),
-    url('/images/fondo cancha.jpg') center / cover no-repeat;
+    linear-gradient(to bottom, color-mix(in srgb, var(--rp-green-900) 78%, transparent), color-mix(in srgb, var(--rp-green-900) 58%, transparent) 40%, color-mix(in srgb, var(--rp-green-900) 84%, transparent)),
+    linear-gradient(to right, color-mix(in srgb, var(--rp-green-900) 52%, transparent), color-mix(in srgb, var(--rp-green-900) 6%, transparent) 42%, color-mix(in srgb, var(--rp-green-900) 44%, transparent)),
+    var(--rp-img-cancha) center / cover no-repeat;
 }
 
 .tournaments-inner {
@@ -30,10 +30,10 @@
   align-items: center;
   gap: 8px;
   margin-bottom: 18px;
-  border: 1px solid rgba(185, 154, 88, .28);
+  border: 1px solid color-mix(in srgb, var(--rp-gold) 28%, transparent);
   border-radius: 6px;
   padding: 7px 14px;
-  background: rgba(8, 20, 10, .68);
+  background: color-mix(in srgb, var(--rp-green-900) 68%, transparent);
   color: var(--rp-pale);
   font-family: var(--font-mono);
   font-size: 9px;
@@ -72,12 +72,12 @@
   border: 1px solid rgba(255, 255, 255, .16);
   border-radius: var(--rp-radius);
   padding: 16px 18px;
-  background: rgba(7, 17, 10, .72);
+  background: color-mix(in srgb, var(--rp-green-900) 72%, transparent);
   transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease;
 }
 
 .tournaments-summary div:hover {
-  border-color: rgba(185, 154, 88, .42);
+  border-color: color-mix(in srgb, var(--rp-gold) 42%, transparent);
   box-shadow: 0 14px 30px rgba(0, 0, 0, .2);
   transform: translateY(-2px);
 }
@@ -100,16 +100,16 @@
 
 .tournaments-shell {
   overflow: hidden;
-  border: 1px solid rgba(198, 211, 196, .88);
+  border: 1px solid color-mix(in srgb, var(--rp-border-light) 88%, transparent);
   border-radius: var(--rp-radius-lg);
-  background: #eef1eb;
+  background: var(--rp-tint-2);
   box-shadow: var(--rp-shadow-lg);
 }
 
 .toolbar {
   padding: 22px 24px;
   border-bottom: 1px solid var(--rp-border-light);
-  background: #f7f7f1;
+  background: var(--rp-tint-1);
 }
 
 .toolbar-head {
@@ -162,7 +162,7 @@
 .filter-field:focus-within,
 select.filter-field:focus {
   border-color: var(--rp-green-600);
-  box-shadow: 0 0 0 3px rgba(47, 104, 64, .12);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--rp-green-600) 12%, transparent);
 }
 
 select.filter-field {
@@ -209,16 +209,16 @@ select.filter-field {
   contain: content;
   content-visibility: auto;
   contain-intrinsic-size: 278px;
-  border: 1px solid rgba(185, 154, 88, .2);
+  border: 1px solid color-mix(in srgb, var(--rp-gold) 20%, transparent);
   border-radius: var(--rp-radius-lg);
   padding: 20px;
-  background: linear-gradient(160deg, rgba(11, 36, 20, .96), rgba(7, 17, 10, .98));
+  background: linear-gradient(160deg, color-mix(in srgb, var(--rp-green-800) 96%, transparent), color-mix(in srgb, var(--rp-green-900) 98%, transparent));
   color: #fff;
   transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease;
 }
 
 .tournament-card:hover {
-  border-color: rgba(185, 154, 88, .46);
+  border-color: color-mix(in srgb, var(--rp-gold) 46%, transparent);
   box-shadow: 0 12px 28px rgba(0, 0, 0, .2);
   transform: translateY(-2px);
 }
@@ -239,10 +239,10 @@ select.filter-field {
 }
 
 .tc-status {
-  border: 1px solid rgba(185, 154, 88, .3);
+  border: 1px solid color-mix(in srgb, var(--rp-gold) 30%, transparent);
   border-radius: 5px;
   padding: 4px 10px;
-  background: rgba(185, 154, 88, .12);
+  background: color-mix(in srgb, var(--rp-gold) 12%, transparent);
   color: var(--rp-pale);
 }
 
@@ -319,8 +319,8 @@ select.filter-field {
 }
 
 .tc-category {
-  border: 1px solid rgba(185, 154, 88, .28);
-  background: rgba(185, 154, 88, .1);
+  border: 1px solid color-mix(in srgb, var(--rp-gold) 28%, transparent);
+  background: color-mix(in srgb, var(--rp-gold) 10%, transparent);
   color: var(--rp-pale);
 }
 

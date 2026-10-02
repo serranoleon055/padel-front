@@ -16,6 +16,7 @@ import { Modal } from '@/shared/ui/Modal'
 import { Pagination } from '@/shared/ui/Pagination'
 import { Select } from '@/shared/ui/Select'
 import { StatusBadge } from '@/shared/ui/StatusBadge'
+import { usePaginaEnUrl, useReiniciarPaginaAlFiltrar } from '@/shared/lib/paginacion'
 
 const TAMANO_PAGINA = 8
 const VACIO: PlantillaFormatoRequest = {
@@ -75,7 +76,7 @@ export default function FormatTemplatesPage() {
   const [objetivoEliminar, setObjetivoEliminar] = useState<PlantillaFormatoResponse | null>(null)
   const [eliminando, setEliminando] = useState(false)
   const [busqueda, setBusqueda] = useState('')
-  const [pagina, setPagina] = useState(1)
+  const [pagina, setPagina] = usePaginaEnUrl('paginaFormatos')
   const refScrollY = useRef(0)
 
   function cargar() {
@@ -91,7 +92,7 @@ export default function FormatTemplatesPage() {
   }
 
   useEffect(cargar, [])
-  useEffect(() => setPagina(1), [busqueda])
+  useReiniciarPaginaAlFiltrar(setPagina, [busqueda])
 
   const filtrados = useMemo(() => elementos
     .filter((plantilla) => coincidePrefijoNombre(plantilla.nombre, busqueda))
@@ -233,12 +234,12 @@ export default function FormatTemplatesPage() {
               </label>
             </div>
             <div className={`mt-4 grid items-end gap-4 ${formulario.incluyeFaseGrupos ? 'sm:grid-cols-4' : 'sm:grid-cols-1'}`}>
-              <Input label="Cantidad parejas" type="number" min={2} placeholder="Automático" value={formulario.cantidadParejasObjetivo ?? ''} onChange={(e) => setFormulario((f) => ({ ...f, cantidadParejasObjetivo: aNumero(e.target.value) }))} />
+              <Input label="Cantidad parejas" soloNumeros placeholder="Automático" value={formulario.cantidadParejasObjetivo ?? ''} onChange={(e) => setFormulario((f) => ({ ...f, cantidadParejasObjetivo: aNumero(e.target.value) }))} />
               {formulario.incluyeFaseGrupos ? (
                 <>
-                  <Input label="Grupos" type="number" min={formulario.incluyeEliminacion ? 2 : 1} placeholder="Automático" value={formulario.cantidadGrupos ?? ''} onChange={(e) => setFormulario((f) => ({ ...f, cantidadGrupos: aNumero(e.target.value) }))} />
-                  <Input label="Parejas/grupo" type="number" min={2} placeholder="Automático" value={formulario.parejasPorGrupo ?? ''} onChange={(e) => setFormulario((f) => ({ ...f, parejasPorGrupo: aNumero(e.target.value) }))} />
-                  {formulario.incluyeEliminacion ? <Input label="Avanzan/grupo" type="number" min={1} value={formulario.avanzanPorGrupo ?? ''} onChange={(e) => setFormulario((f) => ({ ...f, avanzanPorGrupo: aNumero(e.target.value) }))} /> : null}
+                  <Input label="Grupos" soloNumeros placeholder="Automático" value={formulario.cantidadGrupos ?? ''} onChange={(e) => setFormulario((f) => ({ ...f, cantidadGrupos: aNumero(e.target.value) }))} />
+                  <Input label="Parejas/grupo" soloNumeros placeholder="Automático" value={formulario.parejasPorGrupo ?? ''} onChange={(e) => setFormulario((f) => ({ ...f, parejasPorGrupo: aNumero(e.target.value) }))} />
+                  {formulario.incluyeEliminacion ? <Input label="Avanzan/grupo" soloNumeros value={formulario.avanzanPorGrupo ?? ''} onChange={(e) => setFormulario((f) => ({ ...f, avanzanPorGrupo: aNumero(e.target.value) }))} /> : null}
                 </>
               ) : null}
             </div>

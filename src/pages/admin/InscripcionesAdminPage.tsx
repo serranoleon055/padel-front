@@ -1,6 +1,7 @@
 import { ArrowLeft, Check, TriangleAlert, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { NavLink, useParams } from 'react-router-dom'
+import { useVolverA } from '@/shared/lib/volverA'
 
 import { inscripcionesApi, type AprobarInscripcionRequest, type JugadorCandidato, type SolicitudInscripcionResponse } from '@/features/inscripciones/inscripcionesApi'
 import { tournamentsApi } from '@/features/tournaments/tournamentsApi'
@@ -88,6 +89,7 @@ function ResolverIntegrante({ titulo, nombre, candidatos, seleccion, onSeleccion
 
 export default function InscripcionesAdminPage() {
   const { torneoId } = useParams<{ torneoId: string }>()
+  const volverAlListado = useVolverA('/admin/torneos')
   const idTorneo = useMemo(() => (torneoId ? Number(torneoId) : null), [torneoId])
   const [solicitudes, setSolicitudes] = useState<SolicitudInscripcionResponse[]>([])
   const [categorias, setCategorias] = useState<CategoriaResponse[]>([])
@@ -218,7 +220,7 @@ export default function InscripcionesAdminPage() {
   return (
     <section>
       <Button variant="ghost" size="sm" asChild>
-        <NavLink to={`/admin/torneos/${idTorneo}`}><ArrowLeft size={16} />Volver a la gestión del torneo</NavLink>
+        <NavLink to={`/admin/torneos/${idTorneo}`} state={{ volverA: volverAlListado }}><ArrowLeft size={16} />Volver a la gestión del torneo</NavLink>
       </Button>
       <p className="mt-4 text-xs font-black uppercase tracking-[0.22em] text-rp-accent">Admin</p>
       <h1 className="mt-2 text-2xl font-black text-rp-text sm:text-3xl">Inscripciones del torneo</h1>

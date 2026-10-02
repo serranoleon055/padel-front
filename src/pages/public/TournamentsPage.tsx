@@ -12,6 +12,8 @@ import type { CategoriaResponse, EstadoTorneo, Genero, TorneoResponse } from '@/
 import { Pagination } from '@/shared/ui/Pagination'
 import { SegmentedToggle } from '@/shared/ui/SegmentedToggle'
 import { StatusMessage } from '@/shared/ui/StatusMessage'
+import { usePaginaEnUrl } from '@/shared/lib/paginacion'
+import { useUrlActual } from '@/shared/lib/volverA'
 import './TournamentsPage.css'
 
 const estadosPublicos: EstadoTorneo[] = ['INSCRIPCION', 'SORTEADO', 'EN_CURSO', 'FINALIZADO']
@@ -19,14 +21,15 @@ const opcionesEstado: EstadoTorneo[] = estadosPublicos
 const opcionesGenero: Genero[] = ['MASCULINO', 'FEMENINO']
 const TAMANO_PAGINA = 9
 
-const TarjetaTorneo = memo(function TarjetaTorneo({ torneo }: { torneo: TorneoResponse }) {
+const TarjetaTorneo = memo(function TarjetaTorneo({ torneo, volverA }: { torneo: TorneoResponse; volverA: string }) {
   const fondo = resolveApiAssetUrl(torneo.imagenUrl)
   return (
     <NavLink
       to={`/torneos/${torneo.id}`}
+      state={{ volverA }}
       className="tournament-card"
       style={fondo ? {
-        backgroundImage: `linear-gradient(180deg, rgba(6, 15, 9, .76), rgba(6, 15, 9, .5) 42%, rgba(4, 11, 6, .94)), url("${fondo}")`,
+        backgroundImage: `linear-gradient(180deg, color-mix(in srgb, var(--rp-green-900) 76%, transparent), color-mix(in srgb, var(--rp-green-900) 50%, transparent) 42%, color-mix(in srgb, var(--rp-green-900) 94%, transparent)), url("${fondo}")`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       } : undefined}
@@ -78,7 +81,10 @@ export default function TournamentsPage() {
   const estado = (searchParams.get('estado') ?? '') as EstadoTorneo | ''
   const genero = (searchParams.get('genero') ?? '') as Genero | ''
   const categoriaId = searchParams.get('categoria') ?? ''
-  const [pagina, setPagina] = useState(1)
+  const [pagina, setPagina] = usePaginaEnUrl()
+  /* Los filtros y la página de este listado viajan con cada tarjeta: el "Volver a torneos"
+     del detalle tiene que devolver a la misma vista, no al principio. */
+  const urlListado = useUrlActual()
 
   const actualizarFiltroUrl = useCallback((clave: string, valor: string) => {
     setSearchParams((prev) => {
@@ -277,7 +283,7 @@ export default function TournamentsPage() {
         {torneosFiltrados.length > 0 ? (
           <div className="cards-grid">
             {torneosPaginados.map((torneo) => (
-              <TarjetaTorneo key={torneo.id} torneo={torneo} />
+              <TarjetaTorneo key={torneo.id} torneo={torneo} volverA={urlListado} />
             ))}
           </div>
         ) : (

@@ -8,6 +8,7 @@ import type { JugadorHistorialResponse } from '@/shared/types/api'
 import { Pagination } from '@/shared/ui/Pagination'
 import { StatusMessage } from '@/shared/ui/StatusMessage'
 import { TarjetaPartidoJugador } from '@/pages/public/components/TarjetaPartidoJugador'
+import { usePaginaEnUrl } from '@/shared/lib/paginacion'
 
 const PARTIDOS_POR_PAGINA = 10
 
@@ -18,7 +19,7 @@ export default function PlayerMatchesPage() {
   const [historial, setHistorial] = useState<JugadorHistorialResponse | null>(null)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [pagina, setPagina] = useState(1)
+  const [pagina, setPagina] = usePaginaEnUrl()
 
   useEffect(() => {
     if (!Number.isFinite(id)) return

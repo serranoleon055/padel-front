@@ -116,6 +116,13 @@ export const tournamentsApi = {
     invalidateHomeCache()
   },
 
+  /** Borra el cuadro y devuelve el torneo a INSCRIPCION. Solo si no hay resultados. */
+  async undoDraw(id: number) {
+    await apiClient.delete(`/api/torneos/${id}/sorteo`)
+    invalidateTournamentsCache()
+    invalidateHomeCache()
+  },
+
   async reapplyPointTemplate(id: number, categoriaId?: number, plantillaPuntosId?: number) {
     const params: Record<string, number> = {}
     if (categoriaId != null) params.categoriaId = categoriaId

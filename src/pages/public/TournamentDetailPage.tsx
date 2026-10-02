@@ -2,6 +2,7 @@ import './TournamentDetailPage.css'
 import { ArrowLeft, CalendarDays, Check, ChevronLeft, ChevronRight, CircleDot, ClipboardList, GitBranch, ListChecks, MapPin, Medal, NotebookPen, Table2, Trophy } from 'lucide-react'
 import { memo, useEffect, useMemo, useState } from 'react'
 import { NavLink, useParams } from 'react-router-dom'
+import { useVolverA } from '@/shared/lib/volverA'
 
 import { tournamentsApi } from '@/features/tournaments/tournamentsApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
@@ -21,6 +22,7 @@ export default function TournamentDetailPage() {
   const { torneoId } = useParams()
   const torneoIdNumerico = Number(torneoId)
   const torneoIdValido = Number.isFinite(torneoIdNumerico)
+  const volverAlListado = useVolverA('/torneos')
   const [detalle, setDetalle] = useState<TorneoDetalleResponse | null>(null)
   const [grupos, setGrupos] = useState<GrupoResponse[]>([])
   const [calendario, setCalendario] = useState<PartidoResponse[]>([])
@@ -114,7 +116,14 @@ export default function TournamentDetailPage() {
     return Array.from(mapa.values()).sort((a, b) => a.orden - b.orden)
   }, [calendario, detalle, categoriaSeleccionada])
 
-  useEffect(() => { setIndiceProximos(0) }, [categoriaSeleccionada])
+  // Al cambiar de categoría, el carrusel vuelve al principio. Se ajusta durante el render
+  // y no en un efecto: así React lo resuelve en la misma pasada, sin dibujar primero el
+  // índice viejo contra la lista nueva (que es lo que hacía parpadear la tarjeta).
+  const [categoriaDelCarrusel, setCategoriaDelCarrusel] = useState(categoriaSeleccionada)
+  if (categoriaSeleccionada !== categoriaDelCarrusel) {
+    setCategoriaDelCarrusel(categoriaSeleccionada)
+    setIndiceProximos(0)
+  }
 
   useEffect(() => {
     if (categoriaSeleccionada) localStorage.setItem(`rp-torneo-${torneoIdNumerico}-categoria`, categoriaSeleccionada)
@@ -160,7 +169,7 @@ export default function TournamentDetailPage() {
     <section className="tournament-detail-page">
       <div className="tournament-detail-inner">
         <Button variant="subtle" size="sm" asChild className="td-back-button">
-          <NavLink to="/torneos">
+          <NavLink to={volverAlListado}>
             <ArrowLeft size={16} />
             Volver a torneos
           </NavLink>
@@ -404,7 +413,7 @@ function FormatoTorneo({
                         <span className="td-st-cell" data-label="PJ">{posicion.pj}</span>
                         <span className="td-st-cell" data-label="PG">{posicion.pg}</span>
                         <span className="td-st-cell" data-label="PP">{posicion.pp}</span>
-                        <span className="td-st-cell" data-label="Sets" style={{ color: difSets > 0 ? 'var(--rp-green-600)' : difSets < 0 ? '#c0392b' : 'inherit', fontWeight: 700 }}>{difSets > 0 ? '+' : ''}{difSets}</span>
+                        <span className="td-st-cell" data-label="Sets" style={{ color: difSets > 0 ? 'var(--rp-green-600)' : difSets < 0 ? 'var(--rp-danger)' : 'inherit', fontWeight: 700 }}>{difSets > 0 ? '+' : ''}{difSets}</span>
                         <span className="td-st-cell td-st-pts" data-label="Pts">{posicion.puntos}</span>
                       </div>
                     )

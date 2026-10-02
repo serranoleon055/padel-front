@@ -2,6 +2,8 @@ import { ArrowLeft } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { NavLink, useNavigate, useParams } from 'react-router-dom'
 
+import { useVolverA } from '@/shared/lib/volverA'
+
 import { categoriesApi, placesApi, seasonsApi } from '@/features/catalog/catalogApi'
 import { formatTemplatesApi, pointTemplatesApi } from '@/features/templates/templatesApi'
 import { tournamentsApi } from '@/features/tournaments/tournamentsApi'
@@ -113,7 +115,10 @@ export default function TournamentFormPage() {
   const navegar = useNavigate()
   const estaEditando = torneoId !== 'nuevo' && Boolean(torneoId)
   const idNumerico = estaEditando ? Number(torneoId) : null
-  const volverDestino = estaEditando && idNumerico ? `/admin/torneos/${idNumerico}` : '/admin/torneos'
+  /* Guardar tiene que devolver al listado tal como estaba —misma página, mismos filtros—,
+     no a su primera página. La URL viaja en el `state` del enlace que abrió el formulario. */
+  const volverAlListado = useVolverA('/admin/torneos')
+  const volverDestino = estaEditando && idNumerico ? `/admin/torneos/${idNumerico}` : volverAlListado
 
   const [formulario, setFormulario] = useState<TorneoRequest>(POR_DEFECTO)
   const [categorias, setCategorias] = useState<CategoriaResponse[]>([])
@@ -330,7 +335,7 @@ export default function TournamentFormPage() {
       }
       const guardado = estaEditando && idNumerico ? await tournamentsApi.update(idNumerico, datos) : await tournamentsApi.create(datos)
       if (archivoImagen) await tournamentsApi.uploadImage(guardado.id, archivoImagen)
-      navegar('/admin/torneos')
+      navegar(volverAlListado)
     } catch (e: unknown) {
       setErrorFormulario(obtenerMensajeErrorApi(e))
     } finally {
@@ -360,7 +365,7 @@ export default function TournamentFormPage() {
   return (
     <section>
       <Button variant="ghost" size="sm" asChild>
-        <NavLink to={volverDestino}><ArrowLeft size={16} />{estaEditando ? 'Volver al torneo' : 'Volver a torneos'}</NavLink>
+        <NavLink to={volverDestino} state={{ volverA: volverAlListado }}><ArrowLeft size={16} />{estaEditando ? 'Volver al torneo' : 'Volver a torneos'}</NavLink>
       </Button>
 
       <div className="mt-5">
@@ -489,9 +494,9 @@ export default function TournamentFormPage() {
           <fieldset className="rounded-lg border border-rp-border bg-rp-surface/82 p-5">
             <legend className="px-1 text-xs font-black uppercase tracking-[0.14em] text-rp-accent">Inscripción y premios</legend>
             <div className="mt-4 grid gap-4">
-              <Input label="Costo de inscripción por jugador" type="number" min={0} value={formulario.costoInscripcionJugador?.toString() ?? ''} onChange={(e) => setFormulario((f) => ({ ...f, costoInscripcionJugador: e.target.value ? Number(e.target.value) : null }))} placeholder="20000" />
-              <Input label="Premio acumulado" type="number" min={0} value={formulario.premioAcumulado?.toString() ?? ''} onChange={(e) => setFormulario((f) => ({ ...f, premioAcumulado: e.target.value ? Number(e.target.value) : null }))} placeholder="0" />
-              <Input label="Seña (% del total, por defecto 50)" type="number" min={1} max={100} value={formulario.seniaPorcentaje?.toString() ?? ''} onChange={(e) => setFormulario((f) => ({ ...f, seniaPorcentaje: e.target.value ? Number(e.target.value) : null }))} placeholder="50" />
+              <Input label="Costo de inscripción por jugador" soloNumeros value={formulario.costoInscripcionJugador?.toString() ?? ''} onChange={(e) => setFormulario((f) => ({ ...f, costoInscripcionJugador: e.target.value ? Number(e.target.value) : null }))} placeholder="20000" />
+              <Input label="Premio acumulado" soloNumeros value={formulario.premioAcumulado?.toString() ?? ''} onChange={(e) => setFormulario((f) => ({ ...f, premioAcumulado: e.target.value ? Number(e.target.value) : null }))} placeholder="0" />
+              <Input label="Seña (% del total, por defecto 50)" soloNumeros value={formulario.seniaPorcentaje?.toString() ?? ''} onChange={(e) => setFormulario((f) => ({ ...f, seniaPorcentaje: e.target.value ? Number(e.target.value) : null }))} placeholder="50" />
             </div>
             {formulario.costoInscripcionJugador ? (
               <p className="mt-3 rounded-md border border-rp-border bg-rp-bg/55 px-3 py-2 text-xs text-rp-muted">
@@ -514,7 +519,7 @@ export default function TournamentFormPage() {
               {enviando ? 'Guardando...' : estaEditando ? 'Guardar cambios' : 'Crear torneo'}
             </Button>
             <Button variant="ghost" asChild className="w-full">
-              <NavLink to={volverDestino}>Cancelar</NavLink>
+              <NavLink to={volverDestino} state={{ volverA: volverAlListado }}>Cancelar</NavLink>
             </Button>
           </div>
         </div>

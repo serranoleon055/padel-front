@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, NavLink } from 'react-router-dom'
+import { useVolverA } from '@/shared/lib/volverA'
 import { ArrowLeft, ArrowRight, CalendarDays, Trophy, Medal, TrendingUp, Users } from 'lucide-react'
 
 import { categoriesApi } from '@/features/catalog/catalogApi'
@@ -14,6 +15,7 @@ import { TarjetaPartidoJugador } from '@/pages/public/components/TarjetaPartidoJ
 export default function PlayerProfilePage() {
   const { jugadorId } = useParams()
   const id = Number(jugadorId)
+  const volverAlRanking = useVolverA('/ranking')
 
   const [historial, setHistorial] = useState<JugadorHistorialResponse | null>(null)
   const [categorias, setCategorias] = useState<CategoriaResponse[]>([])
@@ -101,7 +103,7 @@ export default function PlayerProfilePage() {
   return (
     <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
       {/* Encabezado */}
-      <NavLink to="/ranking" className="mb-6 flex items-center gap-2 text-sm" style={{ color: 'var(--rp-muted-light)' }}>
+      <NavLink to={volverAlRanking} className="mb-6 flex items-center gap-2 text-sm" style={{ color: 'var(--rp-muted-light)' }}>
         <ArrowLeft size={15} /> Volver al ranking
       </NavLink>
 
@@ -168,7 +170,7 @@ export default function PlayerProfilePage() {
                     <td className="px-4 py-3 text-center" style={{ color: 'var(--rp-muted-light)' }}>{r.torneosJugados}</td>
                     <td className="px-4 py-3 text-center font-bold" style={{ color: 'var(--rp-ink)' }}>{r.victorias}-{r.derrotas}</td>
                     <td className="px-4 py-3 text-center text-sm font-bold">
-                      <span style={{ color: r.tendencia.startsWith('+') ? 'var(--rp-green-600)' : r.tendencia.startsWith('-') ? '#c0392b' : 'var(--rp-muted-light)' }}>
+                      <span style={{ color: r.tendencia.startsWith('+') ? 'var(--rp-green-600)' : r.tendencia.startsWith('-') ? 'var(--rp-danger)' : 'var(--rp-muted-light)' }}>
                         {r.tendencia}
                       </span>
                     </td>

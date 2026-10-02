@@ -16,6 +16,8 @@ import { Input } from '@/shared/ui/Input'
 import { Pagination } from '@/shared/ui/Pagination'
 import { StatusBadge } from '@/shared/ui/StatusBadge'
 import { StatusMessage } from '@/shared/ui/StatusMessage'
+import { usePaginaEnUrl, useReiniciarPaginaAlFiltrar } from '@/shared/lib/paginacion'
+import { useUrlActual } from '@/shared/lib/volverA'
 
 const TAMANO_PAGINA = 3
 
@@ -43,7 +45,11 @@ export default function TournamentsAdminPage() {
     const [filtroEstado, setFiltroEstado] = useState<EstadoTorneo | ''>((searchParams.get('estado') as EstadoTorneo | null) ?? '')
     const [filtroFormato, setFiltroFormato] = useState<FormatoTorneo | ''>('')
     const [filtroCategoria, setFiltroCategoria] = useState<string>('')
-    const [pagina, setPagina] = useState(1)
+    const [pagina, setPagina] = usePaginaEnUrl()
+
+    /* La URL de este listado —página y filtros— viaja con cada enlace que sale de acá,
+       para que el "volver" y el "guardar" de la otra pantalla caigan en esta misma vista. */
+    const urlListado = useUrlActual()
 
     const refScrollY = useRef(0)
 
@@ -77,9 +83,7 @@ export default function TournamentsAdminPage() {
         finally { setEliminando(false) }
     }
 
-    useEffect(() => {
-        setPagina(1)
-    }, [busqueda, filtroEstado, filtroFormato, filtroCategoria])
+    useReiniciarPaginaAlFiltrar(setPagina, [busqueda, filtroEstado, filtroFormato, filtroCategoria])
 
     const categoriasDisponibles = Array.from(
         new Map(elementos.flatMap((elemento) => elemento.categorias ?? []).map((categoria) => [categoria.id, categoria])).values(),
@@ -96,7 +100,7 @@ export default function TournamentsAdminPage() {
 
     return (
         <section>
-            <AdminPageHeader title="Torneos" action={<Button size="sm" asChild><NavLink to="/admin/torneos/nuevo"><Plus size={16} />Nuevo torneo</NavLink></Button>} />
+            <AdminPageHeader title="Torneos" action={<Button size="sm" asChild><NavLink to="/admin/torneos/nuevo" state={{ volverA: urlListado }}><Plus size={16} />Nuevo torneo</NavLink></Button>} />
 
             <div className="rp-toolbar">
                 <Input placeholder="Buscar por nombre..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
@@ -150,10 +154,10 @@ export default function TournamentsAdminPage() {
                             </Button>
                             )}
                             <Button size="sm" variant="ghost" asChild>
-                            <NavLink to={`/admin/torneos/${torneo.id}/editar`} title="Configurar" aria-label="Configurar"><Settings size={16} /></NavLink>
+                            <NavLink to={`/admin/torneos/${torneo.id}/editar`} state={{ volverA: urlListado }} title="Configurar" aria-label="Configurar"><Settings size={16} /></NavLink>
                             </Button>
                             <Button size="sm" variant="ghost" asChild>
-                            <NavLink to={`/admin/torneos/${torneo.id}`} title="Gestionar" aria-label="Gestionar"><ChevronRight size={16} /></NavLink>
+                            <NavLink to={`/admin/torneos/${torneo.id}`} state={{ volverA: urlListado }} title="Gestionar" aria-label="Gestionar"><ChevronRight size={16} /></NavLink>
                             </Button>
                             <button onClick={() => setObjetivoEliminar(torneo)} className="flex size-9 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger">
                                 <Trash2 size={15} />

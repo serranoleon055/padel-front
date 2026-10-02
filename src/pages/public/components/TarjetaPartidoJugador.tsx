@@ -21,7 +21,7 @@ export function TarjetaPartidoJugador({ partido, jugadorId }: TarjetaPartidoJuga
       style={{
         borderColor: esGanador ? 'var(--rp-green-600)' : 'var(--rp-border-light)',
         background: esGanador ? 'rgba(47,104,64,0.06)' : '#fff',
-        borderLeft: `4px solid ${esGanador ? 'var(--rp-green-600)' : hayResultado ? '#c0392b' : 'var(--rp-border-light)'}`,
+        borderLeft: `4px solid ${esGanador ? 'var(--rp-green-600)' : hayResultado ? 'var(--rp-danger)' : 'var(--rp-border-light)'}`,
       }}
     >
       <p className="text-xs" style={{ color: 'var(--rp-muted-light)' }}>{meta}</p>
@@ -33,7 +33,7 @@ export function TarjetaPartidoJugador({ partido, jugadorId }: TarjetaPartidoJuga
         <div className="flex items-center gap-2 sm:flex-col sm:gap-1">
           <span className="whitespace-nowrap text-sm font-black" style={{ color: 'var(--rp-gold)' }}>{partido.marcador ?? formatearEnum(partido.estado)}</span>
           {hayResultado && (
-            <span className="text-[10px] font-black uppercase tracking-wide" style={{ color: esGanador ? 'var(--rp-green-600)' : '#c0392b' }}>
+            <span className="text-[10px] font-black uppercase tracking-wide" style={{ color: esGanador ? 'var(--rp-green-600)' : 'var(--rp-danger)' }}>
               {esGanador ? 'Victoria' : 'Derrota'}
             </span>
           )}

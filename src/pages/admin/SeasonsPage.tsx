@@ -15,6 +15,7 @@ import { Input } from '@/shared/ui/Input'
 import { Modal } from '@/shared/ui/Modal'
 import { Pagination } from '@/shared/ui/Pagination'
 import { StatusBadge } from '@/shared/ui/StatusBadge'
+import { usePaginaEnUrl, useReiniciarPaginaAlFiltrar } from '@/shared/lib/paginacion'
 
 const TAMANO_PAGINA = 8
 const VACIO: TemporadaRequest = { nombre: '', fechaInicio: '', fechaFin: null, activa: false }
@@ -39,7 +40,7 @@ export default function SeasonsPage() {
 
     const [busqueda, setBusqueda] = useState('')
     const [filtroActiva, setFiltroActiva] = useState<string>('')
-    const [pagina, setPagina] = useState(1)
+    const [pagina, setPagina] = usePaginaEnUrl()
 
     const refScrollY = useRef(0)
 
@@ -56,9 +57,7 @@ export default function SeasonsPage() {
     }
     useEffect(cargar, [])
 
-    useEffect(() => {
-        setPagina(1)
-    }, [busqueda, filtroActiva])
+    useReiniciarPaginaAlFiltrar(setPagina, [busqueda, filtroActiva])
 
     const filtrados = useMemo(() => elementos.filter((temporada) => {
         const coincideNombre = coincidePrefijoNombre(temporada.nombre, busqueda)
