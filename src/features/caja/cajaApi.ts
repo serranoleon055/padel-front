@@ -188,7 +188,8 @@ export const cajaApi = {
     const { data } = await apiClient.get<GastoResponse[]>('/api/gastos', { params: { desde, hasta } })
     return data
   },
-  async eliminarGasto(id: number) {
-    await apiClient.delete(`/api/gastos/${id}`)
+  /** Baja logica: la fila queda para poder auditarla, igual que los cobros anulados. */
+  async anularGasto(id: number, motivo: string) {
+    await apiClient.delete(`/api/gastos/${id}`, { params: { motivo } })
   },
 }

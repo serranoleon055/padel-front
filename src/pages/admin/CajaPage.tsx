@@ -149,14 +149,14 @@ export default function CajaPage() {
     } finally { setGuardandoGasto(false) }
   }
 
-  async function borrarGasto() {
+  async function anularGasto(motivo: string) {
     if (aBorrarGasto == null) return
     setBorrandoGasto(true)
     try {
-      await cajaApi.eliminarGasto(aBorrarGasto)
+      await cajaApi.anularGasto(aBorrarGasto, motivo)
       setABorrarGasto(null)
       cargar()
-      avisoExito('Gasto eliminado')
+      avisoExito('Gasto anulado')
     } catch (e: unknown) {
       setError(obtenerMensajeErrorApi(e)); setABorrarGasto(null)
     } finally { setBorrandoGasto(false) }
@@ -473,7 +473,7 @@ export default function CajaPage() {
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     <span className="text-sm font-bold text-rp-danger">−{formatearMoneda(gasto.monto)}</span>
-                    <button onClick={() => setABorrarGasto(gasto.id)} className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger" aria-label="Eliminar gasto" title="Eliminar gasto"><Trash2 size={14} /></button>
+                    <button onClick={() => setABorrarGasto(gasto.id)} className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger" aria-label="Anular gasto" title="Anular gasto"><Trash2 size={14} /></button>
                   </div>
                 </div>
               ))}
@@ -601,9 +601,13 @@ export default function CajaPage() {
       <ConfirmDialog
         isOpen={aBorrarGasto != null}
         onClose={() => setABorrarGasto(null)}
-        onConfirm={borrarGasto}
-        title="Eliminar gasto"
-        description="El gasto se borra y vuelve a cambiar el resultado del día y del mes."
+        onConfirm={anularGasto}
+        title="Anular gasto"
+        description="El gasto deja de sumar en el arqueo y en el resultado del mes. Queda registrado como anulado, con el motivo y quién lo anuló."
+        confirmLabel="Anular"
+        loadingLabel="Anulando..."
+        pedirMotivo
+        motivoPlaceholder="Lo cargué dos veces"
         isLoading={borrandoGasto}
       />
 

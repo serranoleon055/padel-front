@@ -456,6 +456,17 @@ export default function EstadisticasPage() {
                         {producto.margen != null && (
                           <span className="ml-1.5 text-xs text-rp-muted">{Math.round(producto.margen * 100)}%</span>
                         )}
+                        {/* El costo es opcional: el club puede no saber todavía cuánto le
+                            sale algo. Sin este aviso, ganancia 0 y margen 0% se leen como
+                            "se vende sin dejar nada", que es otra cosa. */}
+                        {producto.unidadesSinCosto > 0 && (
+                          <span
+                            className="ml-1.5 text-xs text-rp-faint"
+                            title={`${producto.unidadesSinCosto} de las ${producto.unidades} unidades se vendieron sin costo cargado: la ganancia está incompleta.`}
+                          >
+                            sin costo
+                          </span>
+                        )}
                       </span>
                     </li>
                   ))}
