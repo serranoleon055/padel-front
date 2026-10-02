@@ -9,6 +9,7 @@ import { fechaISO, formatearMoneda } from '@/shared/lib/formatters'
 import { horasDeLaJornada } from '@/shared/lib/jornada'
 import type { EstadisticasResponse, LugarResponse } from '@/shared/types/api'
 import { Button } from '@/shared/ui/Button'
+import { GraficoAccesible } from '@/shared/ui/GraficoAccesible'
 import { SegmentedToggle } from '@/shared/ui/SegmentedToggle'
 import { StatusMessage } from '@/shared/ui/StatusMessage'
 
@@ -252,6 +253,18 @@ export default function EstadisticasPage() {
                 achicar los números los vuelve ilegibles: se corre de costado, igual que el
                 estado de resultados de al lado. El ancho mínimo mantiene alineadas las
                 barras con la fila de resultados, que es lo que se lee en paralelo. */}
+            <GraficoAccesible
+              resumen={`Ingresos y gastos de los últimos ${datos.mesesDelPanel} meses, por mes: turnos, inscripciones, mostrador y gastos operativos.`}
+              columnas={['Mes', 'Turnos', 'Inscripciones', 'Mostrador', 'Gastos', 'Resultado']}
+              filas={datos.ingresosPorMes.map((mes) => [
+                etiquetaMes(mes.mes),
+                formatearMoneda(mes.turnos),
+                formatearMoneda(mes.inscripciones),
+                formatearMoneda(mes.ventas),
+                formatearMoneda(mes.gastosOperativos),
+                formatearMoneda(mes.resultado),
+              ])}
+            >
             <div className="overflow-x-auto">
             <div className="min-w-[520px]">
             <div className="flex items-end gap-4" style={{ height: 160 }}>
@@ -281,6 +294,7 @@ export default function EstadisticasPage() {
             </div>
             </div>
             </div>
+            </GraficoAccesible>
 
             <div className="mt-3 flex flex-wrap gap-4 text-xs font-bold text-rp-muted">
               <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded-sm bg-rp-accent/70" />Turnos</span>
@@ -337,6 +351,13 @@ export default function EstadisticasPage() {
             {turnosPorDia.total === 0 ? (
               <p className="py-4 text-center text-sm text-rp-muted">Sin turnos registrados en el período.</p>
             ) : (
+              // Sin tabla aparte: este gráfico ya lleva el número arriba de cada barra,
+              // así que la alternativa sería repetir lo mismo dos veces.
+              <GraficoAccesible
+                resumen={`Turnos por día de la semana: ${turnosPorDia.barras.map((b) => `${b.dia} ${b.cantidad}`).join(', ')}.`}
+                columnas={[]}
+                filas={[]}
+              >
               <div className="flex items-end gap-2 sm:gap-4" style={{ height: 150 }}>
                 {turnosPorDia.barras.map((barra) => (
                   <div key={barra.dia} className="flex h-full flex-1 flex-col items-center justify-end gap-1">
@@ -349,6 +370,7 @@ export default function EstadisticasPage() {
                   </div>
                 ))}
               </div>
+              </GraficoAccesible>
             )}
           </Panel>
 
