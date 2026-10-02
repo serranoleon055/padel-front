@@ -47,7 +47,39 @@ export interface GeneracionTurnosFijos {
   conflictos: ConflictoTurnoFijo[]
 }
 
+/** Una franja libre para vender como abono. Las horas vienen del backend como HH:mm:ss. */
+export interface FranjaAbonoLibre {
+  horaDesde: string
+  horaHasta: string
+}
+
+/** `cerrada` es "el club no atiende ese día", distinto de "atiende y está todo vendido". */
+export interface CanchaDelDiaAbonos {
+  canchaId: number
+  canchaNombre: string
+  cerrada: boolean
+  franjas: FranjaAbonoLibre[]
+}
+
+export interface DiaAbonos {
+  diaSemana: number
+  nombre: string
+  canchas: CanchaDelDiaAbonos[]
+}
+
+export interface DisponibilidadAbonos {
+  dias: DiaAbonos[]
+  canchas: { id: number; nombre: string }[]
+}
+
 export const turnosFijosApi = {
+  /** Qué franjas le quedan al club por vender como abono, por día y por cancha. */
+  async disponibilidadSemanal(lugarId?: number | null) {
+    const { data } = await apiClient.get<DisponibilidadAbonos>('/api/turnos-fijos/disponibilidad-semanal', {
+      params: { lugarId: lugarId ?? undefined },
+    })
+    return data
+  },
   async getAll(params?: { lugarId?: number | null; canchaId?: number | null }) {
     const { data } = await apiClient.get<TurnoFijoResponse[]>('/api/turnos-fijos', {
       params: { lugarId: params?.lugarId ?? undefined, canchaId: params?.canchaId ?? undefined },
@@ -60,6 +92,11 @@ export const turnosFijosApi = {
   },
   async update(id: number, body: TurnoFijoRequest) {
     const { data } = await apiClient.put<TurnoFijoResponse>(`/api/turnos-fijos/${id}`, body)
+    return data
+  },
+  /** Reactiva un abono dado de baja. Después hay que llamar a generar(). */
+  async reactivar(id: number) {
+    const { data } = await apiClient.patch<TurnoFijoResponse>(`/api/turnos-fijos/${id}/reactivar`)
     return data
   },
   async remove(id: number) {

@@ -1,4 +1,4 @@
-import { Pencil, Plus, Trash2 } from 'lucide-react'
+import { Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { canchasApi } from '@/features/catalog/catalogApi'
@@ -26,10 +26,23 @@ export function CanchasLugarModal({ lugar, onClose }: { lugar: LugarResponse | n
   const [editando, setEditando] = useState<CanchaResponse | null>(null)
   const [guardando, setGuardando] = useState(false)
   const [aArchivar, setAArchivar] = useState<CanchaResponse | null>(null)
+  const [reactivandoId, setReactivandoId] = useState<number | null>(null)
+
+  /** Volver a habilitar la cancha que se apagó por una refacción. Antes era de ida. */
+  async function reactivar(cancha: CanchaResponse) {
+    if (!lugar) return
+    setReactivandoId(cancha.id)
+    try {
+      await canchasApi.reactivar(cancha.id)
+      cargar(lugar.id)
+    } catch (e: unknown) {
+      setError(obtenerMensajeErrorApi(e))
+    } finally { setReactivandoId(null) }
+  }
 
   function cargar(lugarId: number) {
     setCargando(true)
-    canchasApi.getAll(lugarId)
+    canchasApi.getAll(lugarId, true)
       // Por número de cancha: el club las nombra y las mira así, y el orden en que
       // vuelven de la API es el de creación.
       .then((datos) => { setCanchas([...datos].sort(porNombreDeCancha((cancha) => cancha.nombre))); setError(null) })
@@ -126,13 +139,18 @@ export function CanchasLugarModal({ lugar, onClose }: { lugar: LugarResponse | n
             canchas.map((cancha) => (
               <div key={cancha.id} className="flex items-center justify-between rounded-md border border-rp-border bg-rp-surface-2/40 px-3 py-2">
                 <div>
-                  <p className="text-sm font-bold text-rp-text">{cancha.nombre}</p>
+                  <p className="flex items-center gap-2 text-sm font-bold text-rp-text">
+                    {cancha.nombre}
+                    {!cancha.activo && <span className="rounded border border-rp-border px-1.5 py-0.5 text-[11px] font-bold uppercase text-rp-muted">De baja</span>}
+                  </p>
                   {cancha.descripcion && <p className="text-xs text-rp-muted">{cancha.descripcion}</p>}
                   {cancha.precioPorHora != null && <p className="text-xs text-rp-muted">{formatearMoneda(cancha.precioPorHora)}/hora</p>}
                 </div>
                 <div className="flex gap-1">
                   <button type="button" onClick={() => empezarEdicion(cancha)} className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent" aria-label="Editar"><Pencil size={15} /></button>
-                  <button type="button" onClick={() => setAArchivar(cancha)} className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger" aria-label="Archivar"><Trash2 size={15} /></button>
+                  {cancha.activo
+                    ? <button type="button" onClick={() => setAArchivar(cancha)} className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger" aria-label="Archivar"><Trash2 size={15} /></button>
+                    : <button type="button" onClick={() => reactivar(cancha)} disabled={reactivandoId === cancha.id} className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent disabled:opacity-40" aria-label="Reactivar"><RotateCcw size={15} /></button>}
                 </div>
               </div>
             ))
@@ -145,8 +163,8 @@ export function CanchasLugarModal({ lugar, onClose }: { lugar: LugarResponse | n
             <Input label="Nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Cancha 1" />
             <Input label="Descripción" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Cristal / muro / techada" />
             <div className="grid items-end gap-2 sm:grid-cols-2">
-              <Input label="Precio por hora" type="number" min={0} value={precioPorHora} onChange={(e) => setPrecioPorHora(e.target.value)} placeholder="8000" />
-              <Input label="Seña (%, por defecto 50)" type="number" min={1} max={100} value={seniaPorcentaje} onChange={(e) => setSeniaPorcentaje(e.target.value)} placeholder="50" />
+              <Input label="Precio por hora" soloNumeros value={precioPorHora} onChange={(e) => setPrecioPorHora(e.target.value)} placeholder="8000" />
+              <Input label="Seña (%, por defecto 50)" soloNumeros value={seniaPorcentaje} onChange={(e) => setSeniaPorcentaje(e.target.value)} placeholder="50" />
             </div>
             <label className="flex cursor-pointer items-start gap-2 text-sm font-bold text-rp-muted">
               <input type="checkbox" checked={seniaObligatoria} onChange={(e) => setSeniaObligatoria(e.target.checked)} className="mt-0.5 size-4 accent-rp-accent" />

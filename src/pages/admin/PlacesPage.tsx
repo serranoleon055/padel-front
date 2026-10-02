@@ -1,4 +1,4 @@
-import { LayoutGrid, MapPin, Pencil, Plus, Trash2 } from 'lucide-react'
+import { LayoutGrid, MapPin, Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { placesApi } from '@/features/catalog/catalogApi'
@@ -13,6 +13,8 @@ import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
 import { Input } from '@/shared/ui/Input'
 import { Modal } from '@/shared/ui/Modal'
 import { Pagination } from '@/shared/ui/Pagination'
+import { StatusBadge } from '@/shared/ui/StatusBadge'
+import { usePaginaEnUrl, useReiniciarPaginaAlFiltrar } from '@/shared/lib/paginacion'
 
 import { CanchasLugarModal } from './CanchasLugarModal'
 
@@ -37,15 +39,17 @@ export default function PlacesPage() {
     const [eliminandoLote, setEliminandoLote] = useState(false)
 
     const [busqueda, setBusqueda] = useState('')
-    const [pagina, setPagina] = useState(1)
+    const [pagina, setPagina] = usePaginaEnUrl()
     const [lugarCanchas, setLugarCanchas] = useState<LugarResponse | null>(null)
+    const [verArchivadas, setVerArchivadas] = useState(false)
+    const [reactivandoId, setReactivandoId] = useState<number | null>(null)
 
     const refScrollY = useRef(0)
 
     function cargar() {
         refScrollY.current = window.scrollY
         setCargando(true)
-        placesApi.getAll()
+        placesApi.getAll(verArchivadas)
         .then((datos) => { setElementos(datos); setError(null) })
         .catch((e: unknown) => setError(obtenerMensajeErrorApi(e)))
         .finally(() => {
@@ -53,11 +57,21 @@ export default function PlacesPage() {
             requestAnimationFrame(() => window.scrollTo(0, refScrollY.current))
         })
     }
-    useEffect(cargar, [])
+    useEffect(cargar, [verArchivadas])
 
-    useEffect(() => {
-        setPagina(1)
-    }, [busqueda])
+    /** Archivar era de ida: sin ver las archivadas no había forma de volver a activarlas. */
+    async function reactivar(lugar: LugarResponse) {
+        setReactivandoId(lugar.id)
+        try {
+            await placesApi.reactivar(lugar.id)
+            cargar()
+            avisoExito('Sede reactivada con sus canchas')
+        } catch (e: unknown) {
+            setError(obtenerMensajeErrorApi(e))
+        } finally { setReactivandoId(null) }
+    }
+
+    useReiniciarPaginaAlFiltrar(setPagina, [busqueda])
 
     const filtrados = useMemo(() => elementos.filter((lugar) => {
         return coincidePrefijoNombre(lugar.nombre, busqueda)
@@ -111,7 +125,13 @@ export default function PlacesPage() {
     }
 
     const columnas = useMemo(() => [
-        { key: 'nombre', label: 'Nombre', render: (lugar: LugarResponse) => <div className="flex items-center gap-2"><MapPin size={14} className="shrink-0 text-rp-accent" /><span className="text-sm font-bold text-rp-text">{lugar.nombre}</span></div> },
+        { key: 'nombre', label: 'Nombre', render: (lugar: LugarResponse) => (
+            <div className="flex items-center gap-2">
+                <MapPin size={14} className="shrink-0 text-rp-accent" />
+                <span className="text-sm font-bold text-rp-text">{lugar.nombre}</span>
+                {lugar.archivado && <StatusBadge tone="neutral">Archivada</StatusBadge>}
+            </div>
+        ) },
         { key: 'dir', label: 'Dirección', render: (lugar: LugarResponse) => <span className="text-sm text-rp-muted">{lugar.direccion}</span> },
     ] as Column<LugarResponse>[], [])
 
@@ -123,6 +143,10 @@ export default function PlacesPage() {
                 <div className="w-full sm:w-64">
                     <Input placeholder="Buscar por nombre..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
                 </div>
+                <label className="flex cursor-pointer items-center gap-2 text-sm font-bold text-rp-muted">
+                    <input type="checkbox" checked={verArchivadas} onChange={(e) => setVerArchivadas(e.target.checked)} />
+                    Ver archivadas
+                </label>
                 {idsSeleccionados.size > 0 && (
                     <Button size="sm" variant="subtle" className="w-full sm:w-auto" onClick={() => setEliminarLoteAbierto(true)}>
                         <Trash2 size={15} />Archivar seleccionados ({idsSeleccionados.size})
@@ -136,7 +160,9 @@ export default function PlacesPage() {
                 actions={(lugar) => (<>
                     <button onClick={() => setLugarCanchas(lugar)} className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent" aria-label="Canchas"><LayoutGrid size={15} /></button>
                     <button onClick={() => abrirEditar(lugar)} className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent"><Pencil size={15} /></button>
-                    <button onClick={() => setObjetivoEliminar(lugar)} className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger"><Trash2 size={15} /></button>
+                    {lugar.archivado
+                        ? <button onClick={() => reactivar(lugar)} disabled={reactivandoId === lugar.id} title="Reactivar" className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent disabled:opacity-40"><RotateCcw size={15} /></button>
+                        : <button onClick={() => setObjetivoEliminar(lugar)} title="Archivar" className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger"><Trash2 size={15} /></button>}
                 </>)}
                 />
                 <Pagination page={pagina} pageSize={TAMANO_PAGINA} total={filtrados.length} onPageChange={setPagina} />

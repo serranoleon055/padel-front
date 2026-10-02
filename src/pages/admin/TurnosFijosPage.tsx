@@ -1,4 +1,4 @@
-import { CalendarSync, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react'
+import { CalendarSync, Pencil, Plus, RefreshCw, RotateCcw, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
 import { canchasApi, placesApi } from '@/features/catalog/catalogApi'
@@ -28,7 +28,7 @@ const DIAS = [
 ]
 
 function etiquetaDuracion(minutos: number) {
-  return minutos % 60 === 0 ? `-e h` : ` min`
+  return minutos % 60 === 0 ? `${minutos / 60} h` : `${minutos} min`
 }
 
 function hhmm(hora: string | null | undefined) {
@@ -76,6 +76,7 @@ export default function TurnosFijosPage() {
   const [guardando, setGuardando] = useState(false)
   const [objetivoBaja, setObjetivoBaja] = useState<TurnoFijoResponse | null>(null)
   const [dandoDeBaja, setDandoDeBaja] = useState(false)
+  const [reactivandoId, setReactivandoId] = useState<number | null>(null)
   const [generando, setGenerando] = useState(false)
 
   useEffect(() => {
@@ -183,6 +184,27 @@ export default function TurnosFijosPage() {
     } catch (e: unknown) {
       setError(obtenerMensajeErrorApi(e)); setObjetivoBaja(null)
     } finally { setDandoDeBaja(false) }
+  }
+
+  /**
+   * Vuelve a activar un abono. El cliente que se toma un mes y vuelve es lo normal, y
+   * antes había que cargarlo de nuevo desde cero. Los turnos se regeneran a continuación
+   * porque la baja canceló los que ya estaban puestos en la grilla.
+   */
+  async function reactivar(turno: TurnoFijoResponse) {
+    setReactivandoId(turno.id)
+    try {
+      await turnosFijosApi.reactivar(turno.id)
+      const resultado = await turnosFijosApi.generar(turno.id)
+      cargar()
+      if (resultado.conflictos.length > 0) {
+        avisoError(`Abono reactivado · ${resultado.conflictos.length} fechas con el horario ya ocupado`)
+      } else {
+        avisoExito(`Abono reactivado y ${resultado.generadas} turnos agendados`)
+      }
+    } catch (e: unknown) {
+      setError(obtenerMensajeErrorApi(e))
+    } finally { setReactivandoId(null) }
   }
 
   async function regenerarTodos() {
@@ -297,8 +319,10 @@ export default function TurnosFijosPage() {
           emptyDescription="Cargá los abonos semanales del club y se agendan solos."
           actions={(turno) => (<>
             <button onClick={() => abrirEditar(turno)} className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent"><Pencil size={15} /></button>
-            {turno.activo && (
-              <button onClick={() => setObjetivoBaja(turno)} className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger"><Trash2 size={15} /></button>
+            {turno.activo ? (
+              <button onClick={() => setObjetivoBaja(turno)} title="Dar de baja" className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger"><Trash2 size={15} /></button>
+            ) : (
+              <button onClick={() => reactivar(turno)} disabled={reactivandoId === turno.id} title="Reactivar" className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent disabled:opacity-40"><RotateCcw size={15} /></button>
             )}
           </>)}
         />

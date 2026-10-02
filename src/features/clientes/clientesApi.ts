@@ -57,7 +57,29 @@ export interface PaginaClientes {
   number: number
 }
 
+/** Un cliente al que conviene escribirle, con el dato que explica por qué está en la lista. */
+export interface SeguimientoCliente {
+  clienteId: number
+  nombre: string
+  telefono: string
+  turnos: number
+  gastado: number
+  ultimoTurno: string | null
+  primerTurno: string | null
+  diasSinVenir: number
+}
+
+export type TipoSeguimiento = 'DORMIDOS' | 'MEJORES' | 'NUEVOS'
+
 export const clientesApi = {
+  /** A quién escribirle hoy: los que se enfriaron, los que más gastan, los nuevos. */
+  async seguimiento(tipo: TipoSeguimiento, dias: number) {
+    const { data } = await apiClient.get<SeguimientoCliente[]>('/api/clientes/seguimiento', {
+      params: { tipo, dias },
+    })
+    return data
+  },
+
   async listar(busqueda: string, pagina: number, tamano: number) {
     const { data } = await apiClient.get<PaginaClientes>('/api/clientes', {
       params: { busqueda: busqueda || undefined, pagina, tamano },

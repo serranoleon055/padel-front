@@ -51,8 +51,17 @@ export const categoriesApi = {
 }
 
 export const placesApi = {
-  async getAll() {
-    const { data } = await apiClient.get<LugarResponse[]>('/api/lugares')
+  /** `incluirArchivadas` solo tiene efecto para un admin: el listado también es público. */
+  async getAll(incluirArchivadas = false) {
+    const { data } = await apiClient.get<LugarResponse[]>('/api/lugares', {
+      params: incluirArchivadas ? { incluirArchivadas: true } : undefined,
+    })
+    return data
+  },
+
+  /** Desarchiva la sede y vuelve a habilitar sus canchas. */
+  async reactivar(id: number) {
+    const { data } = await apiClient.patch<LugarResponse>(`/api/lugares/${id}/reactivar`)
     return data
   },
 
@@ -81,9 +90,20 @@ export const placesApi = {
 }
 
 export const canchasApi = {
-  async getAll(lugarId?: number) {
-    const params = lugarId ? `?lugarId=${lugarId}` : ''
-    const { data } = await apiClient.get<CanchaResponse[]>(`/api/canchas${params}`)
+  /** `incluirBajas` solo tiene efecto para un admin: el listado también es público. */
+  async getAll(lugarId?: number, incluirBajas = false) {
+    const { data } = await apiClient.get<CanchaResponse[]>('/api/canchas', {
+      params: {
+        lugarId: lugarId ?? undefined,
+        incluirBajas: incluirBajas ? true : undefined,
+      },
+    })
+    return data
+  },
+
+  /** Vuelve a poner la cancha en venta. */
+  async reactivar(id: number) {
+    const { data } = await apiClient.patch<CanchaResponse>(`/api/canchas/${id}/reactivar`)
     return data
   },
 
