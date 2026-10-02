@@ -36,13 +36,32 @@ export interface ProductoRequest {
   activo?: boolean
 }
 
+/** Una forma de vender el producto: la unidad suelta o el pack. */
+export interface PresentacionResponse {
+  id: number
+  nombre: string
+  /** Unidades base que saca del stock. Un tubo de 3 pelotas son 3. */
+  unidades: number
+  precioVenta: number
+  /** Lo que deja cada una, valuada al costo promedio. Null sin costo cargado. */
+  margenUnitario: number | null
+  orden: number
+  activo: boolean
+}
+
 export interface ProductoResponse {
   id: number
   nombre: string
   categoria: CategoriaProducto
   precioVenta: number
+  /** Lo que salió la última compra. Es el número que el club tiene en la cabeza. */
   costo: number | null
-  /** Ganancia por unidad. Null mientras no se cargue el costo. */
+  /**
+   * Lo que sale en promedio cada unidad de las que hay. Es con el que se valúa el
+   * depósito y se mide el margen.
+   */
+  costoPromedio: number | null
+  /** Ganancia por unidad, al costo promedio. Null mientras no se cargue el costo. */
   margenUnitario: number | null
   controlaStock: boolean
   stock: number
@@ -51,6 +70,8 @@ export interface ProductoResponse {
   proveedorId: number | null
   proveedorNombre: string | null
   activo: boolean
+  /** Vacío = se vende solo de a una, por su precio. */
+  presentaciones: PresentacionResponse[]
 }
 
 export interface ProveedorRequest {
@@ -90,7 +111,12 @@ export interface MovimientoStockResponse {
 }
 
 export interface VentaRequest {
-  items: { productoId: number; cantidad: number }[]
+  items: {
+    productoId: number
+    /** Null = la unidad suelta. Con presentación, la cantidad es de ESA (2 tubos son 2). */
+    presentacionId?: number | null
+    cantidad: number
+  }[]
   /** Null = va a la cuenta del turno y se cobra al final; exige reservaId. */
   medio: MedioPago | null
   clienteId?: number | null
@@ -161,6 +187,30 @@ export const productosApi = {
     const { data } = await apiClient.post<ProductoResponse>(`/api/productos/${id}/mermas`, body)
     return data
   },
+
+  /** Las formas de vender el producto: la unidad suelta y los packs. */
+  async crearPresentacion(productoId: number, body: PresentacionRequest) {
+    const { data } = await apiClient.post<PresentacionResponse>(
+      `/api/productos/${productoId}/presentaciones`, body)
+    return data
+  },
+  async actualizarPresentacion(presentacionId: number, body: PresentacionRequest) {
+    const { data } = await apiClient.put<PresentacionResponse>(
+      `/api/productos/presentaciones/${presentacionId}`, body)
+    return data
+  },
+  /** Baja logica: las ventas viejas la siguen mostrando. */
+  async darDeBajaPresentacion(presentacionId: number) {
+    await apiClient.delete(`/api/productos/presentaciones/${presentacionId}`)
+  },
+}
+
+export interface PresentacionRequest {
+  nombre: string
+  /** Cuantas unidades base saca del stock. */
+  unidades: number
+  precioVenta: number
+  orden?: number | null
 }
 
 export const proveedoresApi = {

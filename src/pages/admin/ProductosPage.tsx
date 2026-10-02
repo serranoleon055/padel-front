@@ -4,8 +4,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { MEDIOS, type MedioPago } from '@/features/caja/cajaApi'
 import {
   CATEGORIAS_PRODUCTO, MOTIVOS_STOCK, productosApi, proveedoresApi,
-  type CategoriaProducto, type MovimientoStockResponse, type ProductoResponse, type ProveedorResponse,
+  type CategoriaProducto, type MovimientoStockResponse, type PresentacionResponse,
+  type ProductoResponse, type ProveedorResponse,
 } from '@/features/ventas/ventasApi'
+import { authApi } from '@/features/auth/authApi'
 import { reservasApi } from '@/features/reservas/reservasApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
 import { fechaISO, formatearFechaHora, formatearMoneda } from '@/shared/lib/formatters'
@@ -82,6 +84,15 @@ export default function ProductosPage() {
   const [historial, setHistorial] = useState<MovimientoStockResponse[] | null>(null)
   const [productoHistorial, setProductoHistorial] = useState<ProductoResponse | null>(null)
   const [compras, setCompras] = useState<MovimientoStockResponse[]>([])
+
+  // El alta y la edición de packs, desde la ficha del producto.
+  const [presentacionAbierta, setPresentacionAbierta] = useState<{
+    producto: ProductoResponse
+    presentacion: PresentacionResponse | null
+  } | null>(null)
+  const [formPresentacion, setFormPresentacion] = useState({ nombre: '', unidades: '', precioVenta: '' })
+  const [guardandoPresentacion, setGuardandoPresentacion] = useState(false)
+  const [errorPresentacion, setErrorPresentacion] = useState<string | null>(null)
 
   const [modalProveedor, setModalProveedor] = useState(false)
   const [editandoProveedor, setEditandoProveedor] = useState<ProveedorResponse | null>(null)
@@ -245,6 +256,65 @@ export default function ProductosPage() {
     setProductoHistorial(producto)
     setHistorial(null)
     productosApi.movimientos(producto.id).then(setHistorial).catch(() => setHistorial([]))
+  }
+
+  function abrirPresentacion(producto: ProductoResponse, presentacion: PresentacionResponse | null) {
+    setFormPresentacion(presentacion
+      ? {
+          nombre: presentacion.nombre,
+          unidades: String(presentacion.unidades),
+          precioVenta: String(presentacion.precioVenta),
+        }
+      : { nombre: '', unidades: '', precioVenta: '' })
+    setErrorPresentacion(null)
+    setPresentacionAbierta({ producto, presentacion })
+  }
+
+  /**
+   * Después de tocar un pack hay que recargar la lista Y la ficha abierta: el modal
+   * muestra el producto que está en memoria, y sin esto el pack recién creado no aparece
+   * hasta cerrar y volver a abrir.
+   */
+  async function recargarConFicha(productoId: number) {
+    const lista = await productosApi.getAll(busqueda, false)
+    setProductos(lista)
+    const actualizado = lista.find((p) => p.id === productoId)
+    if (actualizado) setProductoHistorial(actualizado)
+  }
+
+  async function guardarPresentacion() {
+    if (!presentacionAbierta) return
+    const unidades = Number(formPresentacion.unidades)
+    const precio = aNumero(formPresentacion.precioVenta)
+    if (!formPresentacion.nombre.trim()) { setErrorPresentacion('Poné cómo se llama.'); return }
+    if (!Number.isInteger(unidades) || unidades < 1) { setErrorPresentacion('Indicá cuántas unidades trae.'); return }
+    if (precio == null || precio < 0) { setErrorPresentacion('Ingresá un precio válido.'); return }
+
+    setGuardandoPresentacion(true); setErrorPresentacion(null)
+    try {
+      const cuerpo = { nombre: formPresentacion.nombre.trim(), unidades, precioVenta: precio }
+      if (presentacionAbierta.presentacion) {
+        await productosApi.actualizarPresentacion(presentacionAbierta.presentacion.id, cuerpo)
+      } else {
+        await productosApi.crearPresentacion(presentacionAbierta.producto.id, cuerpo)
+      }
+      await recargarConFicha(presentacionAbierta.producto.id)
+      setPresentacionAbierta(null)
+      avisoExito(presentacionAbierta.presentacion ? 'Pack actualizado' : 'Pack agregado')
+    } catch (e: unknown) {
+      setErrorPresentacion(obtenerMensajeErrorApi(e))
+    } finally { setGuardandoPresentacion(false) }
+  }
+
+  async function darDeBajaPresentacion(presentacionId: number) {
+    if (!productoHistorial) return
+    try {
+      await productosApi.darDeBajaPresentacion(presentacionId)
+      await recargarConFicha(productoHistorial.id)
+      avisoExito('Pack dado de baja')
+    } catch (e: unknown) {
+      setErrorPresentacion(obtenerMensajeErrorApi(e))
+    }
   }
 
   async function guardarProveedor() {
@@ -661,10 +731,64 @@ export default function ProductosPage() {
         )}
       </Modal>
 
+      <Modal
+        isOpen={presentacionAbierta != null}
+        onClose={() => setPresentacionAbierta(null)}
+        title={presentacionAbierta?.presentacion ? 'Editar pack' : 'Agregar pack'}
+        onSubmit={guardarPresentacion}
+        size="sm"
+      >
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-rp-muted">
+            Una forma distinta de vender {presentacionAbierta?.producto.nombre}. El stock se
+            sigue llevando de a una: el pack dice cuántas saca.
+          </p>
+          <Input
+            label="Cómo se llama"
+            value={formPresentacion.nombre}
+            onChange={(e) => setFormPresentacion((f) => ({ ...f, nombre: e.target.value }))}
+            placeholder="Tubo de 3"
+          />
+          <Input
+            label="Unidades que saca del stock"
+            value={formPresentacion.unidades}
+            onChange={(e) => setFormPresentacion((f) => ({ ...f, unidades: e.target.value }))}
+            soloNumeros
+            placeholder="3"
+          />
+          <Input
+            label="Precio del pack"
+            value={formPresentacion.precioVenta}
+            onChange={(e) => setFormPresentacion((f) => ({ ...f, precioVenta: e.target.value }))}
+            placeholder="16000"
+          />
+          <p className="-mt-2 text-xs text-rp-muted">
+            No tiene que ser el precio de la unidad por la cantidad: el pack suele salir más
+            barato, y por eso el cliente lo lleva.
+          </p>
+
+          {errorPresentacion && <p role="alert" className="text-sm text-rp-danger">{errorPresentacion}</p>}
+
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" type="button" size="sm" onClick={() => setPresentacionAbierta(null)}>Cancelar</Button>
+            <Button type="submit" size="sm" disabled={guardandoPresentacion}>
+              {guardandoPresentacion ? 'Guardando...' : 'Guardar'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
       <Modal isOpen={Boolean(productoHistorial)} onClose={() => setProductoHistorial(null)} title={productoHistorial?.nombre ?? 'Producto'} size="md">
         {productoHistorial && (
           <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <DatoFicha titulo="Costo" valor={productoHistorial.costo != null ? formatearMoneda(productoHistorial.costo) : '—'} />
+            {/* Los dos costos: el de la última compra es el que el club tiene en la
+                cabeza, y el promedio es con el que se valúa el depósito y se mide el
+                margen. Mostrar uno solo deja al dueño sin poder explicar el otro. */}
+            <DatoFicha titulo="Última compra" valor={productoHistorial.costo != null ? formatearMoneda(productoHistorial.costo) : '—'} />
+            <DatoFicha
+              titulo="Costo promedio"
+              valor={productoHistorial.costoPromedio != null ? formatearMoneda(productoHistorial.costoPromedio) : '—'}
+            />
             <DatoFicha titulo="Precio venta" valor={formatearMoneda(productoHistorial.precioVenta)} />
             <DatoFicha
               titulo="Ganancia"
@@ -676,10 +800,10 @@ export default function ProductosPage() {
               valor={productoHistorial.controlaStock ? String(productoHistorial.stock) : 'No controla'}
               alerta={productoHistorial.necesitaReposicion}
             />
-            {productoHistorial.controlaStock && productoHistorial.costo != null && (
+            {productoHistorial.controlaStock && (productoHistorial.costoPromedio ?? productoHistorial.costo) != null && (
               <DatoFicha
                 titulo="Capital inmovilizado"
-                valor={formatearMoneda(productoHistorial.costo * productoHistorial.stock)}
+                valor={formatearMoneda((productoHistorial.costoPromedio ?? productoHistorial.costo ?? 0) * productoHistorial.stock)}
               />
             )}
             {productoHistorial.proveedorNombre && (
@@ -687,6 +811,58 @@ export default function ProductosPage() {
             )}
           </div>
         )}
+        {/* Las formas de venderlo. El stock se lleva en la unidad base y cada pack dice
+            cuántas saca: por eso vender un tubo baja el stock de a tres. */}
+        {productoHistorial && productoHistorial.controlaStock && (
+          <div className="mb-4">
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-rp-muted">Cómo se vende</p>
+              {authApi.esDuenio() && (
+                <Button size="sm" variant="subtle" onClick={() => abrirPresentacion(productoHistorial, null)}>
+                  <Plus size={14} />Agregar pack
+                </Button>
+              )}
+            </div>
+            {productoHistorial.presentaciones.length === 0 ? (
+              <p className="text-sm text-rp-muted">
+                Se vende de a una, a {formatearMoneda(productoHistorial.precioVenta)}. Si también
+                lo vendés por pack —un tubo de pelotas, un six— agregalo acá con su precio.
+              </p>
+            ) : (
+              <div>
+                {productoHistorial.presentaciones.map((presentacion) => (
+                  <div key={presentacion.id} className="flex items-center justify-between gap-3 border-b border-rp-border py-2 last:border-0">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-bold text-rp-text">{presentacion.nombre}</p>
+                      <p className="text-xs text-rp-muted">
+                        saca {presentacion.unidades} {presentacion.unidades === 1 ? 'unidad' : 'unidades'} del stock
+                        {presentacion.margenUnitario != null ? ` · deja ${formatearMoneda(presentacion.margenUnitario)}` : ''}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span className="text-sm font-bold text-rp-accent">{formatearMoneda(presentacion.precioVenta)}</span>
+                      {authApi.esDuenio() && (
+                        <>
+                          <button
+                            onClick={() => abrirPresentacion(productoHistorial, presentacion)}
+                            className="flex size-9 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent lg:size-7"
+                            aria-label={`Editar ${presentacion.nombre}`} title={`Editar ${presentacion.nombre}`}
+                          ><Pencil size={14} /></button>
+                          <button
+                            onClick={() => darDeBajaPresentacion(presentacion.id)}
+                            className="flex size-9 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger lg:size-7"
+                            aria-label={`Dar de baja ${presentacion.nombre}`} title={`Dar de baja ${presentacion.nombre}`}
+                          ><Trash2 size={14} /></button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         <p className="mb-2 text-xs font-black uppercase tracking-[0.14em] text-rp-muted">Movimientos de stock</p>
         {historial == null ? (
           <p className="text-sm text-rp-muted">Cargando...</p>
