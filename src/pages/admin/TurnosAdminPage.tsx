@@ -1,5 +1,5 @@
 import { CalendarClock, Check, ChevronLeft, ChevronRight, MapPin, MessageCircle, Plus, Settings, ShoppingCart, Tag, Undo2, UserX, Wallet, X } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 
 import { authApi } from '@/features/auth/authApi'
@@ -9,6 +9,7 @@ import { canchasApi, placesApi } from '@/features/catalog/catalogApi'
 import { horariosCanchaApi, reservasApi, type HorarioCanchaRequest, type ReservaResponse, type SlotDisponibilidad } from '@/features/reservas/reservasApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
 import { fechaISO, formatearEnum, formatearFecha, formatearMoneda } from '@/shared/lib/formatters'
+import { porNombreDeCancha } from '@/shared/lib/canchas'
 import { compararPorJornada } from '@/shared/lib/jornada'
 import { enlaceWhatsApp, mensajeRecordatorioTurno } from '@/shared/lib/whatsapp'
 import { TelefonoWhatsApp } from '@/shared/ui/TelefonoWhatsApp'
@@ -18,6 +19,7 @@ import { AdminTable, type Column } from '@/shared/ui/AdminTable'
 import { Button } from '@/shared/ui/Button'
 import { Input } from '@/shared/ui/Input'
 import { Modal } from '@/shared/ui/Modal'
+import { NavegadorFase } from '@/shared/ui/NavegadorFase'
 import { SegmentedToggle } from '@/shared/ui/SegmentedToggle'
 import { Select } from '@/shared/ui/Select'
 import { StatusBadge } from '@/shared/ui/StatusBadge'
@@ -98,6 +100,8 @@ export default function TurnosAdminPage() {
   const [filtroEstado, setFiltroEstado] = useState(() => sessionStorage.getItem('rp-turnos-admin-estado') ?? 'CONFIRMADA')
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  /** Número del último pedido de agenda disparado, para ignorar las respuestas viejas. */
+  const ultimoPedido = useRef(0)
   const { success: avisoExito } = useToast()
 
   /**
@@ -139,8 +143,9 @@ export default function TurnosAdminPage() {
           ? lugarGuardado
           : lugaresData.find((l) => canchasData.some((c) => c.lugarId === l.id))?.id ?? lugaresData[0]?.id ?? null
         setLugarId(lugarInicial)
-        const canchaValida = canchasData.find((c) => c.id === canchaGuardada && c.lugarId === lugarInicial)
-        setCanchaId((canchaValida ?? canchasData.find((c) => c.lugarId === lugarInicial))?.id ?? null)
+        const delLugar = canchasData.filter((c) => c.lugarId === lugarInicial).sort(porNombreDeCancha((cancha) => cancha.nombre))
+        const canchaValida = delLugar.find((c) => c.id === canchaGuardada)
+        setCanchaId((canchaValida ?? delLugar[0])?.id ?? null)
       })
       .catch((e: unknown) => setError(obtenerMensajeErrorApi(e)))
   }, [])
@@ -157,7 +162,25 @@ export default function TurnosAdminPage() {
     sessionStorage.setItem('rp-turnos-admin-estado', filtroEstado)
   }, [filtroEstado])
 
-  const canchasDelLugar = useMemo(() => canchas.filter((c) => c.lugarId === lugarId), [canchas, lugarId])
+  // Ordenadas con el comparador compartido: sin él el backend devuelve "Cancha 10" antes
+  // que "Cancha 2", y con flechas eso se nota más que en un select.
+  const canchasDelLugar = useMemo(
+    () => canchas.filter((c) => c.lugarId === lugarId).sort(porNombreDeCancha((cancha) => cancha.nombre)),
+    [canchas, lugarId],
+  )
+  const indiceCancha = useMemo(
+    () => Math.max(0, canchasDelLugar.findIndex((cancha) => cancha.id === canchaId)),
+    [canchasDelLugar, canchaId],
+  )
+  const canchaActual = canchasDelLugar[indiceCancha] ?? null
+
+  /** Da la vuelta en los extremos: de la última a la primera y al revés. */
+  function moverCancha(paso: number) {
+    if (canchasDelLugar.length === 0) return
+    const total = canchasDelLugar.length
+    const siguiente = (indiceCancha + paso + total) % total
+    setCanchaId(canchasDelLugar[siguiente].id)
+  }
 
   /**
    * Abre WhatsApp con el recordatorio ya escrito. El sistema no manda nada solo: el club
@@ -232,20 +255,48 @@ export default function TurnosAdminPage() {
 
   function cargarReservas(idCancha: number, dia: string) {
     setCargando(true)
+    const pedido = ++ultimoPedido.current
     reservasApi.listar(idCancha, dia)
       .then((datos) => {
+        // Se descarta la respuesta vieja: pasando de cancha en cancha con las flechas se
+        // disparan varias consultas seguidas, y sin esto la que llega tarde pinta la
+        // agenda de una cancha que ya no es la que está en pantalla.
+        if (pedido !== ultimoPedido.current) return
         // Sin ordenar acá: el orden de la pantalla lo arma `filasReservas`, por jornada.
         setReservas(datos)
         setError(null)
       })
-      .catch((e: unknown) => setError(obtenerMensajeErrorApi(e)))
-      .finally(() => setCargando(false))
+      .catch((e: unknown) => {
+        if (pedido !== ultimoPedido.current) return
+        setError(obtenerMensajeErrorApi(e))
+      })
+      .finally(() => {
+        if (pedido === ultimoPedido.current) setCargando(false)
+      })
   }
 
   useEffect(() => {
     if (canchaId == null) return
     cargarReservas(canchaId, fecha)
   }, [canchaId, fecha])
+
+  /**
+   * La agenda abre en la jornada que el club está atendiendo, no en el día de calendario:
+   * a las 00:30 "hoy" todavía no arrancó y la pantalla salía vacía justo en el horario en
+   * que el mostrador más la mira. Si la consulta falla queda el día de hoy, que es lo que
+   * había antes: no vale dejar la pantalla sin agenda por esto.
+   */
+  useEffect(() => {
+    let vigente = true
+    reservasApi.jornadaActual()
+      .then((jornada) => {
+        if (!vigente || jornada === aISO(new Date())) return
+        setFecha(jornada)
+        setInicioSemana(lunesDeLaSemana(new Date(`${jornada}T00:00:00`)))
+      })
+      .catch(() => undefined)
+    return () => { vigente = false }
+  }, [])
 
   async function ejecutarAccionLote(reservasLote: ReservaResponse[], accion: (id: number) => Promise<unknown>, mensaje: string) {
     if (canchaId == null) return
@@ -455,13 +506,30 @@ export default function TurnosAdminPage() {
       </>} />
 
       <div className="mt-4 grid gap-3 sm:max-w-md sm:grid-cols-2">
-        <Select label="Sucursal" value={lugarId ?? ''} onChange={(e) => elegirLugar(e.target.value ? Number(e.target.value) : null)}>
-          {lugares.map((lugar) => <option key={lugar.id} value={lugar.id}>{lugar.nombre}</option>)}
-        </Select>
-        <Select label="Cancha" value={canchaId ?? ''} onChange={(e) => setCanchaId(e.target.value ? Number(e.target.value) : null)}>
-          {canchasDelLugar.length === 0 ? <option value="">Sin canchas</option> : null}
-          {canchasDelLugar.map((cancha) => <option key={cancha.id} value={cancha.id}>{cancha.nombre}</option>)}
-        </Select>
+        {/* La sucursal solo se elige si hay más de una: el club típico tiene una sola y
+            un select de un ítem es una decisión que no existe. */}
+        {lugares.length > 1 && (
+          <Select label="Sucursal" value={lugarId ?? ''} onChange={(e) => elegirLugar(e.target.value ? Number(e.target.value) : null)}>
+            {lugares.map((lugar) => <option key={lugar.id} value={lugar.id}>{lugar.nombre}</option>)}
+          </Select>
+        )}
+        {/* Las canchas se recorren con flechas, no con un select: el mostrador pasa de una
+            a la otra todo el tiempo y abrir una lista para cada cambio es un clic de más. */}
+        <div>
+          <span className="text-xs font-black uppercase tracking-[0.14em] text-rp-muted">Cancha</span>
+          <div className="mt-2">
+            {canchasDelLugar.length === 0
+              ? <p className="rounded-lg border border-rp-border bg-rp-surface/82 px-3 py-3 text-sm text-rp-muted">Esta sucursal no tiene canchas cargadas.</p>
+              : <NavegadorFase
+                  nombreRecurso="Cancha"
+                  etiqueta={canchaActual?.nombre ?? 'Sin canchas'}
+                  indice={indiceCancha}
+                  total={canchasDelLugar.length}
+                  onAnterior={() => moverCancha(-1)}
+                  onSiguiente={() => moverCancha(1)}
+                />}
+          </div>
+        </div>
       </div>
 
       <div className="mt-3">
