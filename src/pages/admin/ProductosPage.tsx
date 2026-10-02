@@ -6,6 +6,7 @@ import {
   CATEGORIAS_PRODUCTO, MOTIVOS_STOCK, productosApi, proveedoresApi,
   type CategoriaProducto, type MovimientoStockResponse, type ProductoResponse, type ProveedorResponse,
 } from '@/features/ventas/ventasApi'
+import { reservasApi } from '@/features/reservas/reservasApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
 import { fechaISO, formatearFechaHora, formatearMoneda } from '@/shared/lib/formatters'
 import { AdminPageHeader } from '@/shared/ui/AdminPageHeader'
@@ -42,7 +43,10 @@ const PRODUCTO_VACIO = {
   proveedorId: '',
 }
 
-const COMPRA_VACIA = { cantidad: '', costoUnitario: '', medioPago: 'EFECTIVO' as MedioPago, registraGasto: true, fecha: fechaISO() }
+// Sin `fecha`: se completa al abrir el modal con la jornada del club. Como constante de
+// módulo quedaba congelada en el día en que se cargó la pantalla, y una compra anotada
+// después de medianoche caía en un día distinto al del arqueo que le descuenta la plata.
+const COMPRA_VACIA = { cantidad: '', costoUnitario: '', medioPago: 'EFECTIVO' as MedioPago, registraGasto: true, fecha: '' }
 
 export default function ProductosPage() {
   const { success: avisoExito } = useToast()
@@ -60,6 +64,13 @@ export default function ProductosPage() {
   const [errorForm, setErrorForm] = useState<string | null>(null)
   const [aDarDeBaja, setADarDeBaja] = useState<ProductoResponse | null>(null)
 
+  /**
+   * Jornada del club, que después de medianoche sigue siendo la de ayer. Es la fecha con
+   * la que se propone una compra: si el pago sale del cajón, tiene que descontarse del
+   * arqueo de esa noche. Arranca en hoy y se corrige apenas responde el backend.
+   */
+  const [jornada, setJornada] = useState(fechaISO())
+
   const [productoStock, setProductoStock] = useState<ProductoResponse | null>(null)
   const [accionStock, setAccionStock] = useState<'compra' | 'ajuste' | 'merma'>('compra')
   const [formCompra, setFormCompra] = useState({ ...COMPRA_VACIA })
@@ -76,6 +87,14 @@ export default function ProductosPage() {
   const [editandoProveedor, setEditandoProveedor] = useState<ProveedorResponse | null>(null)
   const [proveedorADarDeBaja, setProveedorADarDeBaja] = useState<ProveedorResponse | null>(null)
   const [formProveedor, setFormProveedor] = useState({ nombre: '', telefono: '', notas: '' })
+
+  useEffect(() => {
+    let vigente = true
+    reservasApi.jornadaActual()
+      .then((fecha) => { if (vigente) setJornada(fecha) })
+      .catch(() => undefined)
+    return () => { vigente = false }
+  }, [])
 
   function cargar() {
     setCargando(true)
@@ -176,7 +195,13 @@ export default function ProductosPage() {
   function abrirStock(producto: ProductoResponse, accion: 'compra' | 'ajuste' | 'merma') {
     setProductoStock(producto)
     setAccionStock(accion)
-    setFormCompra({ ...COMPRA_VACIA, costoUnitario: producto.costo != null ? String(producto.costo) : '' })
+    setFormCompra({
+      ...COMPRA_VACIA,
+      // La jornada del club: una compra pagada del cajón a la 1 AM tiene que pesar en el
+      // arqueo de esa noche, que es de donde salió la plata.
+      fecha: jornada,
+      costoUnitario: producto.costo != null ? String(producto.costo) : '',
+    })
     setStockReal(String(producto.stock))
     setNotasStock('')
     setErrorStock(null)

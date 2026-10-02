@@ -143,25 +143,29 @@ export default function EstadisticasPage() {
       <h1 className="mt-2 text-3xl font-black text-rp-text sm:text-5xl">Estadísticas</h1>
       <p className="mt-2 text-sm text-rp-muted">Inteligencia de negocio de los últimos 6 meses.</p>
 
-      <div className="mt-4 flex flex-wrap gap-1 rounded-lg border border-rp-border bg-rp-surface/82 p-1">
-        <button
-          type="button"
-          onClick={() => setLugarId(null)}
-          className={`whitespace-nowrap rounded-md px-3 py-2 text-sm font-bold transition ${lugarId === null ? 'bg-rp-surface-2 text-rp-accent' : 'text-rp-muted hover:text-rp-text'}`}
-        >
-          Todas las sedes
-        </button>
-        {lugares.map((lugar) => (
+      {/* Un club de una sola sede no tiene entre qué elegir: "Todas las sedes" y el nombre
+          de la única sede son el mismo número, y el filtro ocupa lugar sin hacer nada. */}
+      {lugares.length > 1 && (
+        <div className="mt-4 flex flex-wrap gap-1 rounded-lg border border-rp-border bg-rp-surface/82 p-1">
           <button
-            key={lugar.id}
             type="button"
-            onClick={() => setLugarId(lugar.id)}
-            className={`whitespace-nowrap rounded-md px-3 py-2 text-sm font-bold transition ${lugarId === lugar.id ? 'bg-rp-surface-2 text-rp-accent' : 'text-rp-muted hover:text-rp-text'}`}
+            onClick={() => setLugarId(null)}
+            className={`whitespace-nowrap rounded-md px-3 py-2 text-sm font-bold transition ${lugarId === null ? 'bg-rp-surface-2 text-rp-accent' : 'text-rp-muted hover:text-rp-text'}`}
           >
-            {lugar.nombre}
+            Todas las sedes
           </button>
-        ))}
-      </div>
+          {lugares.map((lugar) => (
+            <button
+              key={lugar.id}
+              type="button"
+              onClick={() => setLugarId(lugar.id)}
+              className={`whitespace-nowrap rounded-md px-3 py-2 text-sm font-bold transition ${lugarId === lugar.id ? 'bg-rp-surface-2 text-rp-accent' : 'text-rp-muted hover:text-rp-text'}`}
+            >
+              {lugar.nombre}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
         <SegmentedToggle valor={seccion} onChange={(valor) => setSeccion(valor as Seccion)} opciones={SECCIONES} />
@@ -207,9 +211,9 @@ export default function EstadisticasPage() {
               pie={`${formatearMoneda(datos.mesActual.ingresoPorHoraAbierta)} por hora abierta`}
             />
             <Indicador
-              titulo="Ticket promedio"
-              valor={formatearMoneda(datos.mesActual.ticketPromedio)}
-              pie={`${datos.mesActual.turnosJugados} turnos jugados`}
+              titulo="Promedio por turno"
+              valor={formatearMoneda(datos.mesActual.ticketPromedioTurno)}
+              pie={`solo cancha · ${datos.mesActual.turnosJugados} turnos jugados`}
             />
           </div>
 
@@ -224,6 +228,12 @@ export default function EstadisticasPage() {
         <div className="grid gap-4 lg:grid-cols-2">
           {seccion === 'dinero' && <>
           <Panel titulo="Ingresos y gastos por mes" icono={TrendingUp}>
+            {/* Seis meses de columnas con importes de siete cifras no entran en un celular, y
+                achicar los números los vuelve ilegibles: se corre de costado, igual que el
+                estado de resultados de al lado. El ancho mínimo mantiene alineadas las
+                barras con la fila de resultados, que es lo que se lee en paralelo. */}
+            <div className="overflow-x-auto">
+            <div className="min-w-[520px]">
             <div className="flex items-end gap-4" style={{ height: 160 }}>
               {datos.ingresosPorMes.map((mes) => (
                 <div key={mes.mes} className="flex h-full flex-1 flex-col items-center justify-end gap-1">
@@ -237,13 +247,6 @@ export default function EstadisticasPage() {
                 </div>
               ))}
             </div>
-            <div className="mt-3 flex flex-wrap gap-4 text-xs font-bold text-rp-muted">
-              <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded-sm bg-rp-accent/70" />Turnos</span>
-              <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded-sm bg-rp-amber/70" />Inscripciones</span>
-              <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded-sm bg-rp-accent/35" />Mostrador</span>
-              <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded-sm bg-rp-danger/60" />Gastos operativos</span>
-            </div>
-
             <div className="mt-4 border-t border-rp-border pt-3">
               <p className="text-xs font-bold uppercase tracking-wide text-rp-muted">Resultado por mes</p>
               <div className="mt-2 flex gap-4">
@@ -255,6 +258,15 @@ export default function EstadisticasPage() {
                   </div>
                 ))}
               </div>
+            </div>
+            </div>
+            </div>
+
+            <div className="mt-3 flex flex-wrap gap-4 text-xs font-bold text-rp-muted">
+              <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded-sm bg-rp-accent/70" />Turnos</span>
+              <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded-sm bg-rp-amber/70" />Inscripciones</span>
+              <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded-sm bg-rp-accent/35" />Mostrador</span>
+              <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded-sm bg-rp-danger/60" />Gastos operativos</span>
             </div>
           </Panel>
 
@@ -615,8 +627,11 @@ function Mini({ titulo, valor, destacado = false, alerta = false }: {
 }
 
 function Panel({ titulo, icono: Icono, children, className }: { titulo: string; icono: typeof Trophy; children: React.ReactNode; className?: string }) {
+  // `min-w-0`: como celda de la grilla, el panel mide por defecto lo que mide su contenido,
+  // así que una tabla o un gráfico anchos lo estiraban más allá de la pantalla en vez de
+  // correrse de costado dentro de su propio marco.
   return (
-    <div className={`rounded-lg border border-rp-border bg-rp-surface/82 p-4 ${className ?? ''}`}>
+    <div className={`min-w-0 rounded-lg border border-rp-border bg-rp-surface/82 p-4 ${className ?? ''}`}>
       <h3 className="mb-3 flex items-center gap-2 text-xs font-black uppercase tracking-[0.16em] text-rp-accent">
         <Icono size={15} />{titulo}
       </h3>

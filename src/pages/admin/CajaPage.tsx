@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 
 import { authApi } from '@/features/auth/authApi'
 import { cajaApi, CATEGORIAS_GASTO, MEDIOS, type CategoriaGasto, type CierreCaja, type MedioPago, type MovimientoCaja } from '@/features/caja/cajaApi'
+import { reservasApi } from '@/features/reservas/reservasApi'
 import { ventasApi, type VentaResponse } from '@/features/ventas/ventasApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
 import { fechaISO, formatearFecha, formatearMoneda } from '@/shared/lib/formatters'
@@ -15,6 +16,7 @@ import { VentaRapidaModal } from '@/pages/admin/VentaRapidaModal'
 import { Select } from '@/shared/ui/Select'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
 import { useToast } from '@/shared/ui/Toast'
+import { usePaginaEnUrl, useReiniciarPaginaAlFiltrar } from '@/shared/lib/paginacion'
 
 const aISO = fechaISO
 
@@ -61,7 +63,7 @@ export default function CajaPage() {
   const [error, setError] = useState<string | null>(null)
   const [aAnular, setAAnular] = useState<MovimientoCaja | null>(null)
   const [anulando, setAnulando] = useState(false)
-  const [paginaMovimientos, setPaginaMovimientos] = useState(1)
+  const [paginaMovimientos, setPaginaMovimientos] = usePaginaEnUrl('paginaMovimientos')
   const [ventaAbierta, setVentaAbierta] = useState(false)
   const [aAnularVenta, setAAnularVenta] = useState<VentaResponse | null>(null)
   const { success: avisoExito } = useToast()
@@ -90,13 +92,27 @@ export default function CajaPage() {
   }
   useEffect(cargar, [fecha])
 
+  /**
+   * La caja abre en la jornada del club, no en el día de calendario. A las 00:30 la caja
+   * que se está por cerrar es la de la noche en curso: los cobros y las ventas de esa hora
+   * están anotados ahí (V55), y abrir en el día nuevo mostraba un arqueo vacío mientras el
+   * mostrador todavía estaba cobrando. Si la consulta falla queda el día de hoy.
+   */
+  useEffect(() => {
+    let vigente = true
+    reservasApi.jornadaActual()
+      .then((jornada) => { if (vigente && jornada !== aISO(new Date())) setFecha(jornada) })
+      .catch(() => undefined)
+    return () => { vigente = false }
+  }, [])
+
   function correrDia(dias: number) {
     const d = new Date(`${fecha}T12:00:00`)
     d.setDate(d.getDate() + dias)
     setFecha(aISO(d))
   }
 
-  useEffect(() => { setPaginaMovimientos(1) }, [fecha])
+  useReiniciarPaginaAlFiltrar(setPaginaMovimientos, [fecha])
 
   const movimientosPagina = useMemo(() => {
     const desde = (paginaMovimientos - 1) * MOVIMIENTOS_POR_PAGINA
@@ -300,22 +316,33 @@ export default function CajaPage() {
             </div>
           </div>
 
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <div className="rounded-lg border border-rp-border bg-rp-surface p-4">
-              <p className="text-xs font-bold uppercase tracking-wide text-rp-muted">Gastos del día</p>
-              <p className="mt-1 text-3xl font-black text-rp-text">{formatearMoneda(datos.egresos)}</p>
-              <p className="mt-1 text-xs text-rp-muted">
-                {formatearMoneda(datos.egresosEfectivo)} salieron del cajón.
-              </p>
+          {/* Los gastos y la rentabilidad son del dueño: al empleado el backend se los
+              manda en null, y la pantalla no dibuja un panel vacío. Lo que sí ve es
+              cuánto salió del cajón, porque sin eso el efectivo esperado no se explica. */}
+          {datos.egresos != null && datos.resultado != null ? (
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <div className="rounded-lg border border-rp-border bg-rp-surface p-4">
+                <p className="text-xs font-bold uppercase tracking-wide text-rp-muted">Gastos del día</p>
+                <p className="mt-1 text-3xl font-black text-rp-text">{formatearMoneda(datos.egresos)}</p>
+                <p className="mt-1 text-xs text-rp-muted">
+                  {formatearMoneda(datos.egresosEfectivo)} salieron del cajón.
+                </p>
+              </div>
+              <div className="rounded-lg border border-rp-border bg-rp-surface p-4">
+                <p className="text-xs font-bold uppercase tracking-wide text-rp-muted">Resultado del día</p>
+                <p className={`mt-1 text-3xl font-black ${datos.resultado < 0 ? 'text-rp-danger' : 'text-rp-accent'}`}>
+                  {formatearMoneda(datos.resultado)}
+                </p>
+                <p className="mt-1 text-xs text-rp-muted">Lo que entró menos lo que se gastó.</p>
+              </div>
             </div>
-            <div className="rounded-lg border border-rp-border bg-rp-surface p-4">
-              <p className="text-xs font-bold uppercase tracking-wide text-rp-muted">Resultado del día</p>
-              <p className={`mt-1 text-3xl font-black ${datos.resultado < 0 ? 'text-rp-danger' : 'text-rp-accent'}`}>
-                {formatearMoneda(datos.resultado)}
-              </p>
-              <p className="mt-1 text-xs text-rp-muted">Lo que entró menos lo que se gastó.</p>
+          ) : (
+            <div className="mt-4 rounded-lg border border-rp-border bg-rp-surface p-4">
+              <p className="text-xs font-bold uppercase tracking-wide text-rp-muted">Pagos del cajón</p>
+              <p className="mt-1 text-3xl font-black text-rp-text">{formatearMoneda(datos.egresosEfectivo)}</p>
+              <p className="mt-1 text-xs text-rp-muted">Ya descontados del efectivo esperado.</p>
             </div>
-          </div>
+          )}
 
           <div className="mt-6 grid gap-6 lg:grid-cols-3">
             <div className="rounded-lg border border-rp-border bg-rp-surface p-4">

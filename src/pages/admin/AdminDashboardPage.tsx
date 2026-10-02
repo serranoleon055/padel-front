@@ -1,4 +1,4 @@
-import { CalendarClock, ClipboardList, LayoutGrid, Package, Plus, ShoppingCart, Sparkles, Trophy, Wallet } from 'lucide-react'
+import { CalendarClock, CalendarRange, ClipboardList, LayoutGrid, Package, Plus, ShoppingCart, Sparkles, Trophy, Wallet } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 
@@ -7,6 +7,7 @@ import { placesApi } from '@/features/catalog/catalogApi'
 import { homeApi } from '@/features/home/homeApi'
 import { inscripcionesApi } from '@/features/inscripciones/inscripcionesApi'
 import { reservasApi, type OpcionDuracion, type ReservaResponse, type SlotDisponibilidad } from '@/features/reservas/reservasApi'
+import { turnosFijosApi, type DisponibilidadAbonos } from '@/features/reservas/turnosFijosApi'
 import { productosApi, type ProductoResponse } from '@/features/ventas/ventasApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
 import { porNombreDeCancha } from '@/shared/lib/canchas'
@@ -25,7 +26,7 @@ import { useToast } from '@/shared/ui/Toast'
 
 const PRODUCTOS_POR_PAGINA = 6
 
-type Detalle = 'canchas' | 'cobrar' | 'confirmar' | 'reponer' | 'disponibles' | 'inscripciones' | null
+type Detalle = 'canchas' | 'cobrar' | 'confirmar' | 'reponer' | 'disponibles' | 'inscripciones' | 'abonos' | null
 
 function hora(valor: string) {
   return valor.slice(0, 5)
@@ -96,10 +97,14 @@ export default function AdminDashboardPage() {
 
   const [detalle, setDetalle] = useState<Detalle>(null)
   const [indiceGrupo, setIndiceGrupo] = useState(0)
+  /** La cancha que se está mirando en "Próximos turnos". Es del panel, no de los modales. */
+  const [indiceCancha, setIndiceCancha] = useState(0)
   const [paginaProductos, setPaginaProductos] = useState(1)
 
   const [disponibles, setDisponibles] = useState<{ id: number; etiqueta: string; slots: SlotDisponibilidad[] }[]>([])
   const [cargandoDisponibles, setCargandoDisponibles] = useState(false)
+
+  const [abonos, setAbonos] = useState<DisponibilidadAbonos | null>(null)
 
   const [slotNuevo, setSlotNuevo] = useState<
     { canchaId: number; canchaNombre: string; horaInicio: string; opciones: OpcionDuracion[] } | null
@@ -252,6 +257,25 @@ export default function AdminDashboardPage() {
     void cargarDisponibles()
   }
 
+  /**
+   * La grilla de abonos contesta "¿qué turno fijo me queda para vender?", que es lo que el
+   * club publica cada semana. Se carga con el panel y no al abrir el modal porque el
+   * número va en la tarjeta: abrirla para enterarse de cuánto hay sería al revés.
+   */
+  useEffect(() => {
+    let vigente = true
+    turnosFijosApi.disponibilidadSemanal(lugarId)
+      .then((datos) => { if (vigente) setAbonos(datos) })
+      .catch(() => { if (vigente) setAbonos(null) })
+    return () => { vigente = false }
+  }, [lugarId])
+
+  const franjasLibresAbono = useMemo(
+    () => (abonos?.dias ?? []).reduce(
+      (total, dia) => total + dia.canchas.reduce((suma, cancha) => suma + cancha.franjas.length, 0), 0),
+    [abonos],
+  )
+
   function abrirTurnoManual(cancha: { id: number; etiqueta: string }, slot: SlotDisponibilidad) {
     setSlotNuevo({
       canchaId: cancha.id,
@@ -355,9 +379,9 @@ export default function AdminDashboardPage() {
   if (cargando && !panel) return <section className="py-8"><StatusMessage type="loading" title="Cargando el día..." /></section>
   if (lugares.length === 0) return <section className="py-8"><StatusMessage type="empty" title="No hay sedes" description="Creá una sede en Sedes y canchas para usar el panel." /></section>
 
-  // Cuando la jornada no es la fecha del calendario es porque ya pasó la medianoche y el
-  // club sigue abierto. Conviene que se lea, o el que atiende cree que la pantalla quedó
-  // colgada en el día de ayer.
+  // Cuando la jornada no es la fecha del calendario es porque ya pasó la medianoche y la
+  // noche de ayer sigue en curso (o se está terminando de cobrar). Conviene que se lea, o
+  // el que atiende cree que la pantalla quedó colgada en el día de ayer.
   const esJornadaDeAnoche = Boolean(panel && panel.fechaJornada !== fechaISO())
 
   return (
@@ -372,7 +396,7 @@ export default function AdminDashboardPage() {
         {' · '}Lo que está pasando ahora en el club.
         {esJornadaDeAnoche && (
           <span className="mt-1 block text-xs text-rp-amber">
-            Sigue abierta la noche de ayer: los turnos de la madrugada son de esta jornada.
+            Seguís en la noche de ayer: los turnos de la madrugada son de esta jornada.
           </span>
         )}
       </p>
@@ -434,6 +458,13 @@ export default function AdminDashboardPage() {
           onClick={() => setDetalle('inscripciones')}
         />
         <Tarjeta
+          icono={CalendarRange}
+          titulo="Abonos por vender"
+          valor={abonos ? String(franjasLibresAbono) : '-'}
+          detalle={franjasLibresAbono > 0 ? 'Franjas fijas sin ocupar' : 'Todo vendido'}
+          onClick={() => setDetalle('abonos')}
+        />
+        <Tarjeta
           icono={Package}
           titulo="Stock bajo mínimo"
           valor={String(bajoMinimo.length)}
@@ -460,9 +491,9 @@ export default function AdminDashboardPage() {
         ))}
       </Bloque>
 
-      {/* Una columna por cancha, dos por fila: así se ve de un vistazo cómo viene cargada
-          cada una, que es la pregunta real ("¿me queda lugar en la 2?"). Antes había que
-          pasar las canchas de a una con flechas. En el celular caen una abajo de otra. */}
+      {/* Una cancha por vez, recorrida con las flechas: el mismo patrón que los modales del
+          panel. Apiladas en columnas, seis canchas obligaban a barrer toda la pantalla para
+          contestar la pregunta real ("¿me queda lugar en la 2?"). */}
       <div className="mt-5">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-xs font-black uppercase tracking-[0.16em] text-rp-accent">Próximos turnos</h2>
@@ -470,20 +501,24 @@ export default function AdminDashboardPage() {
         </div>
         {proximosPorCancha.length === 0 ? (
           <p className="rounded-lg border border-rp-border bg-rp-surface/82 px-4 py-3 text-sm text-rp-muted">No queda ningún turno más en la jornada.</p>
-        ) : (
-          <div className="grid gap-3 sm:grid-cols-2">
-            {proximosPorCancha.map((grupo) => (
-              <div key={grupo.etiqueta} className="rounded-lg border border-rp-border bg-rp-surface/82 p-3">
-                <p className="mb-2 text-xs font-black uppercase tracking-[0.14em] text-rp-muted">{grupo.etiqueta}</p>
-                <div className="flex flex-col gap-2">
-                  {grupo.elementos.map((turno) => (
-                    <FilaTurno key={turno.id} turno={turno} compacta onConsumo={() => setTurnoVenta(turno)} onCobrar={() => abrirCobro(turno)} />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        ) : (() => {
+          const indice = Math.min(indiceCancha, proximosPorCancha.length - 1)
+          const grupo = proximosPorCancha[indice]
+          return (
+            <div className="flex flex-col gap-2">
+              <NavegadorFase
+                etiqueta={grupo.etiqueta}
+                indice={indice}
+                total={proximosPorCancha.length}
+                onAnterior={() => setIndiceCancha((i) => (i - 1 + proximosPorCancha.length) % proximosPorCancha.length)}
+                onSiguiente={() => setIndiceCancha((i) => (i + 1) % proximosPorCancha.length)}
+              />
+              {grupo.elementos.map((turno) => (
+                <FilaTurno key={turno.id} turno={turno} onConsumo={() => setTurnoVenta(turno)} onCobrar={() => abrirCobro(turno)} />
+              ))}
+            </div>
+          )
+        })()}
       </div>
 
       {conDeuda.length > 0 && (
@@ -495,6 +530,55 @@ export default function AdminDashboardPage() {
       )}
 
       {/* ---------- Detalle de cada tarjeta ---------- */}
+
+      {/* La grilla que el club publica: día por día, qué le queda libre para vender como
+          abono. Se recorre por día con las flechas —siete días por seis canchas no entran
+          en una pantalla de celular— y cada fila es una cancha con sus franjas. */}
+      <Modal isOpen={detalle === 'abonos'} onClose={() => setDetalle(null)} title="Turnos fijos disponibles" size="md">
+        {!abonos ? (
+          <p className="py-6 text-center text-sm text-rp-muted">Cargando la semana...</p>
+        ) : abonos.canchas.length === 0 ? (
+          <p className="py-6 text-center text-sm text-rp-muted">Esta sede no tiene canchas activas.</p>
+        ) : (() => {
+          const indice = Math.min(indiceGrupo, abonos.dias.length - 1)
+          const dia = abonos.dias[indice]
+          return (
+            <div className="flex flex-col gap-3">
+              <NavegadorFase
+                etiqueta={dia.nombre}
+                indice={indice}
+                total={abonos.dias.length}
+                onAnterior={() => setIndiceGrupo((i) => (i - 1 + abonos.dias.length) % abonos.dias.length)}
+                onSiguiente={() => setIndiceGrupo((i) => (i + 1) % abonos.dias.length)}
+              />
+              <ul className="flex flex-col gap-2">
+                {dia.canchas.map((cancha) => (
+                  <li key={cancha.canchaId} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-rp-border bg-rp-bg/55 px-3 py-2.5">
+                    <span className="text-sm font-black text-rp-text">{cancha.canchaNombre}</span>
+                    {cancha.cerrada ? (
+                      <span className="text-xs font-bold text-rp-muted">El club no atiende</span>
+                    ) : cancha.franjas.length === 0 ? (
+                      <span className="text-xs font-bold text-rp-muted">Sin lugar</span>
+                    ) : (
+                      <span className="flex flex-wrap justify-end gap-1.5">
+                        {cancha.franjas.map((franja) => (
+                          <span key={franja.horaDesde} className="rounded border border-rp-accent/50 bg-rp-accent/10 px-1.5 py-0.5 font-mono text-xs font-bold text-rp-text">
+                            {hora(franja.horaDesde)} a {hora(franja.horaHasta)}
+                          </span>
+                        ))}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              <p className="text-xs text-rp-muted">
+                Es lo que queda sin abono todas las semanas. Un turno suelto ya reservado no
+                cuenta: el abono se toma igual.
+              </p>
+            </div>
+          )
+        })()}
+      </Modal>
 
       <Modal isOpen={detalle === 'canchas'} onClose={() => setDetalle(null)} title="Qué pasa en cada cancha" size="md">
         {estadoCanchas.length === 0 ? (
@@ -904,26 +988,19 @@ function Bloque({ titulo, vacio, children }: { titulo: string; vacio?: string; c
   )
 }
 
-/**
- * `compacta` es la fila de media pantalla de "Próximos turnos": el nombre de la cancha ya
- * lo dice la columna, así que no se repite, y el marco lo pone el grupo.
- */
-function FilaTurno({ turno, onConsumo, onCobrar, compacta = false }: {
+function FilaTurno({ turno, onConsumo, onCobrar }: {
   turno: ReservaResponse
   onConsumo: () => void
   onCobrar: () => void
-  compacta?: boolean
 }) {
   const saldo = turno.saldoPendiente ?? 0
   const consumo = turno.consumoACuenta ?? 0
   return (
-    <div className={compacta
-      ? 'flex flex-wrap items-center justify-between gap-2 rounded-md border border-rp-border bg-rp-bg/55 px-3 py-2'
-      : 'flex flex-wrap items-center justify-between gap-3 rounded-lg border border-rp-border bg-rp-surface/82 px-4 py-3'}>
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-rp-border bg-rp-surface/82 px-4 py-3">
       <div className="min-w-0 flex-1">
         <p className="text-sm font-black text-rp-text">
           {hora(turno.horaInicio)} - {hora(turno.horaFin)}
-          {!compacta && <span className="ml-2 font-bold text-rp-muted">{turno.canchaNombre}</span>}
+          <span className="ml-2 font-bold text-rp-muted">{turno.canchaNombre}</span>
         </p>
         <p className="truncate text-sm text-rp-text">{turno.clienteNombre}</p>
         <p className="text-xs text-rp-muted">
@@ -931,7 +1008,9 @@ function FilaTurno({ turno, onConsumo, onCobrar, compacta = false }: {
           {consumo > 0 ? ` + consumo ${formatearMoneda(consumo)}` : ''}
         </p>
       </div>
-      <div className="flex shrink-0 flex-wrap items-center gap-2">
+      {/* Sin `shrink-0`: el saldo más los dos botones miden más que el ancho de un celular,
+          y fijando el tamaño se salían de la pantalla en vez de partirse en dos líneas. */}
+      <div className="flex flex-wrap items-center justify-end gap-2">
         {saldo > 0
           ? <span className="text-sm font-black text-rp-danger">Debe {formatearMoneda(saldo)}</span>
           : <span className="text-sm font-bold text-rp-accent">Pagado</span>}

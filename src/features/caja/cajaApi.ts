@@ -84,7 +84,10 @@ export interface GastoRequest {
 
 export interface GastoResponse {
   id: number
+  /** Fecha contable: a qué mes pesa el gasto. La elige la persona. */
   fecha: string
+  /** Jornada de caja en la que salió la plata. La estampa el sistema. */
+  jornada: string
   categoria: CategoriaGasto
   descripcion: string
   monto: number
@@ -92,6 +95,12 @@ export interface GastoResponse {
   proveedor: string | null
   registradoPor: string | null
   notas: string | null
+  /** Si el egreso fue compra de mercadería y no gasto operativo. */
+  esMercaderia: boolean
+  /** Anular es baja lógica: la fila queda para poder auditarla. */
+  anuladoEn: string | null
+  anuladoPor: string | null
+  motivoAnulacion: string | null
 }
 
 /** El arqueo firmado del día: cuánto había de verdad en el cajón y quién lo contó. */
@@ -109,15 +118,26 @@ export interface CierreCaja {
   porMedio: TotalMedio[]
   efectivoEsperado: number
   totalMostrador: number
+  /** Señas de TURNO acreditadas en Mercado Pago. */
   seniasOnline: number
+  /** Inscripciones a torneos acreditadas en Mercado Pago. Van aparte de las señas. */
+  inscripcionesOnline: number
   totalDelDia: number
   turnosConSaldo: number
   saldoPendiente: number
   movimientos: MovimientoCaja[]
-  egresos: number
+  /**
+   * Null para el empleado: el detalle de los egresos y la rentabilidad son del dueño, y
+   * es lo que `/api/gastos` y `/api/estadisticas` ya le prohíben.
+   */
+  egresos: number | null
+  /** Este sí lo ve el empleado: sin él el efectivo esperado no se puede explicar. */
   egresosEfectivo: number
-  resultado: number
+  /** Null para el empleado. */
+  resultado: number | null
+  /** Vacío para el empleado. */
   gastos: GastoResponse[]
+  gastosAnulados: GastoResponse[]
   /** Ventas de mostrador del día: pelotas, bebidas, alquiler de paletas. */
   ventas: import('@/features/ventas/ventasApi').VentaResponse[]
   totalVentas: number
