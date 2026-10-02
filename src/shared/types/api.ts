@@ -84,6 +84,8 @@ export type JugadorResponse = {
   categoriaId: number | null
   categoriaNombre: string | null
   posicionJuego: PosicionJuego | null
+  /** Falso solo si el panel pidió ver los dados de baja. */
+  activo?: boolean
 }
 
 export type JugadorRequest = {
@@ -128,6 +130,8 @@ export type LugarResponse = {
   nombre: string
   direccion: string
   cantidadCanchas?: number | null
+  /** Solo viene en true si el panel pidió ver las archivadas. */
+  archivado?: boolean
 }
 
 export type LugarRequest = {
@@ -487,6 +491,8 @@ export type ConfiguracionSede = {
   facebook: string | null
   direccion: string | null
   mapsEmbedUrl: string | null
+  /** Hasta cuántas horas antes puede el jugador cancelar su turno solo. 0 = lo apaga. */
+  cancelacionHorasMinimas: number | null
   horarios: HorarioSede[]
   galeria: FotoSede[]
   formasPago: string[]
@@ -590,7 +596,7 @@ export type EstadisticasResponse = {
     variacion: number | null
     resultado: number
     turnosJugados: number
-    ticketPromedio: number
+    ticketPromedioTurno: number
     ocupacion: number
     ingresoPorHoraAbierta: number
     deudaAcumulada: number
@@ -609,6 +615,8 @@ export type EstadisticasResponse = {
     facturado: number
     ganancia: number
     margen: number | null
+    /** Unidades vendidas sin costo cargado: con esto el margen esta incompleto. */
+    unidadesSinCosto: number
   }[]
   mejoresClientes: { clienteId: number; nombre: string; turnos: number; gastado: number }[]
   kiosco: {

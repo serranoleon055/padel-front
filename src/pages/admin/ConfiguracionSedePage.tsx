@@ -212,6 +212,19 @@ export default function ConfiguracionSedePage() {
                 <Input label="Mapa (Google Maps)" value={formulario.mapsEmbedUrl ?? ''} onChange={(e) => set('mapsEmbedUrl', e.target.value)} placeholder="Pegá el link de Google Maps o la dirección" />
                 <p className="text-xs text-rp-muted">Pegá la URL que te da Google Maps (botón "Compartir") o directamente la dirección. Nosotros armamos el mapa embebido automáticamente.</p>
               </div>
+              <div className="flex flex-col gap-1 sm:col-span-2">
+                <Input
+                  label="Cancelación online (horas antes)"
+                  soloNumeros
+                  value={formulario.cancelacionHorasMinimas != null ? String(formulario.cancelacionHorasMinimas) : ''}
+                  onChange={(e) => set('cancelacionHorasMinimas', e.target.value === '' ? null : Number(e.target.value))}
+                  placeholder="12"
+                />
+                <p className="text-xs text-rp-muted">
+                  Hasta cuántas horas antes el jugador puede cancelar su turno desde el enlace que le mandamos.
+                  Con 0 se apaga y solo cancela el club. Cancelar libera la cancha para volver a venderla; la seña ya cobrada no se devuelve sola.
+                </p>
+              </div>
             </div>
           </Seccion>
           <Guardar onClick={guardar} guardando={guardando} />

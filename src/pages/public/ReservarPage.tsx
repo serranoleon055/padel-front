@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight, Clock, MapPin } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 
 import { brand } from '@/config/brand'
 import { placesApi } from '@/features/catalog/catalogApi'
@@ -68,6 +69,7 @@ export default function ReservarPage() {
   const [metodoPago, setMetodoPago] = useState<'ONLINE' | 'EFECTIVO'>('EFECTIVO')
   const [nombre, setNombre] = useState('')
   const [telefono, setTelefono] = useState('')
+  const [email, setEmail] = useState('')
   const [enviando, setEnviando] = useState(false)
   const [errorFormulario, setErrorFormulario] = useState<string | null>(null)
   const [reservaCreada, setReservaCreada] = useState<ReservaResponse | null>(null)
@@ -139,6 +141,7 @@ export default function ReservarPage() {
     setCanchaElegida(null)
     setNombre('')
     setTelefono('')
+    setEmail('')
     setErrorFormulario(null)
     setReservaCreada(null)
     setMetodoPago(elegido.opcion.precio != null ? 'ONLINE' : 'EFECTIVO')
@@ -151,7 +154,10 @@ export default function ReservarPage() {
     setErrorFormulario(null)
   }
 
-  const porcentajeSenia = 50
+  // El porcentaje lo define el club por cancha y lo manda el backend ya resuelto. Estaba
+  // fijo en 50 acá: una cancha configurada al 30% anunciaba una seña y Mercado Pago
+  // cobraba otra.
+  const porcentajeSenia = eleccion?.cancha.seniaPorcentaje ?? 50
   const precio = eleccion?.opcion.precio ?? null
   const montoSenia = precio != null ? Math.round((precio * porcentajeSenia) / 100) : null
   const metodoEfectivo = precio == null || metodoPago === 'EFECTIVO'
@@ -165,6 +171,7 @@ export default function ReservarPage() {
       duracionMin: eleccion.opcion.minutos,
       clienteNombre: nombre.trim(),
       clienteTelefono: telefono.trim(),
+      clienteEmail: email.trim() || undefined,
     }
   }
 
@@ -397,6 +404,21 @@ export default function ReservarPage() {
             >
               Confirmar por WhatsApp
             </a>
+            {/* El enlace del turno se ofrece acá y no solo por mail: el que no dejó mail
+                también tiene que poder volver a su turno para cancelarlo. */}
+            {reservaCreada.tokenPublico && (
+              <Link
+                to={`/mi-turno/${reservaCreada.tokenPublico}`}
+                className="inline-flex items-center justify-center rounded-md border border-rp-border px-4 py-2.5 text-sm font-bold text-rp-text transition hover:border-rp-accent"
+              >
+                Ver mi turno
+              </Link>
+            )}
+            <p className="text-xs text-rp-muted">
+              {email.trim()
+                ? 'Te mandamos el comprobante por mail con este enlace.'
+                : 'Guardá este enlace: desde ahí podés ver o cancelar tu turno.'}
+            </p>
             <Button variant="ghost" size="sm" onClick={cerrarTodo}>Cerrar</Button>
           </div>
         ) : eleccion && (
@@ -449,7 +471,18 @@ export default function ReservarPage() {
             </div>
 
             <Input label="Nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Tu nombre" />
-            <Input label="Teléfono" type="tel" value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="385..." />
+            <Input label="Teléfono" type="tel" inputMode="tel" value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="385..." />
+            {/* Opcional a propósito: cada campo obligatorio antes de la cancha es gente que
+                se va. El que lo deja, recibe el comprobante y el recordatorio. */}
+            <Input
+              label="Mail (opcional)"
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Para recibir el comprobante"
+            />
 
             {errorFormulario && <p className="rounded-md border border-rp-danger/40 bg-rp-danger/10 px-3 py-2 text-sm font-bold text-rp-danger">{errorFormulario}</p>}
             <div className="flex flex-wrap justify-end gap-2 pt-2">

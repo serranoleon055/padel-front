@@ -36,6 +36,7 @@ const AdminUsersPage = lazy(() => import('@/pages/admin/AdminUsersPage'))
 const PlantillasPage = lazy(() => import('@/pages/admin/PlantillasPage'))
 const ComoFuncionaPage = lazy(() => import('@/pages/admin/ComoFuncionaPage'))
 const ReservarPage = lazy(() => import('@/pages/public/ReservarPage'))
+const MiTurnoPage = lazy(() => import('@/pages/public/MiTurnoPage'))
 const TurnosPage = lazy(() => import('@/pages/admin/TurnosPage'))
 const ClientesPage = lazy(() => import('@/pages/admin/ClientesPage'))
 const CajaPage = lazy(() => import('@/pages/admin/CajaPage'))
@@ -75,6 +76,8 @@ export function AppRouter() {
           <Route path="resultados" element={<ResultadosPage />} />
           <Route path="reservar" element={<ReservarPage />} />
           <Route path="reservar/pago/resultado" element={<PagoResultadoPage />} />
+          {/* El turno del jugador. El token del enlace es lo que autoriza: no hay login. */}
+          <Route path="mi-turno/:token" element={<MiTurnoPage />} />
           <Route path="precios" element={<PreciosPage />} />
           <Route path="la-sede" element={<SedePage />} />
           <Route path="jugadores/:jugadorId" element={<PlayerProfilePage />} />

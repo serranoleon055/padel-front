@@ -18,6 +18,8 @@ export interface CanchaLibre {
   canchaId: number
   canchaNombre: string
   tipo: string | null
+  /** Porcentaje del turno que se cobra como seña. Ya resuelto por el backend. */
+  seniaPorcentaje: number
   opciones: OpcionDuracion[]
 }
 
@@ -30,6 +32,24 @@ export interface FranjaSede {
   canchas: CanchaLibre[]
 }
 
+/** El turno como lo ve el jugador desde su enlace. Menos datos que el del panel. */
+export interface TurnoPublico {
+  codigo: string
+  clienteNombre: string
+  canchaNombre: string | null
+  lugarNombre: string | null
+  fecha: string
+  horaInicio: string
+  horaFin: string
+  estado: string
+  precio: number | null
+  seniaPagada: number | null
+  saldoPendiente: number | null
+  puedeCancelar: boolean
+  motivoNoCancelable: string | null
+  horasMinimasCancelacion: number
+}
+
 export interface SolicitudReservaRequest {
   canchaId: number
   fecha: string
@@ -38,6 +58,8 @@ export interface SolicitudReservaRequest {
   duracionMin?: number
   clienteNombre: string
   clienteTelefono: string
+  /** Opcional: a donde le llega el comprobante con el enlace de su turno. */
+  clienteEmail?: string
 }
 
 export interface ReservaResponse {
@@ -52,6 +74,8 @@ export interface ReservaResponse {
   clienteNombre: string
   clienteTelefono: string
   codigo: string
+  /** Token del enlace del turno para el jugador. */
+  tokenPublico?: string | null
   estadoPago?: string | null
   montoSenia?: number | null
   montoTotal?: number | null
@@ -123,6 +147,29 @@ export const reservasApi = {
       params: fecha ? { fecha } : undefined,
     })
     return data
+  },
+
+  /**
+   * El turno del jugador, abierto con el token de su enlace. No hay cuenta ni contraseña:
+   * el token autoriza ese turno y nada más, como el localizador de un pasaje.
+   */
+  async miTurno(token: string) {
+    const { data } = await apiClient.get<TurnoPublico>(`/api/reservas/mio/${token}`)
+    return data
+  },
+
+  async cancelarMiTurno(token: string) {
+    const { data } = await apiClient.patch<TurnoPublico>(`/api/reservas/mio/${token}/cancelar`)
+    return data
+  },
+
+  /**
+   * La jornada que el club está atendiendo. La resuelve el backend, que es el que sabe a
+   * qué hora abre y cierra cada cancha; el front no repite esa cuenta.
+   */
+  async jornadaActual() {
+    const { data } = await apiClient.get<{ fecha: string }>('/api/reservas/jornada-actual')
+    return data.fecha
   },
 
   async listar(canchaId: number, fecha: string) {
