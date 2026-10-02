@@ -59,7 +59,16 @@ export default function HistorialCajaPage() {
     {
       key: 'esperado',
       label: 'Esperado',
-      render: (arqueo) => <span className="text-sm text-rp-text">{formatearMoneda(arqueo.efectivoEsperado)}</span>,
+      render: (arqueo) => (
+        <div>
+          <p className="text-sm text-rp-text">{formatearMoneda(arqueo.efectivoEsperado)}</p>
+          {/* El fondo explica el número: sin él la diferencia de esa noche no se puede
+              volver a leer. */}
+          {arqueo.fondoInicial > 0 && (
+            <p className="text-xs text-rp-muted">incluye {formatearMoneda(arqueo.fondoInicial)} de fondo</p>
+          )}
+        </div>
+      ),
     },
     {
       key: 'contado',

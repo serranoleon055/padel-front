@@ -185,6 +185,8 @@ export interface ArqueoHistorico {
   totalMostrador: number
   seniasOnline: number
   egresos: number
+  /** El fondo con el que se abrió el cajón esa noche, congelado al firmar. */
+  fondoInicial: number
   cerradoPor: string | null
   cerradoEn: string
   notas: string | null
