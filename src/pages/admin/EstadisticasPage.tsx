@@ -2,7 +2,7 @@ import { BarChart3, CalendarClock, CalendarDays, Download, Package, Percent, Tre
 import { useEffect, useMemo, useState } from 'react'
 
 import { placesApi } from '@/features/catalog/catalogApi'
-import { estadisticasApi } from '@/features/estadisticas/estadisticasApi'
+import { estadisticasApi, VENTANAS_PANEL } from '@/features/estadisticas/estadisticasApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
 import { descargarCsv, numeroCsv } from '@/shared/lib/csv'
 import { fechaISO, formatearMoneda } from '@/shared/lib/formatters'
@@ -36,6 +36,7 @@ function exportarEstadoResultados(datos: EstadisticasResponse) {
 
 const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 const CLAVE_SECCION = 'rp-estadisticas-seccion'
+const CLAVE_MESES = 'rp-estadisticas-meses'
 
 type Seccion = 'dinero' | 'turnos' | 'torneos'
 
@@ -76,17 +77,24 @@ export default function EstadisticasPage() {
   const [seccion, setSeccion] = useState<Seccion>(() => (sessionStorage.getItem(CLAVE_SECCION) as Seccion) ?? 'dinero')
   useEffect(() => { sessionStorage.setItem(CLAVE_SECCION, seccion) }, [seccion])
 
+  // La ventana del informe. Persiste como el resto de los filtros: el dueño que mira el
+  // año no quiere volver a elegirlo cada vez que entra.
+  const [meses, setMeses] = useState<number>(() => Number(sessionStorage.getItem(CLAVE_MESES)) || 6)
+  useEffect(() => { sessionStorage.setItem(CLAVE_MESES, String(meses)) }, [meses])
+
   useEffect(() => {
     placesApi.getAll().then(setLugares).catch(() => {})
   }, [])
 
   useEffect(() => {
+    let vigente = true
     setCargando(true)
-    estadisticasApi.obtener(lugarId ?? undefined)
-      .then((d) => { setDatos(d); setError(null) })
-      .catch((e: unknown) => setError(obtenerMensajeErrorApi(e)))
-      .finally(() => setCargando(false))
-  }, [lugarId])
+    estadisticasApi.obtener(lugarId ?? undefined, meses)
+      .then((d) => { if (vigente) { setDatos(d); setError(null) } })
+      .catch((e: unknown) => { if (vigente) setError(obtenerMensajeErrorApi(e)) })
+      .finally(() => { if (vigente) setCargando(false) })
+    return () => { vigente = false }
+  }, [lugarId, meses])
 
   /**
    * Las horas se listan en orden de jornada, arrancando por la de apertura. Ordenarlas
@@ -141,7 +149,9 @@ export default function EstadisticasPage() {
     <section className="admin-page">
       <p className="text-xs font-black uppercase tracking-[0.22em] text-rp-accent">Admin</p>
       <h1 className="mt-2 text-3xl font-black text-rp-text sm:text-5xl">Estadísticas</h1>
-      <p className="mt-2 text-sm text-rp-muted">Inteligencia de negocio de los últimos 6 meses.</p>
+      <p className="mt-2 text-sm text-rp-muted">
+        Inteligencia de negocio de los últimos {datos?.mesesDelPanel ?? meses} meses.
+      </p>
 
       {/* Un club de una sola sede no tiene entre qué elegir: "Todas las sedes" y el nombre
           de la única sede son el mismo número, y el filtro ocupa lugar sin hacer nada. */}
@@ -169,11 +179,21 @@ export default function EstadisticasPage() {
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
         <SegmentedToggle valor={seccion} onChange={(valor) => setSeccion(valor as Seccion)} opciones={SECCIONES} />
-        {datos && seccion === 'dinero' && (
-          <Button variant="subtle" size="sm" onClick={() => exportarEstadoResultados(datos)}>
-            <Download size={15} />Exportar a Excel
-          </Button>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* La ventana del informe. Estaba fija en 6 meses y escrita a mano en el
+              backend: un club que arrancó hace dos meses veía cuatro meses vacíos, y uno
+              con años de historia no podía mirar el año. */}
+          <SegmentedToggle
+            valor={String(meses)}
+            onChange={(valor) => setMeses(Number(valor))}
+            opciones={VENTANAS_PANEL.map((v) => ({ valor: String(v.meses), label: v.nombre }))}
+          />
+          {datos && seccion === 'dinero' && (
+            <Button variant="subtle" size="sm" onClick={() => exportarEstadoResultados(datos)}>
+              <Download size={15} />Exportar a Excel
+            </Button>
+          )}
+        </div>
       </div>
 
       {cargando && !datos ? (
@@ -480,7 +500,9 @@ export default function EstadisticasPage() {
                 confirmados. Es distinto del "Gasto acumulado" de la ficha del cliente,
                 que es histórico completo y sí los incluye. Los dos miden cosas
                 distintas a propósito. */}
-            <p className="mb-2 text-[11px] text-rp-muted">Turnos jugados o confirmados hasta hoy, últimos 6 meses.</p>
+            <p className="mb-2 text-[11px] text-rp-muted">
+              Turnos jugados o confirmados hasta hoy, últimos {datos.mesesDelPanel} meses.
+            </p>
             {datos.mejoresClientes.length === 0 ? (
               <p className="py-4 text-center text-sm text-rp-muted">Sin turnos jugados en el período.</p>
             ) : (

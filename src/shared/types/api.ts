@@ -566,6 +566,8 @@ export type EstadisticasResponse = {
   heatmap: { diaSemana: number; hora: number; cantidad: number }[]
   /** Hora en que arranca la jornada: el gráfico de horas se dibuja desde acá. */
   horaApertura: number
+  /** Cuántos meses mira el informe, contando el actual. Para rotular el período. */
+  mesesDelPanel: number
   canchasMasUsadas: { canchaNombre: string; reservas: number }[]
   /**
    * Estado de resultados del mes, con criterio devengado:
