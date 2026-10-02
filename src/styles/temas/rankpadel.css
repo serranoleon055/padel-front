@@ -1,0 +1,8 @@
+/*
+  Tema base: verde casi negro + dorado + crema. Los valores viven en el `:root` de
+  `index.css`, así que acá no hay nada que sobreescribir. El archivo existe para que el
+  tema por defecto pase por el mismo camino que los demás y no sea un caso especial.
+
+  Sus archivos (favicon, íconos de la PWA, manifest, fotos) sí son propios y están en
+  `public/marcas/rankpadel/`, como los de cualquier otro club.
+*/

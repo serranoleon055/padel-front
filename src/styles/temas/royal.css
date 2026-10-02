@@ -1,0 +1,97 @@
+/*
+  Royal Star's Club — negro, naranja y blanco, sacados del logo del club.
+
+  El naranja del escudo y de la órbita es `#ef6a1e`; el fondo del logo es negro puro, así
+  que las superficies oscuras del sistema van en negros apenas cálidos para que el ícono
+  se funda con el navbar en vez de recortarse contra un verde.
+
+  El `:root:root` es a propósito: el tema se importa después de `index.css` y con la misma
+  especificidad dependería del orden en que el bundler concatene las hojas. Duplicando el
+  selector gana siempre, sin importar cómo quede el CSS del build.
+*/
+:root:root {
+  /* Superficies oscuras: navbar, footer, menú del panel. También el texto de los títulos. */
+  --rp-green-900: #08090a;
+  --rp-green-850: #0d0f11;
+  --rp-green-800: #14171a;
+  --rp-green-700: #24282d;
+
+  /* Acento: botones, enlaces, estados activos. */
+  --rp-green-600: #ef6a1e;
+  --rp-green-500: #f38d50;
+
+  /* Detalle: bordes finos y eyebrows, casi siempre translúcidos sobre lo oscuro. */
+  --rp-gold: #f47b25;
+  --rp-gold-deep: #9a4a12;
+  --rp-pale: #d5d8dc;
+
+  /* Fondos claros y texto. */
+  --rp-cream: #f4f5f6;
+  --rp-paper: #ffffff;
+  --rp-border-light: #d8dbdf;
+  --rp-border-soft: #c3c7cc;
+  --rp-surface-soft: #f1f2f4;
+  --rp-line: #e5e7ea;
+  --rp-ink: #14171a;
+  --rp-muted-light: #5c636b;
+  --rp-faint: #9aa1a9;
+
+  --rp-tint-1: #f8f8f9;
+  --rp-tint-2: #f0f1f3;
+  --rp-tint-3: #eaebee;
+  --rp-tint-4: #e1e3e7;
+  --rp-tint-5: #d9dce0;
+  --rp-sand: #fdf1e8;
+
+  /* Degradé de las tarjetas destacadas: negro que se entibia hacia el naranja. */
+  --rp-hero-from: #15171a;
+  --rp-hero-to: #2e1a0d;
+
+  /*
+    El rojo se corre hacia el carmín. El #c0392b del tema base es un rojo anaranjado: al
+    lado del acento del club, un botón de borrar y uno de confirmar se leían casi iguales.
+  */
+  --rp-danger: #d32f3a;
+  --rp-danger-bright: #ef4452;
+  --rp-danger-deep: #a12530;
+  --rp-danger-soft: #ff9aa2;
+
+  /*
+    Logo del navbar y del pie: el escudo del club, a color. La ruta es la de la raíz
+    porque `public/marcas/royal/` se superpone a `public/` (ver `marcaDelClub` en
+    vite.config.ts). El fondo de la caja es negro puro, como en el logo original: sobre el
+    grafito del resto del panel el escudo se recortaría en un cuadrado.
+  */
+  --rp-logo: url("/escudo.png") center / contain no-repeat;
+  --rp-logo-mask: none;
+  --rp-logo-tamanio: 34px;
+  --rp-logo-caja: #000;
+
+  /*
+    Botón principal en naranja, no en negro: el acento del club es el naranja y un CTA
+    apagado desperdicia la marca.
+  */
+  --rp-cta: #c04d0c;
+  --rp-cta-hover: #e0630f;
+
+
+  /*
+    Utilidades de Tailwind (bg-rp-accent, text-rp-muted, …).
+
+    El acento es un naranja más quemado que el del logo. `bg-rp-accent` es el fondo de los
+    botones del panel y `text-rp-accent` el de varios textos chicos: con el #ef6a1e del
+    escudo, el blanco encima daba 3:1 y el texto sobre blanco lo mismo, por debajo del
+    mínimo legible. El naranja vivo se reserva para lo decorativo, que no tiene que
+    sostener texto.
+  */
+  --color-rp-bg: #e9eaec;
+  --color-rp-surface: #ffffff;
+  --color-rp-surface-2: #dee0e4;
+  --color-rp-border: #cdd0d5;
+  --color-rp-text: #14171a;
+  --color-rp-muted: #5c636b;
+  --color-rp-accent: #c04d0c;
+  --color-rp-cyan: #c04d0c;
+  --color-rp-amber: #c26a15;
+  --color-rp-danger: #d32f3a;
+}

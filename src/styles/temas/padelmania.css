@@ -1,0 +1,115 @@
+/*
+  Padel Mania — negro, blanco, magenta y lima, sacados del logo del club.
+
+  El logo es un círculo blanco sobre negro: la raqueta que hace de "P" está trazada en
+  magenta `#e0157f` y la pelota que le pone el punto a la "i" de MANIA es lima `#a7c515`.
+  Las superficies oscuras van en negros con una gota de rosa para que el círculo del logo
+  se funda con el navbar, y los fondos claros llevan un tinte rosado por lo mismo: un gris
+  neutro al lado del magenta se lee apagado.
+
+  A diferencia de Royal y de UPCN, acá el color vivo de la marca **sí** sostiene texto: el
+  magenta del logo da 4.6:1 contra el blanco. Igual el acento se usa un punto más profundo
+  (5.7:1) porque 4.6 es justo el mínimo y el sistema lo usa en textos chicos.
+
+  El `:root:root` es a propósito: el tema se importa después de `index.css` y con la misma
+  especificidad dependería del orden en que el bundler concatene las hojas. Duplicando el
+  selector gana siempre, sin importar cómo quede el CSS del build.
+*/
+:root:root {
+  /* Superficies oscuras: navbar, footer, menú del panel. También el texto de los títulos. */
+  --rp-green-900: #070406;
+  --rp-green-850: #0d080c;
+  --rp-green-800: #160e14;
+  --rp-green-700: #2a1a24;
+
+  /*
+    Acento: botones, enlaces, estados activos. El 600 también es color de TEXTO sobre fondo
+    claro (los puntos del perfil, la tendencia del ranking, el eyebrow del inicio): va en
+    #c4186d, que da 5.7:1 contra el blanco. El magenta exacto del logo queda en el 500, que
+    es decorativo, porque su 4.6:1 es el mínimo justo y en 11 px no alcanza.
+  */
+  --rp-green-600: #c4186d;
+  --rp-green-500: #e0157f;
+
+  /*
+    Detalle: bordes finos y eyebrows, casi siempre translúcidos sobre lo oscuro. Es el lima
+    de la pelota, bajado hasta 2.98:1 contra el blanco —el mismo nivel que el dorado del
+    tema base y que el naranja de Royal— porque unos pocos eyebrows son texto chico sobre
+    fondo claro. Sobre el navbar da 6.7:1, que es donde más se lo ve. El lima crudo del
+    logo daba 1.97:1 y esos textos desaparecían.
+  */
+  --rp-gold: #8a9f11;
+  --rp-gold-deep: #5f6e0b;
+  --rp-pale: #e6d8e0;
+
+  /* Fondos claros y texto. */
+  --rp-cream: #f7f4f6;
+  --rp-paper: #ffffff;
+  --rp-border-light: #e2dade;
+  --rp-border-soft: #cfc2c9;
+  --rp-surface-soft: #f3eef1;
+  --rp-line: #ece5e9;
+  --rp-ink: #15090f;
+  --rp-muted-light: #6b5a63;
+  --rp-faint: #a1919a;
+
+  --rp-tint-1: #fbf9fa;
+  --rp-tint-2: #f5f1f3;
+  --rp-tint-3: #efe9ec;
+  --rp-tint-4: #e8e0e5;
+  --rp-tint-5: #e0d6dc;
+  --rp-sand: #fdf0f6;
+
+  /* Degradé de las tarjetas destacadas: negro que se corre hacia el magenta del logo. */
+  --rp-hero-from: #120810;
+  --rp-hero-to: #360d25;
+
+  /*
+    El rojo de peligro no se toca. El #c0392b del tema base es un rojo anaranjado y el
+    acento del club es magenta: son los dos extremos del arco rojo y un botón de borrar no
+    se confunde con uno de confirmar. Royal tuvo que correrlo al carmín porque su acento
+    era naranja; acá correrlo lo acercaría al magenta, que es justo lo contrario.
+  */
+
+  /*
+    Logo del navbar, del pie y del panel: el logo del club, a color. La ruta es la de la
+    raíz porque `public/marcas/padelmania/` se superpone a `public/` (ver `marcaDelClub` en
+    vite.config.ts). El PNG viene recortado en círculo con transparencia, así que la caja
+    va en el mismo negro del navbar y el logo no se recorta en un cuadrado.
+  */
+  --rp-logo: url("/escudo.png") center / contain no-repeat;
+  --rp-logo-mask: none;
+  --rp-logo-tamanio: 34px;
+  --rp-logo-caja: #0d080c;
+
+  /*
+    Botón principal en magenta, no en negro: el acento del club es el magenta y un CTA
+    apagado desperdicia la marca. Reposo profundo (6.3:1 con el texto blanco), hover hacia
+    el magenta del logo.
+  */
+  --rp-cta: #b81268;
+  --rp-cta-hover: #d4177a;
+
+
+  /*
+    Utilidades de Tailwind (bg-rp-accent, text-rp-muted, …).
+
+    `bg-rp-accent` es el fondo de los botones del panel y `text-rp-accent` el de varios
+    textos chicos, así que va el magenta profundo, no el del logo.
+  */
+  --color-rp-bg: #efe9ec;
+  --color-rp-surface: #ffffff;
+  --color-rp-surface-2: #e5dbe1;
+  --color-rp-border: #d7cad1;
+  --color-rp-text: #15090f;
+  --color-rp-muted: #6b5a63;
+  --color-rp-accent: #c4186d;
+  --color-rp-cyan: #c4186d;
+  /*
+    El ámbar es el tono de aviso (stock bajo, badges "warning") y va más anaranjado que en
+    los otros temas: acá el detalle fino ya es un lima olivo y un ámbar verdoso se
+    confundiría con él. 4.9:1 sobre blanco.
+  */
+  --color-rp-amber: #9c6508;
+  --color-rp-danger: #c0392b;
+}

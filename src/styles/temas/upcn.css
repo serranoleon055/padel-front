@@ -1,0 +1,106 @@
+/*
+  UPCN Pádel Club — azul marino, verde lima y blanco, sacados del logo del club.
+
+  El logo tiene exactamente tres colores: el fondo azul marino `#03132c`, las curvas y el
+  "PÁDEL CLUB" en verde lima `#76d054`, y el "UPCN" en blanco. Las superficies oscuras del
+  sistema van en ese mismo marino para que el logo se funda con el navbar en vez de
+  recortarse contra un verde, y los fondos claros llevan un tinte frío por lo mismo: un
+  crema cálido al lado del marino se lee sucio.
+
+  El `:root:root` es a propósito: el tema se importa después de `index.css` y con la misma
+  especificidad dependería del orden en que el bundler concatene las hojas. Duplicando el
+  selector gana siempre, sin importar cómo quede el CSS del build.
+*/
+:root:root {
+  /* Superficies oscuras: navbar, footer, menú del panel. También el texto de los títulos. */
+  --rp-green-900: #020c1c;
+  --rp-green-850: #03132c;
+  --rp-green-800: #061c3e;
+  --rp-green-700: #12305c;
+
+  /*
+    Acento: botones, enlaces, estados activos. El lima del logo queda en el 500, que es
+    decorativo, porque el 600 se usa mucho como color de TEXTO sobre fondo claro (los
+    puntos del perfil, la tendencia del ranking, el eyebrow del inicio): con el #76d054
+    del logo esos textos daban 1.9:1 contra el blanco y no se leían.
+  */
+  --rp-green-600: #2c7420;
+  --rp-green-500: #76d054;
+
+  /*
+    Detalle: bordes finos y eyebrows, casi siempre translúcidos sobre lo oscuro, pero unos
+    pocos son texto chico sobre fondo claro. Este verde da 2.9:1 contra el blanco, el mismo
+    nivel que el dorado del tema base y que el naranja de Royal, y 6.6:1 sobre el marino
+    del navbar, que es donde más se lo ve.
+  */
+  --rp-gold: #5ba83a;
+  --rp-gold-deep: #2f6a1d;
+  --rp-pale: #ccd6e4;
+
+  /* Fondos claros y texto. */
+  --rp-cream: #f3f5f8;
+  --rp-paper: #ffffff;
+  --rp-border-light: #d5dbe3;
+  --rp-border-soft: #bfc7d2;
+  --rp-surface-soft: #f0f2f6;
+  --rp-line: #e3e7ee;
+  --rp-ink: #0d1a2e;
+  --rp-muted-light: #566275;
+  --rp-faint: #94a0b2;
+
+  --rp-tint-1: #f7f9fb;
+  --rp-tint-2: #eff2f6;
+  --rp-tint-3: #e9edf3;
+  --rp-tint-4: #e0e6ee;
+  --rp-tint-5: #d8dfe9;
+  --rp-sand: #eaf4e4;
+
+  /* Degradé de las tarjetas destacadas: marino que se corre hacia el verde del logo. */
+  --rp-hero-from: #0a1a33;
+  --rp-hero-to: #10301f;
+
+  /*
+    El rojo de peligro no se toca: el `#c0392b` del tema base es un rojo anaranjado que se
+    distingue de un acento verde sin esfuerzo. Royal tuvo que correrlo al carmín porque su
+    acento era naranja; acá no hay nada que desambiguar.
+  */
+
+  /*
+    Logo del navbar y del pie: el logo del club, a color. La ruta es la de la raíz porque
+    `public/marcas/upcn/` se superpone a `public/` (ver `marcaDelClub` en vite.config.ts).
+    La caja va en el marino exacto del logo para que el cuadrado no se recorte contra el
+    navbar.
+  */
+  --rp-logo: url("/escudo.png") center / contain no-repeat;
+  --rp-logo-mask: none;
+  --rp-logo-tamanio: 34px;
+  --rp-logo-caja: #03132c;
+
+  /*
+    Botón principal en verde, no en marino: el acento del club es el verde y un CTA apagado
+    desperdicia la marca. Reposo oscuro (6.2:1 con el texto blanco), hover al verde vivo.
+  */
+  --rp-cta: #2a6f1e;
+  --rp-cta-hover: #358726;
+
+
+  /*
+    Utilidades de Tailwind (bg-rp-accent, text-rp-muted, …).
+
+    El acento es un verde bastante más oscuro que el del logo. `bg-rp-accent` es el fondo de
+    los botones del panel y `text-rp-accent` el de varios textos chicos: con el #76d054 del
+    logo, el blanco encima daba 1.9:1 y el texto sobre el fondo claro lo mismo, muy por
+    debajo del mínimo legible. El lima se reserva para lo decorativo, que no tiene que
+    sostener texto.
+  */
+  --color-rp-bg: #e7ebf1;
+  --color-rp-surface: #ffffff;
+  --color-rp-surface-2: #dde3ec;
+  --color-rp-border: #cbd3de;
+  --color-rp-text: #0d1a2e;
+  --color-rp-muted: #566275;
+  --color-rp-accent: #2a6f1e;
+  --color-rp-cyan: #2a6f1e;
+  --color-rp-amber: #8f6a14;
+  --color-rp-danger: #c0392b;
+}

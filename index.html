@@ -2,29 +2,45 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#155c2e" />
-    <link rel="manifest" href="/manifest.webmanifest" />
 
-    <title>RankPadel — Ranking y torneos de pádel en Santiago del Estero</title>
-    <meta name="description" content="RankPadel: ranking de jugadores, torneos en vivo, resultados y campeones de pádel en Santiago del Estero. Seguí la competición temporada a temporada." />
-    <link rel="canonical" href="https://padel-front-five.vercel.app/" />
+    <!--
+      Los textos y el color de la marca los completa el plugin `rankpadel-textos` de
+      vite.config.ts con las variables VITE_BRAND_*: rebrandear no tiene que pasar por acá.
+
+      La dirección del sitio sale de VITE_SITE_URL (.env), no escrita a mano: estas tres
+      etiquetas apuntaban a una demo de Vercel que ya no existe, así que compartir el link
+      por WhatsApp mostraba una previsualización rota y Google indexaba un dominio caído.
+      Cada club tiene su dominio: acá se cambia en un solo lugar.
+    -->
+    <link rel="canonical" href="%VITE_SITE_URL%/" />
+
+    <!-- Íconos: el SVG para el navegador, el PNG para iOS (Safari ignora el manifest). -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="%BRAND_THEME_COLOR%" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="%BRAND_NAME%" />
+
+    <title>%BRAND_TITLE%</title>
+    <meta name="description" content="%BRAND_DESCRIPTION%" />
 
     <!-- Open Graph (Facebook, WhatsApp, etc.) -->
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="RankPadel" />
-    <meta property="og:title" content="RankPadel — Ranking y torneos de pádel" />
-    <meta property="og:description" content="Ranking de jugadores, torneos en vivo, resultados y campeones de pádel en Santiago del Estero." />
+    <meta property="og:site_name" content="%BRAND_NAME%" />
+    <meta property="og:title" content="%BRAND_TITLE%" />
+    <meta property="og:description" content="%BRAND_DESCRIPTION%" />
     <meta property="og:locale" content="es_AR" />
-    <meta property="og:url" content="https://padel-front-five.vercel.app/" />
-    <meta property="og:image" content="https://padel-front-five.vercel.app/images/fondo%20cancha.jpg" />
+    <meta property="og:url" content="%VITE_SITE_URL%/" />
+    <meta property="og:image" content="%VITE_SITE_URL%%BRAND_OG_IMAGE%" />
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="RankPadel — Ranking y torneos de pádel" />
-    <meta name="twitter:description" content="Ranking de jugadores, torneos en vivo, resultados y campeones de pádel en Santiago del Estero." />
-    <meta name="twitter:image" content="https://padel-front-five.vercel.app/images/fondo%20cancha.jpg" />
+    <meta name="twitter:title" content="%BRAND_TITLE%" />
+    <meta name="twitter:description" content="%BRAND_DESCRIPTION%" />
+    <meta name="twitter:image" content="%VITE_SITE_URL%%BRAND_OG_IMAGE%" />
   </head>
   <body>
     <div id="root"></div>

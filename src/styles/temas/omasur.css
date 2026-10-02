@@ -1,0 +1,110 @@
+/*
+  Oma Padel Sur — azul noche, agua y blanco, sacados del logo del club.
+
+  El logo son tres cosas: "OMA" y "PADEL SUR" en un negro azulado `#0a141f`, una onda de
+  agua celeste que los cruza —medida entre `#a6c4da` y `#b0d2eb`, promedio `#8dbcdd`— y el
+  fondo blanco. Las superficies oscuras del sistema van en ese mismo azul noche para que el
+  logo se funda con el navbar en vez de recortarse contra un verde, y los fondos claros
+  llevan un tinte frío por lo mismo.
+
+  El celeste de la onda es MUY claro (1.8:1 contra el blanco): no sostiene texto en ningún
+  tamaño. Queda en el 500, que es decorativo, y todo lo que tiene que leerse usa azules
+  profundos derivados de él.
+
+  El `:root:root` es a propósito: el tema se importa después de `index.css` y con la misma
+  especificidad dependería del orden en que el bundler concatene las hojas. Duplicando el
+  selector gana siempre, sin importar cómo quede el CSS del build.
+*/
+:root:root {
+  /* Superficies oscuras: navbar, footer, menú del panel. También el texto de los títulos. */
+  --rp-green-900: #050b12;
+  --rp-green-850: #0a141f;
+  --rp-green-800: #101d2c;
+  --rp-green-700: #21313f;
+
+  /*
+    Acento: botones, enlaces, estados activos. El 600 también es color de TEXTO sobre fondo
+    claro (los puntos del perfil, la tendencia del ranking, el eyebrow del inicio): va en
+    un azul profundo que da 5.9:1 contra el blanco, y el mismo 5.9:1 con texto blanco
+    encima. El celeste del logo queda en el 500, decorativo.
+  */
+  --rp-green-600: #1f6a96;
+  --rp-green-500: #8dbcdd;
+
+  /*
+    Detalle: bordes finos y eyebrows, casi siempre translúcidos sobre lo oscuro, pero unos
+    pocos son texto chico sobre fondo claro. Este azul agua da 2.85:1 contra el blanco —el
+    mismo nivel que el dorado del tema base y que el naranja de Royal— y 6.5:1 sobre el
+    azul noche del navbar, que es donde más se lo ve.
+  */
+  --rp-gold: #5da0cc;
+  --rp-gold-deep: #2f6b91;
+  --rp-pale: #cfdce7;
+
+  /* Fondos claros y texto. */
+  --rp-cream: #f3f6f8;
+  --rp-paper: #ffffff;
+  --rp-border-light: #d3dde5;
+  --rp-border-soft: #bcc9d4;
+  --rp-surface-soft: #eff3f6;
+  --rp-line: #e2e9ef;
+  --rp-ink: #0c1723;
+  --rp-muted-light: #526375;
+  --rp-faint: #91a1b1;
+
+  --rp-tint-1: #f8fafb;
+  --rp-tint-2: #eff3f7;
+  --rp-tint-3: #e8eef3;
+  --rp-tint-4: #dfe7ee;
+  --rp-tint-5: #d7e1e9;
+  --rp-sand: #e9f1f8;
+
+  /* Degradé de las tarjetas destacadas: azul noche que se abre hacia el agua del logo. */
+  --rp-hero-from: #0a1725;
+  --rp-hero-to: #14324a;
+
+  /*
+    El rojo de peligro no se toca: el `#c0392b` del tema base es un rojo anaranjado que se
+    distingue de un acento azul sin esfuerzo. Royal tuvo que correrlo al carmín porque su
+    acento era naranja; acá no hay nada que desambiguar.
+  */
+
+  /*
+    Logo del navbar y del pie: el logo del club, a color. La ruta es la de la raíz porque
+    `public/marcas/omasur/` se superpone a `public/` (ver `marcaDelClub` en vite.config.ts).
+    A diferencia de Royal, UPCN y Padel Mania, este logo viene sobre BLANCO, así que la caja
+    va en blanco: pintarla del azul del navbar dejaría el recuadro blanco del JPG recortado
+    contra el fondo oscuro.
+  */
+  --rp-logo: url("/escudo.png") center / contain no-repeat;
+  --rp-logo-mask: none;
+  --rp-logo-tamanio: 40px;
+  --rp-logo-caja: #ffffff;
+
+  /*
+    Botón principal en azul, no en el azul noche: el acento del club es el agua y un CTA
+    apagado desperdicia la marca. Reposo profundo (6.9:1 con el texto blanco), hover un
+    punto más abierto.
+  */
+  --rp-cta: #1c5f88;
+  --rp-cta-hover: #2478a9;
+
+
+  /*
+    Utilidades de Tailwind (bg-rp-accent, text-rp-muted, …).
+
+    El acento es el mismo azul profundo del 600: `bg-rp-accent` es el fondo de los botones
+    del panel y `text-rp-accent` el de varios textos chicos, así que tiene que sostener
+    texto en los dos sentidos. El celeste del logo daba 1.8:1 en ambos y no se leía nada.
+  */
+  --color-rp-bg: #e6ecf1;
+  --color-rp-surface: #ffffff;
+  --color-rp-surface-2: #dce4ec;
+  --color-rp-border: #c9d4de;
+  --color-rp-text: #0c1723;
+  --color-rp-muted: #526375;
+  --color-rp-accent: #1f6a96;
+  --color-rp-cyan: #1f6a96;
+  --color-rp-amber: #8a6512;
+  --color-rp-danger: #c0392b;
+}

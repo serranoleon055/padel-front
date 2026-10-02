@@ -34,10 +34,31 @@
   --rp-pale: #d8cfb8;
   --rp-cream: #f4f1e9;
   --rp-paper: #fbfaf6;
+  --rp-gold-deep: #705a2d;
   --rp-border-light: #c6d3c4;
+  --rp-border-soft: #b4c3b2;
+  --rp-surface-soft: #f0f2ee;
+  --rp-line: #e2e8e0;
   --rp-ink: #0e1a11;
   --rp-muted-light: #4a6a50;
   --rp-faint: #8aaa8e;
+
+  /* Superficies claras, de la más clara a la más marcada. */
+  --rp-tint-1: #f7f7f1;
+  --rp-tint-2: #eef1eb;
+  --rp-tint-3: #e8ece5;
+  --rp-tint-4: #dfe8dc;
+  --rp-tint-5: #d9e3d7;
+  --rp-sand: #f0eadf;
+
+  /* Degradé de las tarjetas destacadas sobre fondo oscuro. */
+  --rp-hero-from: #0c2e18;
+  --rp-hero-to: #113d22;
+
+  --rp-danger: #c0392b;
+  --rp-danger-bright: #e74c3c;
+  --rp-danger-deep: #9c3b42;
+  --rp-danger-soft: #ff8a8a;
   --rp-radius-sm: 8px;
   --rp-radius: 12px;
   --rp-radius-lg: 16px;
@@ -46,6 +67,20 @@
   --rp-shadow-lg: 0 18px 42px rgba(0, 0, 0, .18);
   --rp-nav-height: 62px;
   --rp-ticker-duration: 44s;
+
+  /* Logo del navbar y del pie. Una silueta de paleta de pádel, recortada y pintada en blanco. */
+  --rp-logo: #fff;
+  --rp-logo-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M15.9 2.1c2.6 0 4.8 2.1 4.8 4.8 0 1.4-.6 2.7-1.6 3.6l-4.2 4.2-5.6-5.6 4.2-4.2c.7-.7 1.5-1 2.4-1zM15.9 4.8c-.2 0-.5.1-.7.3l-3.1 3.1 2.8 2.8 3.1-3.1a1.9 1.9 0 0 0-2.1-3.1zM8.3 10.2l5.5 5.5-1.7 1.7-1.6-1.6-5.2 5.2a1.6 1.6 0 0 1-2.3-2.3l5.2-5.2-1.6-1.6 1.7-1.7z'/%3E%3C/svg%3E");
+  --rp-logo-tamanio: 27px;
+  --rp-logo-caja: var(--rp-green-700);
+
+  /* Botón principal (Reservar cancha, el acceso al panel). Reposo oscuro, hover al acento. */
+  --rp-cta: var(--rp-green-700);
+  --rp-cta-hover: var(--rp-green-600);
+
+  /* Fotos que el CSS usa de fondo. Espejan src/config/imagenes.ts. */
+  --rp-img-cancha: url("/images/fondo cancha.webp");
+  --rp-img-ambiente: url("/images/coello.webp");
 }
 
 *,
@@ -69,14 +104,29 @@ body {
   color: var(--rp-ink);
 }
 
+/*
+ * Zonas seguras del iPhone. El `viewport-fit=cover` del index.html hace que la página se
+ * dibuje TAMBIÉN abajo del notch y de la barra del gesto: sin esto, lo último de cada
+ * pantalla —el botón de cerrar sesión del menú, la barra inferior del panel— queda tapado
+ * por la barra negra del teléfono y no se puede tocar.
+ */
+.rp-safe-bottom {
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+}
+
+.rp-safe-x {
+  padding-right: env(safe-area-inset-right);
+  padding-left: env(safe-area-inset-left);
+}
+
 .rp-page-bg {
   background: var(--rp-cream);
 }
 
 .rp-surface {
-  border: 1px solid rgba(198, 211, 196, .9);
+  border: 1px solid color-mix(in srgb, var(--rp-border-light) 90%, transparent);
   border-radius: var(--rp-radius-lg);
-  background: #f0f2ee;
+  background: var(--rp-surface-soft);
   box-shadow: var(--rp-shadow-md);
 }
 
@@ -85,8 +135,8 @@ body {
 }
 
 .rp-card-hover:hover {
-  border-color: rgba(185, 154, 88, .42);
-  box-shadow: 0 14px 30px rgba(32, 72, 43, .14);
+  border-color: color-mix(in srgb, var(--rp-gold) 42%, transparent);
+  box-shadow: 0 14px 30px color-mix(in srgb, var(--rp-green-700) 14%, transparent);
   transform: translateY(-2px);
 }
 
@@ -151,15 +201,15 @@ body {
   display: flex;
   align-items: center;
   overflow: hidden;
-  border-top: 1px solid rgba(185, 154, 88, .16);
-  border-bottom: 1px solid rgba(185, 154, 88, .16);
+  border-top: 1px solid color-mix(in srgb, var(--rp-gold) 16%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--rp-gold) 16%, transparent);
   background: var(--rp-green-800);
   padding: 13px 0;
 }
 
 .ticker-label {
   flex: 0 0 auto;
-  border-right: 1px solid rgba(185, 154, 88, .22);
+  border-right: 1px solid color-mix(in srgb, var(--rp-gold) 22%, transparent);
   padding: 0 22px;
   color: var(--rp-gold);
   font-family: var(--font-mono);
@@ -244,18 +294,6 @@ textarea {
   font: inherit;
 }
 
-input[type="number"] {
-  appearance: textfield;
-  -moz-appearance: textfield;
-}
-
-input[type="number"]::-webkit-outer-spin-button,
-input[type="number"]::-webkit-inner-spin-button {
-  margin: 0;
-  appearance: none;
-  -webkit-appearance: none;
-}
-
 button {
   border: 0;
 }
@@ -270,7 +308,7 @@ img {
 }
 
 ::selection {
-  background: rgba(47, 104, 64, .22);
+  background: color-mix(in srgb, var(--rp-green-600) 22%, transparent);
 }
 
 ::-webkit-scrollbar {
@@ -278,12 +316,12 @@ img {
 }
 
 ::-webkit-scrollbar-track {
-  background: #e2e8e0;
+  background: var(--rp-line);
 }
 
 ::-webkit-scrollbar-thumb {
   background: var(--rp-green-700);
-  border: 2px solid #e2e8e0;
+  border: 2px solid var(--rp-line);
   border-radius: 999px;
 }
 
@@ -296,8 +334,8 @@ img {
   align-items: center;
   justify-content: space-between;
   padding: 0 40px;
-  background: rgba(7, 17, 10, .92);
-  border-bottom: 1px solid rgba(185, 154, 88, .18);
+  background: color-mix(in srgb, var(--rp-green-900) 92%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--rp-gold) 18%, transparent);
 }
 
 .nlogo,
@@ -308,7 +346,8 @@ img {
 }
 
 .nlogo-icon,
-.footer-logo-icon {
+.footer-logo-icon,
+.admin-sidebar-logo {
   position: relative;
   display: grid;
   width: 42px;
@@ -317,16 +356,22 @@ img {
   place-items: center;
   overflow: hidden;
   border-radius: 9px;
-  background: var(--rp-green-700);
+  background: var(--rp-logo-caja);
 }
 
+/*
+  El logo del navbar y el del pie salen del tema, no de acá: `--rp-logo-mask` para una
+  marca que se dibuja en un solo color (se recorta una silueta y se pinta con
+  `--rp-logo`), o `--rp-logo` con una `url()` cuando el club entrega su logo a color.
+*/
 .nlogo-icon::before,
-.footer-logo-icon::before {
-  width: 27px;
-  height: 27px;
+.footer-logo-icon::before,
+.admin-sidebar-logo::before {
+  width: var(--rp-logo-tamanio);
+  height: var(--rp-logo-tamanio);
   content: "";
-  background: #fff;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M15.9 2.1c2.6 0 4.8 2.1 4.8 4.8 0 1.4-.6 2.7-1.6 3.6l-4.2 4.2-5.6-5.6 4.2-4.2c.7-.7 1.5-1 2.4-1zM15.9 4.8c-.2 0-.5.1-.7.3l-3.1 3.1 2.8 2.8 3.1-3.1a1.9 1.9 0 0 0-2.1-3.1zM8.3 10.2l5.5 5.5-1.7 1.7-1.6-1.6-5.2 5.2a1.6 1.6 0 0 1-2.3-2.3l5.2-5.2-1.6-1.6 1.7-1.7z'/%3E%3C/svg%3E") center / contain no-repeat;
+  background: var(--rp-logo);
+  mask: var(--rp-logo-mask) center / contain no-repeat;
 }
 
 .nlogo-name,
@@ -368,7 +413,7 @@ img {
 }
 
 .nl.on {
-  background: rgba(185, 154, 88, .12);
+  background: color-mix(in srgb, var(--rp-gold) 12%, transparent);
 }
 
 .nl-dropdown {
@@ -392,8 +437,8 @@ img {
   flex-direction: column;
   gap: 2px;
   padding: 6px;
-  background: rgba(7, 17, 10, .98);
-  border: 1px solid rgba(185, 154, 88, .18);
+  background: color-mix(in srgb, var(--rp-green-900) 98%, transparent);
+  border: 1px solid color-mix(in srgb, var(--rp-gold) 18%, transparent);
   border-radius: 10px;
   opacity: 0;
   visibility: hidden;
@@ -420,7 +465,7 @@ img {
 .nl-menu-item:hover,
 .nl-menu-item.on {
   color: var(--rp-pale);
-  background: rgba(185, 154, 88, .12);
+  background: color-mix(in srgb, var(--rp-gold) 12%, transparent);
 }
 
 .nav-cta {
@@ -430,7 +475,7 @@ img {
   min-height: 36px;
   border-radius: 8px;
   padding: 0 18px;
-  background: var(--rp-green-700);
+  background: var(--rp-cta);
   color: #fff;
   font-size: 12px;
   font-weight: 800;
@@ -438,7 +483,7 @@ img {
 }
 
 .nav-cta:hover {
-  background: var(--rp-green-600);
+  background: var(--rp-cta-hover);
 }
 
 /*
@@ -476,7 +521,7 @@ img {
   align-items: center;
   justify-content: center;
   gap: 16px;
-  background: rgba(7, 17, 10, .98);
+  background: color-mix(in srgb, var(--rp-green-900) 98%, transparent);
 }
 
 .mobile-nav-overlay a {
@@ -491,7 +536,7 @@ img {
 
 .site-footer {
   background: var(--rp-green-900);
-  border-top: 1px solid rgba(185, 154, 88, .14);
+  border-top: 1px solid color-mix(in srgb, var(--rp-gold) 14%, transparent);
 }
 
 .footer-grid {
@@ -522,15 +567,15 @@ img {
   width: 36px;
   height: 36px;
   place-items: center;
-  border: 1px solid rgba(185, 154, 88, .18);
+  border: 1px solid color-mix(in srgb, var(--rp-gold) 18%, transparent);
   border-radius: 8px;
-  background: rgba(185, 154, 88, .1);
+  background: color-mix(in srgb, var(--rp-gold) 10%, transparent);
   color: var(--rp-pale);
   transition: background-color .15s ease;
 }
 
 .fsoc:hover {
-  background: rgba(185, 154, 88, .2);
+  background: color-mix(in srgb, var(--rp-gold) 20%, transparent);
 }
 
 .footer-col h4 {
@@ -569,7 +614,7 @@ img {
 }
 
 .footer-bottom {
-  border-top: 1px solid rgba(185, 154, 88, .1);
+  border-top: 1px solid color-mix(in srgb, var(--rp-gold) 10%, transparent);
   padding: 16px 40px;
   color: rgba(255, 255, 255, .35);
   font-size: 12px;
@@ -635,16 +680,37 @@ img {
 
 .admin-sidebar {
   background: var(--rp-green-900);
-  border-color: rgba(185, 154, 88, .16);
+  border-color: color-mix(in srgb, var(--rp-gold) 16%, transparent);
+}
+
+/*
+  Barra fija de abajo, solo en celular. Mismo verde que el menú lateral para que se lea
+  como parte del panel y no como un elemento suelto del sistema operativo.
+*/
+.admin-barra-movil {
+  background: var(--rp-green-900);
+  border-color: color-mix(in srgb, var(--rp-gold) 16%, transparent);
+}
+
+.admin-barra-movil-enlace {
+  color: rgba(255, 255, 255, .62);
+  transition: color .14s ease, background-color .14s ease;
+}
+
+.admin-barra-movil-enlace.activo {
+  background: color-mix(in srgb, var(--rp-gold) 12%, transparent);
+  color: var(--rp-gold);
 }
 
 .admin-sidebar-separador {
   border-color: rgba(255, 255, 255, .08);
 }
 
+/* El cuadro del logo del panel es un poco mayor que el del navbar; el dibujo sale del tema. */
 .admin-sidebar-logo {
-  background: var(--rp-green-700);
-  color: #fff;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
 }
 
 .admin-sidebar-marca {
@@ -679,7 +745,7 @@ img {
 
 .admin-sidebar-salir:hover {
   background: rgba(255, 255, 255, .07);
-  color: #ff8a8a;
+  color: var(--rp-danger-soft);
 }
 
 .admin-topbar {
@@ -700,5 +766,5 @@ img {
 }
 
 .admin-topbar-boton-salir:hover {
-  color: #ff8a8a;
+  color: var(--rp-danger-soft);
 }

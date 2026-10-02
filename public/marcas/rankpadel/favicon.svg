@@ -1,0 +1,25 @@
+<!--
+  Paleta aprobada: verde casi negro de fondo, dorado adelante. Antes acá había un rayo
+  violeta que no era de ninguna marca del proyecto y que además es justo el color con el
+  que no se quiere asociar el sistema.
+
+  La forma es una paleta de pádel vista de frente: se reconoce chiquita en la pestaña, y
+  para rebrandear a otro club alcanza con cambiar los dos colores de abajo.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="RankPadel">
+  <rect width="64" height="64" rx="14" fill="#06100a"/>
+  <g fill="none" stroke="#c2a25f" stroke-width="3.4">
+    <path d="M32 11c9.4 0 16 6.9 16 15.8S41.4 42.6 32 42.6s-16-6.9-16-15.8S22.6 11 32 11Z"/>
+    <path d="M29.4 42.4v6.2a2.6 2.6 0 0 0 5.2 0v-6.2" stroke-linecap="round"/>
+  </g>
+  <g fill="#c2a25f">
+    <circle cx="25.4" cy="21.6" r="2.1"/>
+    <circle cx="32" cy="21.6" r="2.1"/>
+    <circle cx="38.6" cy="21.6" r="2.1"/>
+    <circle cx="25.4" cy="28.2" r="2.1"/>
+    <circle cx="32" cy="28.2" r="2.1"/>
+    <circle cx="38.6" cy="28.2" r="2.1"/>
+    <circle cx="28.7" cy="34.8" r="2.1"/>
+    <circle cx="35.3" cy="34.8" r="2.1"/>
+  </g>
+</svg>

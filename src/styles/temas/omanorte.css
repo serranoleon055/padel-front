@@ -1,0 +1,122 @@
+/*
+  Oma Padel Center (Norte) — verde botella y lima, los dos únicos colores del logo.
+
+  El logo es literalmente dos colores: un verde botella `#0a2b18` de fondo y la marca —la
+  "M" que hace de raqueta, la pelota que le pone el punto a la "i" y el texto OMA PADEL
+  CENTER— trazada en un lima `#e7f927`. No hay un tercer tono, ni blanco. Las superficies
+  oscuras del sistema van en ese mismo verde para que el logo se funda con el navbar en vez
+  de recortarse contra otro fondo.
+
+  El lima es el color MÁS claro que puede tener una marca: 1.17:1 contra el blanco. No
+  sostiene texto en ningún tamaño ni sobre ningún fondo claro. Queda en el 500, que es
+  decorativo, y brilla donde le corresponde: sobre lo oscuro, donde da 13:1. Todo lo que
+  tiene que leerse usa el mismo lima bajado a olivas profundas.
+
+  El `:root:root` es a propósito: el tema se importa después de `index.css` y con la misma
+  especificidad dependería del orden en que el bundler concatene las hojas. Duplicando el
+  selector gana siempre, sin importar cómo quede el CSS del build.
+*/
+:root:root {
+  /* Superficies oscuras: navbar, footer, menú del panel. También el texto de los títulos. */
+  --rp-green-900: #071e11;
+  --rp-green-850: #0a2b18;
+  --rp-green-800: #103923;
+  --rp-green-700: #1b5031;
+
+  /*
+    Acento: botones, enlaces, estados activos. El 600 también es color de TEXTO sobre fondo
+    claro (los puntos del perfil, la tendencia del ranking, el eyebrow del inicio): va en un
+    oliva profundo que da 5.65:1 contra el blanco, y el mismo 5.65:1 con texto blanco
+    encima. El lima exacto del logo queda en el 500, decorativo: con 1.17:1 contra el blanco
+    es, de los cinco temas, el que menos puede sostener texto.
+  */
+  --rp-green-600: #5f6e00;
+  --rp-green-500: #e7f927;
+
+  /*
+    Detalle: bordes finos y eyebrows, casi siempre translúcidos sobre lo oscuro, pero unos
+    pocos son texto chico sobre fondo claro. Es el lima del logo bajado hasta 3.03:1 contra
+    el blanco —el mismo nivel que el dorado del tema base, el naranja de Royal, el verde de
+    UPCN y el lima de Padel Mania— y 5.05:1 sobre el verde del navbar, que es donde más se
+    lo ve.
+  */
+  --rp-gold: #8f9c0e;
+  --rp-gold-deep: #5c6508;
+  --rp-pale: #d5dcc4;
+
+  /* Fondos claros y texto. Tinte verde-amarillo, no el gris neutro de Royal: al lado del
+     verde botella un gris frío se lee gastado, y el crema cálido del tema base se amarillea
+     de más contra el lima. */
+  --rp-cream: #f4f6ee;
+  --rp-paper: #ffffff;
+  --rp-border-light: #dee3d3;
+  --rp-border-soft: #c5ccb6;
+  --rp-surface-soft: #eff2e8;
+  --rp-line: #e7ebdf;
+  --rp-ink: #101810;
+  --rp-muted-light: #5c6558;
+  --rp-faint: #979f92;
+
+  --rp-tint-1: #fafbf6;
+  --rp-tint-2: #f2f5ea;
+  --rp-tint-3: #ebefe1;
+  --rp-tint-4: #e3e8d7;
+  --rp-tint-5: #dae0cd;
+  --rp-sand: #f3f8dc;
+
+  /* Degradé de las tarjetas destacadas: el verde del logo abriéndose hacia el lima. */
+  --rp-hero-from: #08210f;
+  --rp-hero-to: #1d4a1c;
+
+  /*
+    El rojo de peligro no se toca. El `#c0392b` del tema base es un rojo anaranjado y el
+    acento del club es un oliva verde-amarillo: están en extremos opuestos del círculo y un
+    botón de borrar no se confunde con uno de confirmar. Royal tuvo que correrlo al carmín
+    porque su acento era naranja; acá no hay nada que desambiguar.
+  */
+
+  /*
+    Logo del navbar, del pie y del panel: el logo del club, a color. La ruta es la de la
+    raíz porque `public/marcas/omanorte/` se superpone a `public/` (ver `marcaDelClub` en
+    vite.config.ts). El PNG viene con la marca recortada en alfa —el fondo del JPG se
+    descartó—, así que la caja se pinta con el verde exacto del logo y el recuadro no se
+    marca contra el navbar.
+  */
+  --rp-logo: url("/escudo.png") center / contain no-repeat;
+  --rp-logo-mask: none;
+  --rp-logo-tamanio: 34px;
+  --rp-logo-caja: #0a2b18;
+
+  /*
+    Botón principal en el oliva de la marca, no en el verde del navbar: el color del club es
+    el lima y un CTA apagado lo desperdicia. Reposo 5.93:1 con el texto blanco, hover un
+    punto más abierto hacia el lima. El lima crudo no puede ser fondo de botón: con texto
+    blanco encima da 1.17:1.
+  */
+  --rp-cta: #5a6b08;
+  --rp-cta-hover: #6f7d12;
+
+
+  /*
+    Utilidades de Tailwind (bg-rp-accent, text-rp-muted, …).
+
+    El acento es el mismo oliva del 600: `bg-rp-accent` es el fondo de los botones del panel
+    y `text-rp-accent` el de varios textos chicos, así que tiene que sostener texto en los
+    dos sentidos.
+  */
+  --color-rp-bg: #e9ede0;
+  --color-rp-surface: #ffffff;
+  --color-rp-surface-2: #dfe4d4;
+  --color-rp-border: #d0d7c3;
+  --color-rp-text: #101810;
+  --color-rp-muted: #5c6558;
+  --color-rp-accent: #5f6e00;
+  --color-rp-cyan: #5f6e00;
+  /*
+    El ámbar es el tono de aviso (stock bajo, badges "warning") y va anaranjado, no
+    amarillo: acá el detalle fino ya es un lima olivo y un ámbar verdoso se confundiría con
+    él. Mismo criterio que en Padel Mania. 4.9:1 sobre blanco.
+  */
+  --color-rp-amber: #9c6508;
+  --color-rp-danger: #c0392b;
+}

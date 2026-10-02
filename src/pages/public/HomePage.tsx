@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 
 import { brand } from '@/config/brand'
+import { imagenes } from '@/config/imagenes'
 import { seasonsApi } from '@/features/catalog/catalogApi'
 import { homeApi } from '@/features/home/homeApi'
 import { resolveApiAssetUrl } from '@/shared/api/apiClient'
@@ -87,7 +88,9 @@ export default function HomePage() {
     <main className="homepage">
       <section className="hero">
         <div className="hero-photo">
-          <img src="/images/tapia.png" alt="Jugador de padel" loading="eager" />
+          {/* La imagen de portada sale de la marca del club (src/config/imagenes.ts). Se
+              pide con prioridad porque es lo primero que se ve: que sea liviana. */}
+          <img src={imagenes.portada} alt="" loading="eager" fetchPriority="high" />
           <div className="hero-headline">
             <div className="hero-eyebrow">
               <Users size={14} />
@@ -195,7 +198,7 @@ export default function HomePage() {
                             </span>
                           </div>
                           <div className="tp-prog-bar">
-                            <div className="tp-prog-fill" style={{ width: `${ancho}%`, background: lleno ? '#c0392b' : undefined }} />
+                            <div className="tp-prog-fill" style={{ width: `${ancho}%`, background: lleno ? 'var(--rp-danger)' : undefined }} />
                           </div>
                         </div>
                       )
@@ -222,7 +225,7 @@ export default function HomePage() {
           </div>
 
           <div className="tp-photo">
-            <img key={torneo?.id ?? 'sin-torneo'} src={torneoFotoUrl ?? '/images/galan.jpg'} alt={torneo?.nombre ?? 'Próximo torneo'} loading="lazy" />
+            <img key={torneo?.id ?? 'sin-torneo'} src={torneoFotoUrl ?? imagenes.torneo} alt={torneo?.nombre ?? 'Próximo torneo'} loading="lazy" />
             <div className="tp-photo-glass">
               <h2 className="tp-photo-title">{torneo?.nombre ?? 'Próximo torneo'}</h2>
               <div className="date-glass">
@@ -423,7 +426,7 @@ function TorneoCard({ torneo }: { torneo: TorneoResponse }) {
 
   return (
     <NavLink to={`/torneos/${torneo.id}`} className="tp-card">
-      <img src={fotoUrl ?? '/images/galan.jpg'} alt={torneo.nombre} loading="lazy" />
+      <img src={fotoUrl ?? imagenes.torneo} alt={torneo.nombre} loading="lazy" />
       <div className="tp-card-top">
         {enVivo ? (
           <span className="tp-card-chip tp-card-chip--live">

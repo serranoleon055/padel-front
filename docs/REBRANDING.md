@@ -5,29 +5,86 @@ Todo lo que NO está acá (funcionalidad, seguridad, backups) ya viene listo de 
 
 ## 1. Marca en el frontend (build-time)
 
-| Qué | Dónde |
+La marca entera —colores, logo, nombre, favicon, textos del `<head>`— sale de **dos
+lugares**: un archivo de tema y un `.env` por club. Ninguna pantalla tiene el nombre ni un
+color escrito a mano; si aparece uno, el arreglo es tokenizarlo, no editarlo por cliente.
+
+### 1.1 El tema
+
+`src/styles/temas/<club>.css` es la paleta: un bloque `:root:root` con los tokens y nada
+más. Se copia de `royal.css`, que es el ejemplo completo. Lo explica en detalle
+`src/styles/temas/LEEME.md`; lo esencial es que los tokens se respetan **por rol**:
+
+| Token | Rol |
 |---|---|
-| Nombre, ciudad, email, teléfono | Variables de Vercel/Cloudflare Pages: `VITE_BRAND_NAME`, `VITE_BRAND_LOCATION`, `VITE_BRAND_COUNTRY`, `VITE_BRAND_EMAIL`, `VITE_BRAND_PHONE` (defaults en `src/config/brand.ts`) |
-| Paleta de colores | Tokens CSS en `src/index.css` → `:root` (tema claro, ~línea 19) y el bloque `:root` oscuro (~línea 574). Cambiar `--rp-green-*`, `--rp-gold`, `--rp-cream`, etc. Todo el sistema los consume. |
-| Logo del navbar | `.nlogo-icon` en `src/index.css` + favicon |
-| Favicon / ícono PWA | `public/favicon.svg`. Para el ícono instalable generar también PNG 192×192 y 512×512 y sumarlos a `public/manifest.webmanifest` |
-| Manifest PWA | `public/manifest.webmanifest`: `name`, `short_name`, `background_color`, `theme_color` |
-| Título y SEO | `index.html`: `<title>`, description, canonical, og:* (dominio + imagen del club), `theme-color` |
-| Imagen social (WhatsApp/FB) | `public/images/` — usar nombre de archivo **sin espacios** y actualizar `og:image` |
-| Sitemap / robots | `public/sitemap.xml` y `public/robots.txt`: reemplazar el dominio |
+| `--rp-green-900/850/800/700` | Superficies oscuras (navbar, pie, menú del panel) y el texto de los títulos. Oscuros en cualquier marca. |
+| `--rp-green-600` | Acento decorativo: puntos, bordes, estados. |
+| `--rp-cta` / `--rp-cta-hover` | Fondo del botón principal. Tiene que sostener texto blanco: 4.5:1 mínimo. |
+| `--color-rp-accent` | Acento de las utilidades de Tailwind (`bg-rp-accent`, `text-rp-accent`). También sostiene texto. |
+| `--rp-gold` | Detalle fino, casi siempre translúcido sobre lo oscuro. |
+| `--rp-cream` / `--rp-paper` / `--rp-tint-*` | Fondos claros. `--rp-ink`, el texto. |
+| `--rp-logo`, `--rp-logo-mask`, `--rp-logo-tamanio`, `--rp-logo-caja` | El logo del navbar, del pie y del panel. |
+| `--rp-img-cancha` | Foto de fondo de la franja de reserva. |
+
+### 1.2 El `.env` del club
+
+`.env.<club>` con las variables de marca; se usa con `--mode <club>`:
+
+```bash
+npm run dev -- --mode royal
+npm run build -- --mode royal
+```
+
+| Variable | Para qué |
+|---|---|
+| `VITE_BRAND_THEME` | Qué archivo de `src/styles/temas/` entra al build. Un nombre inexistente **rompe el build** a propósito. |
+| `VITE_BRAND_NAME`, `VITE_BRAND_LOCATION` | Nombre y ciudad. De acá salen el navbar, el pie y, derivados, el título y la descripción del sitio. |
+| `VITE_BRAND_EMAIL`, `VITE_BRAND_PHONE`, `VITE_BRAND_COUNTRY` | Contacto por defecto, hasta que el club cargue el suyo en el panel. |
+| `VITE_BRAND_THEME_COLOR` | Color de la barra del navegador en Android. **Entre comillas**: sin ellas el `#` abre un comentario y el valor llega vacío. |
+| `VITE_BRAND_TITLE`, `VITE_BRAND_DESCRIPTION` | Solo si el texto derivado no sirve. |
+| `VITE_BRAND_OG_IMAGE` | Imagen de la previsualización al compartir el link. |
+| `VITE_BRAND_IMG_PORTADA`, `_CANCHA`, `_TORNEO`, `_AMBIENTE` | Las fotos del sitio público (`src/config/imagenes.ts`). |
+| `VITE_SITE_URL` | Dominio del club: canonical, previsualizaciones, `sitemap.xml` y `robots.txt`, que **los genera el build**. |
+| `VITE_API_BASE_URL` | Backend del club. |
+
+### 1.3 Los archivos de marca
+
+`public/marcas/<club>/` se **superpone** a `public/` con las mismas rutas, en el build y en
+`npm run dev`. Ahí van `favicon.svg`, `manifest.webmanifest`, `icons/` (192, 512, maskable,
+apple-touch) e `images/`. Así el `index.html` no se toca nunca.
+
+La carpeta `marcas/` no se publica: el build copia la del club elegido sobre la raíz de
+`dist` y borra el resto. Sin eso, el sitio de cada cliente serviría también el logo y las
+fotos de todos los demás.
+
+> Los íconos de la PWA son PNG: con un solo SVG, iPhone deja un ícono genérico al agregar a
+> inicio. Si el club manda el logo en JPG chico, conviene limpiarle el fondo a negro exacto
+> antes de escalar — además de verse mejor, el PNG comprime del orden de diez veces mejor.
+
+### 1.4 Las fotos
+
+El sitio base viene con fotos de jugadores profesionales (Tapia, Galán, Coello) y de una
+cancha de torneo. **Para mostrar el sistema alcanzan y quedan bien**: son muestras
+ilustrativas y un club sin fotos propias todavía se ve mejor con ellas que con un relleno
+gráfico. Se comparten entre todos los temas desde `public/images/`.
+
+**Antes de entregarle el sistema a un cliente que paga sí hay que reemplazarlas** por fotos
+del club: son caras reconocibles y marcas de terceros. Se cambian sin tocar código, con las
+cuatro variables `VITE_BRAND_IMG_*` apuntando a archivos de `public/marcas/<club>/images/`.
 
 ## 2. Marca en runtime (la carga el club desde el panel)
 
 En `/admin/configuracion` (no requiere deploy): nombre visible de la sede, WhatsApp,
 Instagram, dirección + Google Maps, horarios, galería de fotos, textos de precios,
-token de Mercado Pago del club.
+token de Mercado Pago del club. **Los nombres de las sedes y canchas, y las fotos de los
+torneos, también son datos**: si la base viene de una demo, quedan los del club anterior.
 
 ## 3. Infraestructura por cliente
 
 1. **Railway**: nuevo proyecto `<cliente>-prod` (backend + MySQL). Variables según
    `DEPLOY.md` del backend. Agregar `JAVA_TOOL_OPTIONS=-Xmx384m -XX:MaxMetaspaceSize=128m`.
-2. **Cloudflare Pages**: nuevo proyecto desde este repo (o un fork por cliente si va
-   a divergir el diseño), con las `VITE_*` del punto 1 y `VITE_API_BASE_URL` del backend.
+2. **Cloudflare Pages**: nuevo proyecto desde este repo, con las `VITE_*` del punto 1.
+   No hace falta un fork por cliente: el tema y el `.env` alcanzan.
 3. **Dominio del club** en Cloudflare → Pages + actualizar `APP_CORS_ALLOWED_ORIGINS`
    y `MERCADO_PAGO_BACK_URL_BASE`/`MERCADO_PAGO_NOTIFICATION_URL` en Railway.
 4. **Backups**: bucket propio (o prefijo propio) en B2/R2 + secrets del workflow

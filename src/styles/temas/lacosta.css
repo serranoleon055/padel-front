@@ -1,0 +1,109 @@
+/*
+  La Costa Padel Club — azul marino, lima y blanco, sacados del logo del club.
+
+  El logo es una cancha nocturna: el fondo es el marino `#042149`, el "LA COSTA" y la
+  pelota son el lima `#d0ec52`, y el "Padel Club" es blanco. Las superficies oscuras del
+  sistema van en ese mismo marino para que el logo se funda con el navbar en vez de
+  recortarse contra un verde, y los fondos claros llevan un tinte frío por lo mismo: un
+  crema cálido al lado del marino se lee sucio.
+
+  El `:root:root` es a propósito: el tema se importa después de `index.css` y con la misma
+  especificidad dependería del orden en que el bundler concatene las hojas. Duplicando el
+  selector gana siempre, sin importar cómo quede el CSS del build.
+*/
+:root:root {
+  /* Superficies oscuras: navbar, footer, menú del panel. También el texto de los títulos. */
+  --rp-green-900: #021230;
+  --rp-green-850: #042149;
+  --rp-green-800: #073062;
+  --rp-green-700: #13457c;
+
+  /*
+    Acento: botones, enlaces, estados activos. El lima del logo queda en el 500, que es
+    decorativo, porque el 600 se usa mucho como color de TEXTO sobre fondo claro (los
+    puntos del perfil, la tendencia del ranking, el eyebrow del inicio): con el lima esos
+    textos no llegan ni a 1.5:1 contra el blanco. El 600 es ese mismo lima llevado a oliva
+    profundo, que da 4.95:1 y se sigue leyendo como el color del club.
+  */
+  --rp-green-600: #5c7a10;
+  --rp-green-500: #d0ec52;
+
+  /*
+    Detalle: bordes finos y eyebrows, casi siempre translúcidos sobre lo oscuro, pero unos
+    pocos son texto chico sobre fondo claro. Este oliva da 2.85:1 contra el blanco, el
+    mismo nivel que el dorado del tema base y que el naranja de Royal, y 5.6:1 sobre el
+    marino del navbar, que es donde más se lo ve.
+  */
+  --rp-gold: #87a41c;
+  --rp-gold-deep: #5b7010;
+  --rp-pale: #ccd9ea;
+
+  /* Fondos claros y texto. */
+  --rp-cream: #f2f5f9;
+  --rp-paper: #ffffff;
+  --rp-border-light: #d3dbe6;
+  --rp-border-soft: #bdc7d5;
+  --rp-surface-soft: #eff2f7;
+  --rp-line: #e2e7ef;
+  --rp-ink: #0b1d38;
+  --rp-muted-light: #54627a;
+  --rp-faint: #92a0b5;
+
+  --rp-tint-1: #f7f9fc;
+  --rp-tint-2: #eef2f7;
+  --rp-tint-3: #e8edf4;
+  --rp-tint-4: #dfe6f0;
+  --rp-tint-5: #d6deea;
+  --rp-sand: #f0f5e2;
+
+  /* Degradé de las tarjetas destacadas: marino que se corre hacia el lima del logo. */
+  --rp-hero-from: #061f3f;
+  --rp-hero-to: #1d3310;
+
+  /*
+    El rojo de peligro no se toca: el `#c0392b` del tema base es un rojo anaranjado que se
+    distingue de un acento oliva sin esfuerzo. Royal tuvo que correrlo al carmín porque su
+    acento era naranja; acá no hay nada que desambiguar.
+  */
+
+  /*
+    Logo del navbar y del pie: el logo del club, a color. La ruta es la de la raíz porque
+    `public/marcas/lacosta/` se superpone a `public/` (ver `marcaDelClub` en
+    vite.config.ts). La caja va en el marino exacto del logo para que el cuadrado no se
+    recorte contra el navbar.
+  */
+  --rp-logo: url("/escudo.png") center / contain no-repeat;
+  --rp-logo-mask: none;
+  --rp-logo-tamanio: 34px;
+  --rp-logo-caja: #042149;
+
+  /*
+    Botón principal en oliva, no en marino: el acento del club es el lima y un CTA apagado
+    desperdicia la marca. Reposo oscuro (5.7:1 con el texto blanco), hover al oliva vivo.
+  */
+  --rp-cta: #55700e;
+  --rp-cta-hover: #657e12;
+
+
+  /*
+    Utilidades de Tailwind (bg-rp-accent, text-rp-muted, …).
+
+    El acento es el mismo oliva profundo del CTA. `bg-rp-accent` es el fondo de los botones
+    del panel y `text-rp-accent` el de varios textos chicos: con el lima del logo, el
+    blanco encima daba 1.4:1 y el texto sobre el fondo claro lo mismo, muy por debajo del
+    mínimo legible. El lima se reserva para lo decorativo, que no tiene que sostener texto.
+
+    El ámbar se corre a un naranja quemado: el del tema base es amarillento y al lado de un
+    acento oliva los estados "pendiente" y "activo" se leían casi iguales.
+  */
+  --color-rp-bg: #e6ebf3;
+  --color-rp-surface: #ffffff;
+  --color-rp-surface-2: #dce3ee;
+  --color-rp-border: #c9d2e0;
+  --color-rp-text: #0b1d38;
+  --color-rp-muted: #54627a;
+  --color-rp-accent: #55700e;
+  --color-rp-cyan: #55700e;
+  --color-rp-amber: #9a5a0d;
+  --color-rp-danger: #c0392b;
+}
