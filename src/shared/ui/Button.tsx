@@ -12,7 +12,7 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 }
 
 const variants = {
-  primary: 'bg-rp-accent text-white shadow-sm shadow-rp-accent/20 hover:bg-[#27542f]',
+  primary: 'bg-rp-accent text-white shadow-sm shadow-rp-accent/20 hover:bg-[var(--rp-green-700)]',
   ghost: 'border border-rp-border bg-transparent text-rp-text hover:bg-rp-surface-2',
   subtle: 'bg-rp-surface-2 text-rp-text hover:bg-rp-border',
   danger: 'bg-rp-danger text-white hover:opacity-90',

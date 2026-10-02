@@ -1,5 +1,5 @@
-import { Banknote, BarChart3, CalendarClock, CalendarDays, Contact, HelpCircle, Layers, LayoutDashboard, LogOut, MapPin, Menu, Package, Settings, ShieldCheck, Tag, Trophy, UserCog, Users, X } from 'lucide-react'
-import { useCallback, useMemo, useState } from 'react'
+import { Banknote, BarChart3, CalendarClock, CalendarDays, Contact, HelpCircle, Layers, LayoutDashboard, LogOut, MapPin, Menu, Package, Settings, Tag, Trophy, UserCog, Users, X } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 
 import { useAuth } from '@/app/providers/AuthContext'
@@ -53,10 +53,31 @@ const NAV = [
   },
 ]
 
+/**
+ * Lo que el mostrador toca todo el día. En el celular va en una barra fija abajo: llegar a
+ * la caja no puede costar abrir el menú, buscar y tocar. Son las cuatro pantallas que
+ * cualquiera del club puede abrir, así que la barra es la misma para el dueño y el empleado.
+ */
+const BARRA_MOVIL = [
+  { to: '/admin', label: 'Panel', icon: LayoutDashboard, end: true },
+  { to: '/admin/turnos', label: 'Turnos', icon: CalendarClock, end: false },
+  { to: '/admin/clientes', label: 'Clientes', icon: Contact, end: false },
+  { to: '/admin/caja', label: 'Caja', icon: Banknote, end: false },
+]
+
 export function AdminLayout() {
   const { logout } = useAuth()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
+
+  // Cerrar con Escape: el drawer tapa la pantalla entera y en una tablet con teclado la
+  // única salida era encontrar el borde de afuera para tocarlo.
+  useEffect(() => {
+    if (!open) return
+    const alPresionar = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
+    window.addEventListener('keydown', alPresionar)
+    return () => window.removeEventListener('keydown', alPresionar)
+  }, [open])
 
   // Esconder lo que el mostrador no puede abrir es comodidad, no seguridad: quien
   // decide qué se puede hacer es el backend. Acá solo se evita ofrecer un 403.
@@ -79,9 +100,8 @@ export function AdminLayout() {
 
       <aside className={cn('admin-sidebar fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r transition-transform lg:sticky lg:top-0 lg:h-svh lg:translate-x-0', open ? 'translate-x-0' : '-translate-x-full')}>
         <div className="admin-sidebar-separador flex items-center gap-3 border-b px-4 py-4">
-          <span className="admin-sidebar-logo flex size-10 items-center justify-center rounded-lg">
-            <ShieldCheck size={20} />
-          </span>
+          {/* El logo del club, el mismo que el navbar público: sale del tema. */}
+          <span className="admin-sidebar-logo" aria-hidden="true" />
           <span>
             <span className="admin-sidebar-marca block text-sm font-black">Panel Admin</span>
             <span className="admin-sidebar-submarca block text-xs">{brand.name}</span>
@@ -119,7 +139,7 @@ export function AdminLayout() {
           ))}
         </nav>
 
-        <div className="admin-sidebar-separador border-t px-3 py-3">
+        <div className="admin-sidebar-separador rp-safe-bottom border-t px-3 py-3">
           <button onClick={handleLogout} className="admin-sidebar-salir flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm font-semibold transition">
             <LogOut size={17} />
             Cerrar sesión
@@ -140,10 +160,29 @@ export function AdminLayout() {
           </div>
         </header>
 
-        <main className="min-w-0 flex-1 overflow-x-clip px-4 py-4 sm:px-5 lg:px-6">
+        {/* El pb-24 de abajo deja lugar para la barra fija: sin eso, la última fila de
+            cada tabla queda escondida atrás de ella y no se puede tocar. */}
+        <main className="min-w-0 flex-1 overflow-x-clip px-4 py-4 pb-24 sm:px-5 lg:px-6 lg:pb-6">
           <Outlet />
         </main>
       </div>
+
+      <nav className="admin-barra-movil rp-safe-bottom fixed inset-x-0 bottom-0 z-30 flex border-t lg:hidden">
+        {BARRA_MOVIL.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            end={item.end}
+            className={({ isActive }) => cn(
+              'admin-barra-movil-enlace flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 pt-2 text-[11px] font-bold',
+              isActive && 'activo',
+            )}
+          >
+            <item.icon size={19} />
+            {item.label}
+          </NavLink>
+        ))}
+      </nav>
     </div>
   )
 }
