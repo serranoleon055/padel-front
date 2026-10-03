@@ -628,6 +628,14 @@ export default function CajaPage() {
                         : 'anotado en el turno, sin cobrar'}
                       {venta.registradoPor ? ` · ${venta.registradoPor}` : ''}
                     </p>
+                    {/* Sin esto, una venta bonificada se ve igual que una al precio de
+                        lista y el dueño no tiene cómo enterarse de que hubo descuento. */}
+                    {venta.descuento > 0 && (
+                      <p className="text-xs text-rp-accent">
+                        {formatearMoneda(venta.descuento)} de descuento
+                        {venta.motivoDescuento ? ` · ${venta.motivoDescuento}` : ''}
+                      </p>
+                    )}
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     <span className="text-sm font-bold text-rp-text">{formatearMoneda(venta.total)}</span>

@@ -26,6 +26,7 @@ import { TelefonoWhatsApp } from '@/shared/ui/TelefonoWhatsApp'
 import { useToast } from '@/shared/ui/Toast'
 import { CompraModal } from '@/pages/admin/CompraModal'
 import { CuentaProveedorModal } from '@/pages/admin/CuentaProveedorModal'
+import { RecuentoPanel } from '@/pages/admin/RecuentoPanel'
 
 function nombreCategoria(categoria: string) {
   return CATEGORIAS_PRODUCTO.find((c) => c.valor === categoria)?.nombre ?? categoria
@@ -48,6 +49,7 @@ const PRODUCTO_VACIO = {
 const COMPRA_VACIA = { cantidad: '', costoUnitario: '', medioPago: 'EFECTIVO' as MedioPago, registraGasto: true, fecha: '' }
 
 const COMPROBANTES_POR_PAGINA = 20
+const MOVIMIENTOS_POR_PAGINA = 25
 
 function nombreComprobante(tipo: string) {
   return TIPOS_COMPROBANTE.find((t) => t.valor === tipo)?.nombre ?? tipo
@@ -86,6 +88,8 @@ export default function ProductosPage() {
 
   const [historial, setHistorial] = useState<MovimientoStockResponse[] | null>(null)
   const [productoHistorial, setProductoHistorial] = useState<ProductoResponse | null>(null)
+  const [paginaHistorial, setPaginaHistorial] = useState(1)
+  const [totalHistorial, setTotalHistorial] = useState(0)
   const [compras, setCompras] = useState<MovimientoStockResponse[]>([])
 
   // Los comprobantes cargados, que es distinto de las entradas sueltas de la tabla de
@@ -292,8 +296,23 @@ export default function ProductosPage() {
   function abrirHistorial(producto: ProductoResponse) {
     setProductoHistorial(producto)
     setHistorial(null)
-    productosApi.movimientos(producto.id).then(setHistorial).catch(() => setHistorial([]))
+    setPaginaHistorial(1)
   }
+
+  // El kardex se pide cuando se abre la ficha y cada vez que se pasa de página. Antes
+  // llegaban los últimos 40 y nada más: un faltante de hace dos meses era inalcanzable.
+  useEffect(() => {
+    if (!productoHistorial) return
+    let vigente = true
+    productosApi.movimientos(productoHistorial.id, paginaHistorial - 1, MOVIMIENTOS_POR_PAGINA)
+      .then((pagina) => {
+        if (!vigente) return
+        setHistorial(pagina.contenido)
+        setTotalHistorial(pagina.totalElementos)
+      })
+      .catch(() => { if (vigente) setHistorial([]) })
+    return () => { vigente = false }
+  }, [productoHistorial, paginaHistorial])
 
   function abrirPresentacion(producto: ProductoResponse, presentacion: PresentacionResponse | null) {
     setFormPresentacion(presentacion
@@ -599,7 +618,10 @@ export default function ProductosPage() {
           ? <Button size="sm" onClick={abrirCrear}><Plus size={16} />Nuevo producto</Button>
           : pestana === 'proveedores'
             ? <Button size="sm" onClick={() => { setEditandoProveedor(null); setFormProveedor({ nombre: '', telefono: '', notas: '' }); setModalProveedor(true) }}><Plus size={16} />Nuevo proveedor</Button>
-            : <Button size="sm" onClick={() => setModalCompra(true)}><Plus size={16} />Cargar compra</Button>}
+            : pestana === 'compras'
+              ? <Button size="sm" onClick={() => setModalCompra(true)}><Plus size={16} />Cargar compra</Button>
+              // El conteo abre desde su propio panel: el botón ahí explica qué hace.
+              : null}
       />
 
       <p className="mt-3 max-w-2xl text-sm text-rp-muted">
@@ -624,11 +646,14 @@ export default function ProductosPage() {
         opciones={[
           { valor: 'productos', label: 'Productos y stock' },
           { valor: 'compras', label: 'Compras' },
+          { valor: 'conteo', label: 'Conteo' },
           { valor: 'proveedores', label: 'Proveedores' },
         ]}
       />
 
-      {pestana === 'compras' ? (
+      {pestana === 'conteo' ? (
+        <RecuentoPanel onAplicado={cargar} />
+      ) : pestana === 'compras' ? (
         <div className="mt-4">
           <h2 className="flex items-center gap-2 text-sm font-black uppercase tracking-[0.14em] text-rp-muted">
             <FileText size={15} />Comprobantes
@@ -1001,23 +1026,36 @@ export default function ProductosPage() {
         ) : historial.length === 0 ? (
           <p className="text-sm text-rp-muted">Este producto todavía no tuvo movimientos.</p>
         ) : (
-          <div className="max-h-96 overflow-y-auto">
-            {historial.map((movimiento) => (
-              <div key={movimiento.id} className="flex items-center justify-between gap-3 border-b border-rp-border py-2 last:border-0">
-                <div className="min-w-0">
-                  <p className="text-sm font-bold text-rp-text">{MOTIVOS_STOCK[movimiento.motivo] ?? movimiento.motivo}</p>
-                  <p className="text-xs text-rp-muted">
-                    {formatearFechaHora(movimiento.fecha)}
-                    {movimiento.registradoPor ? ` · ${movimiento.registradoPor}` : ''}
-                  </p>
-                  {movimiento.notas && <p className="text-xs italic text-rp-muted">{movimiento.notas}</p>}
+          <>
+            <div className="max-h-96 overflow-y-auto">
+              {historial.map((movimiento) => (
+                <div key={movimiento.id} className="flex items-center justify-between gap-3 border-b border-rp-border py-2 last:border-0">
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-rp-text">{MOTIVOS_STOCK[movimiento.motivo] ?? movimiento.motivo}</p>
+                    <p className="text-xs text-rp-muted">
+                      {formatearFechaHora(movimiento.fecha)}
+                      {movimiento.registradoPor ? ` · ${movimiento.registradoPor}` : ''}
+                    </p>
+                    {movimiento.notas && <p className="text-xs italic text-rp-muted">{movimiento.notas}</p>}
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className={`text-sm font-black ${movimiento.cantidad < 0 ? 'text-rp-danger' : 'text-rp-accent'}`}>
+                      {movimiento.cantidad > 0 ? '+' : ''}{movimiento.cantidad}
+                    </p>
+                    {/* Las unidades que quedaban después. Sin esto, un "-3" no dice si
+                        quedaron veinte o si se vendió lo último. */}
+                    <p className="text-xs text-rp-muted">quedaban {movimiento.saldo}</p>
+                  </div>
                 </div>
-                <span className={`shrink-0 text-sm font-black ${movimiento.cantidad < 0 ? 'text-rp-danger' : 'text-rp-accent'}`}>
-                  {movimiento.cantidad > 0 ? '+' : ''}{movimiento.cantidad}
-                </span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+            <Pagination
+              page={paginaHistorial}
+              pageSize={MOVIMIENTOS_POR_PAGINA}
+              total={totalHistorial}
+              onPageChange={setPaginaHistorial}
+            />
+          </>
         )}
       </Modal>
 

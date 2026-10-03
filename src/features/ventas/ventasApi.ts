@@ -1,5 +1,6 @@
 import { apiClient } from '@/shared/api/apiClient'
 import type { MedioPago } from '@/features/caja/cajaApi'
+import type { PagedResponse } from '@/shared/types/api'
 
 export type CategoriaProducto =
   | 'PELOTAS' | 'PALETAS' | 'ALQUILER' | 'INDUMENTARIA'
@@ -22,6 +23,7 @@ export const MOTIVOS_STOCK: Record<string, string> = {
   AJUSTE: 'Ajuste',
   ANULACION: 'Anulación',
   ANULACION_COMPRA: 'Compra anulada',
+  RECUENTO: 'Conteo',
   MERMA: 'Merma',
 }
 
@@ -105,6 +107,8 @@ export interface MovimientoStockResponse {
   productoNombre: string
   cantidad: number
   motivo: keyof typeof MOTIVOS_STOCK
+  /** Unidades que quedaban despues de este movimiento. Cero en el historial del club. */
+  saldo: number
   fecha: string
   costoUnitario: number | null
   registradoPor: string | null
@@ -122,13 +126,24 @@ export interface VentaRequest {
   medio: MedioPago | null
   clienteId?: number | null
   reservaId?: number | null
+  /**
+   * Lo que se bonifica sobre el total, en plata. Se reparte entre los renglones al cargar
+   * la venta. Es importe y no porcentaje porque el mostrador redondea, no calcula.
+   */
+  descuento?: number | null
+  /** Obligatorio si hay descuento: es lo que después explica un margen flojo. */
+  motivoDescuento?: string | null
   notas?: string | null
 }
 
 export interface VentaResponse {
   id: number
   fecha: string
+  /** Lo que se cobra, ya con el descuento aplicado. */
   total: number
+  /** Lo bonificado sobre el precio de lista. Cero si no hubo descuento. */
+  descuento: number
+  motivoDescuento: string | null
   /** Null = quedó anotada en la cuenta de un turno, todavía sin cobrar. */
   medio: MedioPago | null
   clienteId: number | null
@@ -136,7 +151,15 @@ export interface VentaResponse {
   reservaId: number | null
   registradoPor: string | null
   notas: string | null
-  items: { productoId: number; productoNombre: string; cantidad: number; precioUnitario: number; subtotal: number }[]
+  items: {
+    productoId: number
+    productoNombre: string
+    cantidad: number
+    precioUnitario: number
+    /** Lo bonificado en este renglón: su parte del descuento de la venta. */
+    descuento: number
+    subtotal: number
+  }[]
   /** "2 x Pelotas Head, 1 x Gatorade". */
   detalle: string
   /** Con fecha, la venta está anulada y no suma en ningún total. */
@@ -167,8 +190,15 @@ export const productosApi = {
   async remove(id: number) {
     await apiClient.delete(`/api/productos/${id}`)
   },
-  async movimientos(id: number) {
-    const { data } = await apiClient.get<MovimientoStockResponse[]>(`/api/productos/${id}/movimientos`)
+  /**
+   * El kardex del producto, paginado. El rango de fechas acota lo que se lista; el saldo
+   * de cada fila sigue siendo el stock real que había en ese momento.
+   */
+  async movimientos(id: number, pagina = 0, tamanio = 25, desde?: string, hasta?: string) {
+    const { data } = await apiClient.get<PagedResponse<MovimientoStockResponse>>(
+      `/api/productos/${id}/movimientos`,
+      { params: { pagina, tamanio, desde: desde || undefined, hasta: hasta || undefined } },
+    )
     return data
   },
   /** Historial de compras de todo el club, no de un producto. */

@@ -28,6 +28,7 @@ export const configuracionSedeDefault: ConfiguracionSede = {
   mapsEmbedUrl: `https://www.google.com/maps?q=${encodeURIComponent(`${brand.location}, ${brand.country}`)}&output=embed`,
   cancelacionHorasMinimas: 12,
   fondoFijo: null,
+  descuentoMaximoMostrador: 0,
   horarios: [
     { dias: 'Lunes a Viernes', horas: '08:00 - 00:00' },
     { dias: 'Sábados', horas: '09:00 - 01:00' },

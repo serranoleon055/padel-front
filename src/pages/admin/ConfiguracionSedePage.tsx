@@ -225,6 +225,19 @@ export default function ConfiguracionSedePage() {
                   Con 0 se apaga y solo cancela el club. Cancelar libera la cancha para volver a venderla; la seña ya cobrada no se devuelve sola.
                 </p>
               </div>
+              <div className="flex flex-col gap-1 sm:col-span-2">
+                <Input
+                  label="Descuento que puede hacer el empleado (%)"
+                  soloNumeros
+                  value={formulario.descuentoMaximoMostrador != null ? String(formulario.descuentoMaximoMostrador) : ''}
+                  onChange={(e) => set('descuentoMaximoMostrador', e.target.value === '' ? null : Number(e.target.value))}
+                  placeholder="0"
+                />
+                <p className="text-xs text-rp-muted">
+                  Hasta qué porcentaje de una venta de kiosco puede bonificar el empleado sin consultarte.
+                  Con 0 no puede descontar nada. Vos no tenés tope.
+                </p>
+              </div>
             </div>
           </Seccion>
           <Guardar onClick={guardar} guardando={guardando} />

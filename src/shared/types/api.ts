@@ -495,6 +495,8 @@ export type ConfiguracionSede = {
   cancelacionHorasMinimas: number | null
   /** Propuesta de fondo para el formulario de apertura de caja. */
   fondoFijo: number | null
+  /** Hasta que porcentaje puede bonificar el empleado sin el dueño. 0 = no puede. */
+  descuentoMaximoMostrador: number | null
   horarios: HorarioSede[]
   galeria: FotoSede[]
   formasPago: string[]

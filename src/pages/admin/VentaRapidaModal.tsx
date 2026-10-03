@@ -5,6 +5,7 @@ import { MEDIOS, type MedioPago } from '@/features/caja/cajaApi'
 import { CATEGORIAS_PRODUCTO, productosApi, ventasApi, type ProductoResponse } from '@/features/ventas/ventasApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
 import { formatearMoneda } from '@/shared/lib/formatters'
+import { aNumero } from '@/shared/lib/numeros'
 import { Button } from '@/shared/ui/Button'
 import { Input } from '@/shared/ui/Input'
 import { Modal } from '@/shared/ui/Modal'
@@ -39,6 +40,8 @@ export function VentaRapidaModal({ abierto, onClose, onVendido, turno = null }: 
   // 'CUENTA' = va anotado al turno y se cobra al final junto con la cancha.
   const [medio, setMedio] = useState<MedioPago | 'CUENTA'>('EFECTIVO')
   const [busqueda, setBusqueda] = useState('')
+  const [descuento, setDescuento] = useState('')
+  const [motivoDescuento, setMotivoDescuento] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -46,6 +49,8 @@ export function VentaRapidaModal({ abierto, onClose, onVendido, turno = null }: 
     if (!abierto) return
     setCarrito({})
     setBusqueda('')
+    setDescuento('')
+    setMotivoDescuento('')
     setMedio(turno ? 'CUENTA' : 'EFECTIVO')
     setError(null)
     productosApi.getAll().then(setProductos).catch((e: unknown) => setError(obtenerMensajeErrorApi(e)))
@@ -102,6 +107,13 @@ export function VentaRapidaModal({ abierto, onClose, onVendido, turno = null }: 
     [carrito, porClave],
   )
 
+  /** Lo tipeado en el descuento, limpio. Nunca negativo ni mayor que la venta. */
+  const aBonificar = useMemo(
+    () => Math.max(0, Math.min(total, aNumero(descuento) ?? 0)),
+    [descuento, total],
+  )
+  const aCobrar = total - aBonificar
+
   function sumar(clave: string) {
     const opcion = porClave.get(clave)
     if (!opcion) return
@@ -136,6 +148,11 @@ export function VentaRapidaModal({ abierto, onClose, onVendido, turno = null }: 
       }
     })
     if (items.length === 0) { setError('Agregá al menos un producto.'); return }
+    if (aBonificar > total) { setError('El descuento no puede ser mayor que la venta.'); return }
+    if (aBonificar > 0 && !motivoDescuento.trim()) {
+      setError('Decí por qué se bonifica.')
+      return
+    }
 
     setGuardando(true); setError(null)
     try {
@@ -145,10 +162,12 @@ export function VentaRapidaModal({ abierto, onClose, onVendido, turno = null }: 
         // Sin medio, el backend lo anota como deuda del turno en vez de plata cobrada.
         medio: aCuenta ? null : medio,
         reservaId: turno?.id ?? null,
+        descuento: aBonificar > 0 ? aBonificar : null,
+        motivoDescuento: aBonificar > 0 ? motivoDescuento.trim() : null,
       })
       avisoExito(aCuenta
-        ? `Anotado en la cuenta de ${turno?.clienteNombre}: ${formatearMoneda(total)}`
-        : `Venta registrada por ${formatearMoneda(total)}`)
+        ? `Anotado en la cuenta de ${turno?.clienteNombre}: ${formatearMoneda(aCobrar)}`
+        : `Venta registrada por ${formatearMoneda(aCobrar)}`)
       onVendido()
       onClose()
     } catch (e: unknown) {
@@ -231,13 +250,41 @@ export function VentaRapidaModal({ abierto, onClose, onVendido, turno = null }: 
                   </div>
                 )
               })}
-              <div className="mt-2 flex items-center justify-between border-t border-rp-border pt-2">
-                <span className="text-sm font-bold text-rp-muted">Total</span>
-                <span className="text-xl font-black text-rp-accent">{formatearMoneda(total)}</span>
+              {aBonificar > 0 && (
+                <div className="mt-2 flex items-center justify-between border-t border-rp-border pt-2 text-sm">
+                  <span className="text-rp-muted">Subtotal</span>
+                  <span className="text-rp-muted">{formatearMoneda(total)}</span>
+                </div>
+              )}
+              <div className={`flex items-center justify-between ${aBonificar > 0 ? 'pt-1' : 'mt-2 border-t border-rp-border pt-2'}`}>
+                <span className="text-sm font-bold text-rp-muted">
+                  {aBonificar > 0 ? 'A cobrar' : 'Total'}
+                </span>
+                <span className="text-xl font-black text-rp-accent">{formatearMoneda(aCobrar)}</span>
               </div>
             </div>
           )}
         </div>
+
+        {/* El descuento es un importe y no un porcentaje porque el mostrador redondea
+            ("quedate con cinco mil"), no calcula. */}
+        {Object.keys(carrito).length > 0 && (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Input
+              label="Descuento"
+              value={descuento}
+              onChange={(e) => setDescuento(e.target.value)}
+              placeholder="0"
+            />
+            <Input
+              label="Por qué"
+              value={motivoDescuento}
+              onChange={(e) => setMotivoDescuento(e.target.value)}
+              placeholder="Cliente de siempre"
+              disabled={aBonificar <= 0}
+            />
+          </div>
+        )}
 
         <Select label="Cómo pagó" value={medio} onChange={(e) => setMedio(e.target.value as MedioPago | 'CUENTA')}>
           {turno && <option value="CUENTA">A la cuenta del turno (se cobra al final)</option>}
@@ -250,7 +297,7 @@ export function VentaRapidaModal({ abierto, onClose, onVendido, turno = null }: 
           <Button type="submit" size="sm" disabled={guardando || total <= 0}>
             {guardando
               ? 'Registrando...'
-              : `${medio === 'CUENTA' ? 'Anotar' : 'Cobrar'} ${formatearMoneda(total)}`}
+              : `${medio === 'CUENTA' ? 'Anotar' : 'Cobrar'} ${formatearMoneda(aCobrar)}`}
           </Button>
         </div>
       </div>
