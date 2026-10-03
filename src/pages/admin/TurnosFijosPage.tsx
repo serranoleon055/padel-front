@@ -5,6 +5,7 @@ import { canchasApi, placesApi } from '@/features/catalog/catalogApi'
 import { turnosFijosApi, type TurnoFijoRequest, type TurnoFijoResponse } from '@/features/reservas/turnosFijosApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
 import { fechaISO, formatearFecha, formatearMoneda } from '@/shared/lib/formatters'
+import { aNumero } from '@/shared/lib/numeros'
 import { TelefonoWhatsApp } from '@/shared/ui/TelefonoWhatsApp'
 import type { CanchaResponse, LugarResponse } from '@/shared/types/api'
 import { AdminPageHeader } from '@/shared/ui/AdminPageHeader'
@@ -37,14 +38,6 @@ function hhmm(hora: string | null | undefined) {
 
 function hoyISO() {
   return fechaISO()
-}
-
-/** El precio se escribe como texto (nada de type=number) y se limpia al enviar. */
-function aNumero(valor: string): number | null {
-  const limpio = valor.replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.')
-  if (!limpio) return null
-  const numero = Number(limpio)
-  return Number.isFinite(numero) ? numero : null
 }
 
 const VACIO = {

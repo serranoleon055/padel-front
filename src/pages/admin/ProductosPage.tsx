@@ -1,7 +1,8 @@
-import { AlertTriangle, History, Package, PackagePlus, Pencil, Plus, Scale, Trash2, Truck } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { AlertTriangle, FileText, History, Package, PackagePlus, Pencil, Plus, Scale, Trash2, Truck, Wallet } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { MEDIOS, type MedioPago } from '@/features/caja/cajaApi'
+import { TIPOS_COMPROBANTE, comprasApi, type CompraResponse } from '@/features/ventas/comprasApi'
 import {
   CATEGORIAS_PRODUCTO, MOTIVOS_STOCK, productosApi, proveedoresApi,
   type CategoriaProducto, type MovimientoStockResponse, type PresentacionResponse,
@@ -10,25 +11,21 @@ import {
 import { authApi } from '@/features/auth/authApi'
 import { reservasApi } from '@/features/reservas/reservasApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
-import { fechaISO, formatearFechaHora, formatearMoneda } from '@/shared/lib/formatters'
+import { fechaISO, formatearFecha, formatearFechaHora, formatearMoneda } from '@/shared/lib/formatters'
+import { aNumero } from '@/shared/lib/numeros'
 import { AdminPageHeader } from '@/shared/ui/AdminPageHeader'
 import { AdminTable, type Column } from '@/shared/ui/AdminTable'
 import { Button } from '@/shared/ui/Button'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
 import { Input } from '@/shared/ui/Input'
 import { Modal } from '@/shared/ui/Modal'
+import { Pagination } from '@/shared/ui/Pagination'
 import { SegmentedToggle } from '@/shared/ui/SegmentedToggle'
 import { Select } from '@/shared/ui/Select'
 import { TelefonoWhatsApp } from '@/shared/ui/TelefonoWhatsApp'
 import { useToast } from '@/shared/ui/Toast'
-
-/** Los montos se escriben como texto y se limpian al enviar. */
-function aNumero(valor: string): number | null {
-  const limpio = valor.replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.')
-  if (!limpio) return null
-  const numero = Number(limpio)
-  return Number.isFinite(numero) ? numero : null
-}
+import { CompraModal } from '@/pages/admin/CompraModal'
+import { CuentaProveedorModal } from '@/pages/admin/CuentaProveedorModal'
 
 function nombreCategoria(categoria: string) {
   return CATEGORIAS_PRODUCTO.find((c) => c.valor === categoria)?.nombre ?? categoria
@@ -49,6 +46,12 @@ const PRODUCTO_VACIO = {
 // módulo quedaba congelada en el día en que se cargó la pantalla, y una compra anotada
 // después de medianoche caía en un día distinto al del arqueo que le descuenta la plata.
 const COMPRA_VACIA = { cantidad: '', costoUnitario: '', medioPago: 'EFECTIVO' as MedioPago, registraGasto: true, fecha: '' }
+
+const COMPROBANTES_POR_PAGINA = 20
+
+function nombreComprobante(tipo: string) {
+  return TIPOS_COMPROBANTE.find((t) => t.valor === tipo)?.nombre ?? tipo
+}
 
 export default function ProductosPage() {
   const { success: avisoExito } = useToast()
@@ -84,6 +87,15 @@ export default function ProductosPage() {
   const [historial, setHistorial] = useState<MovimientoStockResponse[] | null>(null)
   const [productoHistorial, setProductoHistorial] = useState<ProductoResponse | null>(null)
   const [compras, setCompras] = useState<MovimientoStockResponse[]>([])
+
+  // Los comprobantes cargados, que es distinto de las entradas sueltas de la tabla de
+  // arriba: un remito de doce productos es UN comprobante y doce entradas.
+  const [comprobantes, setComprobantes] = useState<CompraResponse[]>([])
+  const [totalComprobantes, setTotalComprobantes] = useState(0)
+  const [paginaComprobantes, setPaginaComprobantes] = useState(1)
+  const [modalCompra, setModalCompra] = useState(false)
+  const [compraAAnular, setCompraAAnular] = useState<CompraResponse | null>(null)
+  const [cuentaDe, setCuentaDe] = useState<ProveedorResponse | null>(null)
 
   // El alta y la edición de packs, desde la ficha del producto.
   const [presentacionAbierta, setPresentacionAbierta] = useState<{
@@ -125,6 +137,18 @@ export default function ProductosPage() {
     const id = setTimeout(cargar, 300)
     return () => clearTimeout(id)
   }, [busqueda])
+
+  const cargarComprobantes = useCallback(() => {
+    comprasApi.listar(null, paginaComprobantes - 1, COMPROBANTES_POR_PAGINA)
+      .then((pagina) => { setComprobantes(pagina.contenido); setTotalComprobantes(pagina.totalElementos) })
+      .catch((e: unknown) => setError(obtenerMensajeErrorApi(e)))
+  }, [paginaComprobantes])
+
+  // Solo cuando la solapa está a la vista: el mostrador no puede pedirlos y recibiría un 403.
+  useEffect(() => {
+    if (pestana !== 'compras') return
+    cargarComprobantes()
+  }, [pestana, cargarComprobantes])
 
   const aReponer = useMemo(() => productos.filter((p) => p.necesitaReposicion), [productos])
   const proveedoresActivos = useMemo(() => proveedores.filter((p) => p.activo), [proveedores])
@@ -200,6 +224,19 @@ export default function ProductosPage() {
       avisoExito('Proveedor dado de baja')
     } catch (e: unknown) {
       setError(obtenerMensajeErrorApi(e)); setProveedorADarDeBaja(null)
+    }
+  }
+
+  async function anularCompra(motivo: string) {
+    if (!compraAAnular) return
+    try {
+      await comprasApi.anular(compraAAnular.id, motivo)
+      setCompraAAnular(null)
+      cargar()
+      cargarComprobantes()
+      avisoExito('Compra anulada. El stock volvió como estaba.')
+    } catch (e: unknown) {
+      setError(obtenerMensajeErrorApi(e)); setCompraAAnular(null)
     }
   }
 
@@ -419,6 +456,55 @@ export default function ProductosPage() {
     },
   ] as Column<ProductoResponse>[], [])
 
+  const columnasComprobantes = useMemo(() => [
+    {
+      key: 'comprobante',
+      label: 'Comprobante',
+      render: (compra: CompraResponse) => (
+        <div className="flex flex-col">
+          <span className="text-sm font-bold text-rp-text">
+            {nombreComprobante(compra.tipoComprobante)} {compra.numero}
+          </span>
+          <span className="text-xs text-rp-muted">{formatearFecha(compra.fecha)}</span>
+        </div>
+      ),
+    },
+    {
+      key: 'proveedor',
+      label: 'Proveedor',
+      render: (compra: CompraResponse) => (
+        <span className="text-sm text-rp-text">{compra.proveedorNombre}</span>
+      ),
+    },
+    {
+      key: 'detalle',
+      label: 'Qué entró',
+      render: (compra: CompraResponse) => (
+        <span className="text-xs text-rp-muted">
+          {compra.items.map((item) => `${item.cantidad} x ${item.productoNombre}`).join(', ')}
+        </span>
+      ),
+    },
+    {
+      key: 'total',
+      label: 'Total',
+      render: (compra: CompraResponse) => (
+        <span className="text-sm font-bold text-rp-text">{formatearMoneda(compra.total)}</span>
+      ),
+    },
+    {
+      key: 'medio',
+      label: 'Cómo se pagó',
+      render: (compra: CompraResponse) => (
+        compra.anuladoEn != null
+          ? <span className="text-xs font-bold text-rp-danger">Anulada</span>
+          : compra.quedaACuenta
+            ? <span className="text-xs font-bold text-rp-accent">A cuenta</span>
+            : <span className="text-xs text-rp-muted">{MEDIOS.find((m) => m.valor === compra.medio)?.nombre ?? compra.medio}</span>
+      ),
+    },
+  ] as Column<CompraResponse>[], [])
+
   const columnasCompras = useMemo(() => [
     {
       key: 'fecha',
@@ -438,7 +524,10 @@ export default function ProductosPage() {
       key: 'cantidad',
       label: 'Unidades',
       render: (compra: MovimientoStockResponse) => (
-        <span className="text-sm font-bold text-rp-accent">+{compra.cantidad}</span>
+        // Una compra anulada deja su compensatorio, que resta: el signo no puede ir fijo.
+        <span className={`text-sm font-bold ${compra.cantidad < 0 ? 'text-rp-danger' : 'text-rp-accent'}`}>
+          {compra.cantidad > 0 ? `+${compra.cantidad}` : compra.cantidad}
+        </span>
       ),
     },
     {
@@ -510,7 +599,7 @@ export default function ProductosPage() {
           ? <Button size="sm" onClick={abrirCrear}><Plus size={16} />Nuevo producto</Button>
           : pestana === 'proveedores'
             ? <Button size="sm" onClick={() => { setEditandoProveedor(null); setFormProveedor({ nombre: '', telefono: '', notas: '' }); setModalProveedor(true) }}><Plus size={16} />Nuevo proveedor</Button>
-            : null}
+            : <Button size="sm" onClick={() => setModalCompra(true)}><Plus size={16} />Cargar compra</Button>}
       />
 
       <p className="mt-3 max-w-2xl text-sm text-rp-muted">
@@ -541,9 +630,46 @@ export default function ProductosPage() {
 
       {pestana === 'compras' ? (
         <div className="mt-4">
-          <p className="mb-3 max-w-2xl text-sm text-rp-muted">
-            Toda la mercadería que entró, de todos los productos. Las compras que cargaste con
-            medio de pago además figuran como gasto en la rentabilidad.
+          <h2 className="flex items-center gap-2 text-sm font-black uppercase tracking-[0.14em] text-rp-muted">
+            <FileText size={15} />Comprobantes
+          </h2>
+          <p className="mb-3 mt-1 max-w-2xl text-sm text-rp-muted">
+            Las compras cargadas como vino el papel: un comprobante con todos sus productos.
+            Las que quedan a cuenta pesan igual en la rentabilidad del mes, pero la plata sale
+            del cajón recién cuando le pagás al proveedor, desde su cuenta.
+          </p>
+          <AdminTable
+            columns={columnasComprobantes}
+            rows={comprobantes}
+            getRowKey={(compra) => compra.id}
+            isLoading={cargando}
+            error={error}
+            emptyTitle="Todavía no cargaste ningún comprobante"
+            emptyDescription="Con el remito o la factura en la mano, usá «Cargar compra»."
+            actions={(compra) => (
+              compra.anuladoEn == null ? (
+                <button
+                  onClick={() => setCompraAAnular(compra)}
+                  className="flex size-11 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger lg:size-8"
+                  aria-label={`Anular ${nombreComprobante(compra.tipoComprobante)} ${compra.numero}`}
+                  title="Anular"
+                ><Trash2 size={15} /></button>
+              ) : null
+            )}
+          />
+          <Pagination
+            page={paginaComprobantes}
+            pageSize={COMPROBANTES_POR_PAGINA}
+            total={totalComprobantes}
+            onPageChange={setPaginaComprobantes}
+          />
+
+          <h2 className="mt-8 flex items-center gap-2 text-sm font-black uppercase tracking-[0.14em] text-rp-muted">
+            <PackagePlus size={15} />Entradas de stock
+          </h2>
+          <p className="mb-3 mt-1 max-w-2xl text-sm text-rp-muted">
+            Toda la mercadería que entró, renglón por renglón: la de los comprobantes de arriba
+            y la que se carga de a un producto desde la lista.
           </p>
           <AdminTable
             columns={columnasCompras}
@@ -551,8 +677,8 @@ export default function ProductosPage() {
             getRowKey={(compra) => compra.id}
             isLoading={cargando}
             error={error}
-            emptyTitle="Todavía no cargaste ninguna compra"
-            emptyDescription="Usá el botón de mercadería en la lista de productos cuando entre algo."
+            emptyTitle="Todavía no entró mercadería"
+            emptyDescription="Cargá un comprobante o usá el botón de mercadería en la lista de productos."
           />
         </div>
       ) : pestana === 'productos' ? (
@@ -599,6 +725,12 @@ export default function ProductosPage() {
             emptyDescription="Cargalos para tener a mano a quién pedirle cuando falte algo."
             actions={(proveedor) => (
               <>
+                <button
+                  onClick={() => setCuentaDe(proveedor)}
+                  className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent"
+                  aria-label={`Ver la cuenta de ${proveedor.nombre}`}
+                  title="Cuenta corriente"
+                ><Wallet size={15} /></button>
                 <button
                   onClick={() => {
                     setEditandoProveedor(proveedor)
@@ -915,6 +1047,33 @@ export default function ProductosPage() {
         onConfirm={darDeBajaProveedor}
         title="Dar de baja el proveedor"
         description={`"${proveedorADarDeBaja?.nombre ?? ''}" deja de aparecer al cargar compras, pero las compras ya hechas no se tocan.`}
+      />
+
+      <ConfirmDialog
+        isOpen={Boolean(compraAAnular)}
+        onClose={() => setCompraAAnular(null)}
+        onConfirm={anularCompra}
+        title="Anular la compra"
+        description={`Sale del stock todo lo que entró con ${nombreComprobante(compraAAnular?.tipoComprobante ?? '')} ${compraAAnular?.numero ?? ''} y se anula el egreso. La compra queda registrada como anulada: no se borra.`}
+        confirmLabel="Anular"
+        loadingLabel="Anulando..."
+        pedirMotivo
+        motivoPlaceholder="Vino mal el pedido, se cargó dos veces..."
+      />
+
+      <CompraModal
+        abierto={modalCompra}
+        onClose={() => setModalCompra(false)}
+        onCargada={() => { cargar(); cargarComprobantes() }}
+        productos={productos}
+        proveedores={proveedores}
+        fechaInicial={jornada || fechaISO()}
+      />
+
+      <CuentaProveedorModal
+        proveedor={cuentaDe}
+        onClose={() => setCuentaDe(null)}
+        onPagado={cargar}
       />
     </section>
   )

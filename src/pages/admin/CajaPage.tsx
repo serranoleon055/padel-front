@@ -9,6 +9,7 @@ import { reservasApi } from '@/features/reservas/reservasApi'
 import { ventasApi, type VentaResponse } from '@/features/ventas/ventasApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
 import { fechaISO, formatearFecha, formatearMoneda } from '@/shared/lib/formatters'
+import { aNumero } from '@/shared/lib/numeros'
 import { AdminPageHeader } from '@/shared/ui/AdminPageHeader'
 import { Button } from '@/shared/ui/Button'
 import { Input } from '@/shared/ui/Input'
@@ -28,14 +29,6 @@ function nombreMedio(medio: string) {
 
 function nombreCategoria(categoria: string) {
   return CATEGORIAS_GASTO.find((c) => c.valor === categoria)?.nombre ?? categoria
-}
-
-/** El monto se escribe como texto (nada de type=number) y se limpia al enviar. */
-function aNumero(valor: string): number | null {
-  const limpio = valor.replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.')
-  if (!limpio) return null
-  const numero = Number(limpio)
-  return Number.isFinite(numero) ? numero : null
 }
 
 const GASTO_VACIO = {

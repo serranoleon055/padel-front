@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { describirDias, promocionesApi, type PromocionCanchaResponse } from '@/features/catalog/promocionesApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
 import { formatearFecha, formatearMoneda } from '@/shared/lib/formatters'
+import { aNumero } from '@/shared/lib/numeros'
 import { Button } from '@/shared/ui/Button'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
 import { Input } from '@/shared/ui/Input'
@@ -38,13 +39,6 @@ function describirVigencia(promocion: PromocionCanchaResponse): string {
   if (promocion.vigenteHasta) return `Hasta el ${formatearFecha(promocion.vigenteHasta)}`
   if (promocion.vigenteDesde) return `Desde el ${formatearFecha(promocion.vigenteDesde)}`
   return 'Sin fecha de corte'
-}
-
-function aNumero(valor: string): number | null {
-  const limpio = valor.replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.')
-  if (!limpio) return null
-  const numero = Number(limpio)
-  return Number.isFinite(numero) ? numero : null
 }
 
 type Props = {

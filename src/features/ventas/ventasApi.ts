@@ -21,6 +21,7 @@ export const MOTIVOS_STOCK: Record<string, string> = {
   COMPRA: 'Compra',
   AJUSTE: 'Ajuste',
   ANULACION: 'Anulación',
+  ANULACION_COMPRA: 'Compra anulada',
   MERMA: 'Merma',
 }
 
