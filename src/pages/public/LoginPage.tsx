@@ -10,6 +10,11 @@ import { Input } from '@/shared/ui/Input'
 
 type EstadoUbicacionLogin = { from?: { pathname?: string } }
 
+// Solo en la demo publica: el build la prende con VITE_DEMO_USUARIO / VITE_DEMO_CLAVE.
+// En el sitio de un club no se definen y el cartel no existe.
+const DEMO_USUARIO = import.meta.env.VITE_DEMO_USUARIO as string | undefined
+const DEMO_CLAVE = import.meta.env.VITE_DEMO_CLAVE as string | undefined
+
 export default function LoginPage() {
   const navegar = useNavigate()
   const ubicacion = useLocation()
@@ -43,6 +48,27 @@ export default function LoginPage() {
           <Lock size={22} />
         </div>
         <h1 className="mt-6 text-2xl font-black text-rp-text">Acceso admin</h1>
+
+        {DEMO_USUARIO && DEMO_CLAVE ? (
+          <div className="mt-5 rounded-lg border border-rp-accent/40 bg-rp-accent/10 p-4 text-sm">
+            <p className="font-bold text-rp-text">Demo abierta: entrá al panel del club</p>
+            <p className="mt-1 text-rp-muted">
+              Usuario <b className="font-mono text-rp-text">{DEMO_USUARIO}</b> · Contraseña{' '}
+              <b className="font-mono text-rp-text">{DEMO_CLAVE}</b>
+            </p>
+            <Button
+              className="mt-3 w-full"
+              type="button"
+              variant="subtle"
+              onClick={() => {
+                setUsuario(DEMO_USUARIO)
+                setContrasena(DEMO_CLAVE)
+              }}
+            >
+              Completar los datos
+            </Button>
+          </div>
+        ) : null}
 
         <div className="mt-6 flex flex-col gap-4">
           <Input label="Usuario" value={usuario} onChange={(e) => setUsuario(e.target.value)} autoComplete="username" />
