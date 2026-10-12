@@ -4,22 +4,30 @@ import { NavLink, Outlet } from 'react-router-dom'
 import { Footer } from '@/shared/ui/Footer'
 import { FranjaSponsors } from '@/shared/ui/FranjaSponsors'
 import { brand } from '@/config/brand'
+import { esClub } from '@/config/modo'
 
-const navPrincipal = [
+type Enlace = { to: string; label: string; soloClub?: boolean }
+
+const soloLoQueAplica = (enlaces: Enlace[]) => enlaces.filter((item) => esClub || !item.soloClub)
+
+const navPrincipal = soloLoQueAplica([
   { to: '/', label: 'Inicio' },
-  { to: '/reservar', label: 'Turnos' },
+  { to: '/reservar', label: 'Turnos', soloClub: true },
   { to: '/torneos', label: 'Torneos' },
   { to: '/ranking', label: 'Ranking' },
-  { to: '/precios', label: 'Precios' },
-]
+  { to: '/precios', label: 'Precios', soloClub: true },
+  // Sin turnos ni precios, los resultados suben a la barra: es lo que el jugador de un
+  // circuito viene a mirar.
+  ...(esClub ? [] : [{ to: '/resultados', label: 'Resultados' }]),
+])
 
-const navMas = [
-  { to: '/la-sede', label: 'Servicios y galería' },
+const navMas = soloLoQueAplica([
+  { to: '/la-sede', label: 'Servicios y galería', soloClub: true },
   { to: '/reglas', label: 'Reglas' },
   { to: '/contacto', label: 'Contacto' },
   { to: '/terminos', label: 'Términos' },
   { to: '/privacidad', label: 'Privacidad' },
-]
+])
 
 const PublicNavbar = memo(function PublicNavbar({
   mobileOpen,

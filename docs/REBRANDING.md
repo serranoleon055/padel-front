@@ -46,6 +46,7 @@ npm run build -- --mode royal
 | `VITE_BRAND_IMG_PORTADA`, `_CANCHA`, `_TORNEO`, `_AMBIENTE` | Las fotos del sitio público (`src/config/imagenes.ts`). |
 | `VITE_SITE_URL` | Dominio del club: canonical, previsualizaciones, `sitemap.xml` y `robots.txt`, que **los genera el build**. |
 | `VITE_API_BASE_URL` | Backend del club. |
+| `VITE_MODO` | `CLUB` (default) u `ORGANIZADOR` (organización de torneos que juega en varios clubes: sin turnos, caja ni stock). Tiene que coincidir con `APP_MODO` del backend. |
 
 ### 1.3 Los archivos de marca
 

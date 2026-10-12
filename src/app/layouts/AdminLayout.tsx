@@ -5,6 +5,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/app/providers/AuthContext'
 import { authApi } from '@/features/auth/authApi'
 import { brand } from '@/config/brand'
+import { esOrganizador } from '@/config/modo'
 import { cn } from '@/shared/lib/utils'
 
 /**
@@ -15,7 +16,15 @@ import { cn } from '@/shared/lib/utils'
  * <p>No hay una entrada "Vender" aparte: el Panel es la pantalla del día y la venta se
  * dispara desde ahí. Eran dos pantallas que mostraban lo mismo.
  */
-const NAV = [
+type ItemMenu = {
+  to: string
+  label: string
+  icon: typeof Trophy
+  end: boolean
+  soloDuenio?: boolean
+}
+
+const NAV_CLUB: { grupo: string; items: ItemMenu[] }[] = [
   {
     grupo: 'Día a día',
     items: [
@@ -64,6 +73,33 @@ const BARRA_MOVIL = [
   { to: '/admin/clientes', label: 'Clientes', icon: Contact, end: false },
   { to: '/admin/caja', label: 'Caja', icon: Banknote, end: false },
 ]
+
+/**
+ * El organizador no tiene mostrador: su día a día son los torneos. Los clubes donde
+ * juega son "Clubes y canchas", no sus sedes.
+ */
+const NAV_ORGANIZADOR: { grupo: string; items: ItemMenu[] }[] = [
+  {
+    grupo: 'Torneos',
+    items: [
+      { to: '/admin/torneos', label: 'Torneos', icon: Trophy, end: false },
+      { to: '/admin/jugadores', label: 'Jugadores', icon: Users, end: false },
+      { to: '/admin/categorias', label: 'Categorías', icon: Tag, end: false },
+      { to: '/admin/temporadas', label: 'Temporadas', icon: CalendarDays, end: false },
+      { to: '/admin/plantillas', label: 'Plantillas', icon: Layers, end: false },
+    ],
+  },
+  {
+    grupo: 'Sistema',
+    items: [
+      { to: '/admin/lugares', label: 'Clubes y canchas', icon: MapPin, end: false, soloDuenio: true },
+      { to: '/admin/usuarios', label: 'Usuarios', icon: UserCog, end: false, soloDuenio: true },
+      { to: '/admin/configuracion', label: 'Configuración', icon: Settings, end: false, soloDuenio: true },
+    ],
+  },
+]
+
+const NAV = esOrganizador ? NAV_ORGANIZADOR : NAV_CLUB
 
 export function AdminLayout() {
   const { logout } = useAuth()
@@ -161,28 +197,31 @@ export function AdminLayout() {
         </header>
 
         {/* El pb-24 de abajo deja lugar para la barra fija: sin eso, la última fila de
-            cada tabla queda escondida atrás de ella y no se puede tocar. */}
-        <main className="min-w-0 flex-1 overflow-x-clip px-4 py-4 pb-24 sm:px-5 lg:px-6 lg:pb-6">
+            cada tabla queda escondida atrás de ella y no se puede tocar. El organizador no
+            tiene mostrador, así que no lleva barra. */}
+        <main className={cn('min-w-0 flex-1 overflow-x-clip px-4 py-4 sm:px-5 lg:px-6 lg:pb-6', esOrganizador ? 'pb-6' : 'pb-24')}>
           <Outlet />
         </main>
       </div>
 
-      <nav className="admin-barra-movil rp-safe-bottom fixed inset-x-0 bottom-0 z-30 flex border-t lg:hidden">
-        {BARRA_MOVIL.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.end}
-            className={({ isActive }) => cn(
-              'admin-barra-movil-enlace flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 pt-2 text-[11px] font-bold',
-              isActive && 'activo',
-            )}
-          >
-            <item.icon size={19} />
-            {item.label}
-          </NavLink>
-        ))}
-      </nav>
+      {!esOrganizador && (
+        <nav className="admin-barra-movil rp-safe-bottom fixed inset-x-0 bottom-0 z-30 flex border-t lg:hidden">
+          {BARRA_MOVIL.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.end}
+              className={({ isActive }) => cn(
+                'admin-barra-movil-enlace flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 pt-2 text-[11px] font-bold',
+                isActive && 'activo',
+              )}
+            >
+              <item.icon size={19} />
+              {item.label}
+            </NavLink>
+          ))}
+        </nav>
+      )}
     </div>
   )
 }

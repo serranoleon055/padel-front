@@ -4,6 +4,7 @@ import { NavLink } from 'react-router-dom'
 
 import { useConfiguracionSede } from '@/app/providers/ConfiguracionSedeContext'
 import { brand } from '@/config/brand'
+import { esClub } from '@/config/modo'
 import { whatsappUrl } from '@/config/sede'
 import { IconoFacebook, IconoInstagram, IconoWhatsApp } from '@/shared/ui/SocialIcons'
 
@@ -48,13 +49,21 @@ export const Footer = memo(function Footer() {
           <NavLink to="/campeones">Campeones</NavLink>
         </div>
 
-        <div className="footer-col">
-          <h4>La sede</h4>
-          <NavLink to="/reservar">Reservar cancha</NavLink>
-          <NavLink to="/precios">Precios y horarios</NavLink>
-          <NavLink to="/la-sede">Servicios y galería</NavLink>
-          <NavLink to="/ranking">Ranking</NavLink>
-        </div>
+        {esClub ? (
+          <div className="footer-col">
+            <h4>La sede</h4>
+            <NavLink to="/reservar">Reservar cancha</NavLink>
+            <NavLink to="/precios">Precios y horarios</NavLink>
+            <NavLink to="/la-sede">Servicios y galería</NavLink>
+            <NavLink to="/ranking">Ranking</NavLink>
+          </div>
+        ) : (
+          <div className="footer-col">
+            <h4>El circuito</h4>
+            <NavLink to="/ranking">Ranking</NavLink>
+            <NavLink to="/campeones">Campeones</NavLink>
+          </div>
+        )}
 
         <div className="footer-col">
           <h4>Contacto</h4>

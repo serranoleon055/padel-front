@@ -6,6 +6,7 @@ import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
 import { useToast } from '@/shared/ui/Toast'
 import { coincidePrefijoNombre } from '@/shared/lib/tournamentView'
 import type { LugarRequest, LugarResponse } from '@/shared/types/api'
+import { esClub } from '@/config/modo'
 import { AdminPageHeader } from '@/shared/ui/AdminPageHeader'
 import { AdminTable, type Column } from '@/shared/ui/AdminTable'
 import { Button } from '@/shared/ui/Button'
@@ -137,7 +138,7 @@ export default function PlacesPage() {
 
     return (
         <section>
-            <AdminPageHeader title="Lugares" action={<Button size="sm" onClick={abrirCrear}><Plus size={16} />Nuevo lugar</Button>} />
+            <AdminPageHeader title={esClub ? 'Lugares' : 'Clubes'} action={<Button size="sm" onClick={abrirCrear}><Plus size={16} />{esClub ? 'Nuevo lugar' : 'Nuevo club'}</Button>} />
 
             <div className="mt-4 flex flex-wrap items-center gap-3">
                 <div className="w-full sm:w-64">
@@ -167,7 +168,7 @@ export default function PlacesPage() {
                 />
                 <Pagination page={pagina} pageSize={TAMANO_PAGINA} total={filtrados.length} onPageChange={setPagina} />
             </div>
-            <Modal isOpen={modalAbierto} onClose={cerrarModal} onSubmit={manejarGuardar} title={objetivoEdicion ? 'Editar lugar' : 'Nuevo lugar'} size="sm">
+            <Modal isOpen={modalAbierto} onClose={cerrarModal} onSubmit={manejarGuardar} title={objetivoEdicion ? (esClub ? 'Editar lugar' : 'Editar club') : (esClub ? 'Nuevo lugar' : 'Nuevo club')} size="sm">
                 <div className="flex flex-col gap-4">
                 <Input label="Nombre" value={formulario.nombre} onChange={(e) => setFormulario((f) => ({ ...f, nombre: e.target.value }))} placeholder="Top Padel" />
                 <Input label="Dirección" value={formulario.direccion} onChange={(e) => setFormulario((f) => ({ ...f, direccion: e.target.value }))} placeholder="Av. Libertad 1234" />

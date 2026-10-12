@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import { useConfiguracionSede } from '@/app/providers/ConfiguracionSedeContext'
 import { canchasApi, placesApi } from '@/features/catalog/catalogApi'
+import { esClub } from '@/config/modo'
 import { configuracionSedeApi, type EstadoNotificaciones } from '@/features/configuracion/configuracionApi'
 import { horariosCanchaApi, type HorarioCanchaRequest } from '@/features/reservas/reservasApi'
 import { resolveSedeAsset } from '@/shared/api/apiClient'
@@ -19,12 +20,19 @@ const CLAVE_SECCION = 'rp-config-seccion'
 
 type Seccion = 'club' | 'turnos' | 'publico' | 'cobros'
 
-const SECCIONES: { valor: Seccion; label: string }[] = [
-  { valor: 'club', label: 'El club' },
-  { valor: 'turnos', label: 'Turnos' },
-  { valor: 'publico', label: 'La web' },
-  { valor: 'cobros', label: 'Cobros y avisos' },
-]
+// El organizador no vende turnos: esa pestaña no existe para él.
+const SECCIONES: { valor: Seccion; label: string }[] = esClub
+  ? [
+      { valor: 'club', label: 'El club' },
+      { valor: 'turnos', label: 'Turnos' },
+      { valor: 'publico', label: 'La web' },
+      { valor: 'cobros', label: 'Cobros y avisos' },
+    ]
+  : [
+      { valor: 'club', label: 'La organización' },
+      { valor: 'publico', label: 'La web' },
+      { valor: 'cobros', label: 'Cobros y avisos' },
+    ]
 
 const DIAS = [
   { valor: '1', nombre: 'Lun' }, { valor: '2', nombre: 'Mar' }, { valor: '3', nombre: 'Mié' },
@@ -70,7 +78,10 @@ function etiquetaDuracion(minutos: number) {
 export default function ConfiguracionSedePage() {
   const { configuracion, refrescar } = useConfiguracionSede()
   const { success: avisoExito } = useToast()
-  const [seccion, setSeccion] = useState<Seccion>(() => (sessionStorage.getItem(CLAVE_SECCION) as Seccion) ?? 'club')
+  const [seccion, setSeccion] = useState<Seccion>(() => {
+    const guardada = sessionStorage.getItem(CLAVE_SECCION) as Seccion | null
+    return guardada && SECCIONES.some((item) => item.valor === guardada) ? guardada : 'club'
+  })
   const [formulario, setFormulario] = useState<ConfiguracionSede>(configuracion)
   const [guardando, setGuardando] = useState(false)
   const [subiendo, setSubiendo] = useState(false)
@@ -95,6 +106,7 @@ export default function ConfiguracionSedePage() {
   }, [configuracion])
 
   useEffect(() => {
+    if (!esClub) return
     placesApi.getAll()
       .then((datos) => { setLugares(datos); setLugarId((actual) => actual ?? datos[0]?.id ?? null) })
       .catch(() => setLugares([]))
@@ -358,20 +370,22 @@ export default function ConfiguracionSedePage() {
 
       {seccion === 'publico' && (
         <>
-          <p className="mt-4 text-sm text-rp-muted">Lo que ven los jugadores en la web del club.</p>
+          <p className="mt-4 text-sm text-rp-muted">{esClub ? 'Lo que ven los jugadores en la web del club.' : 'Lo que ven los jugadores en la web.'}</p>
 
-          <Lista
-            titulo="Horarios de atención (texto que se publica)"
-            items={formulario.horarios}
-            onChange={(items) => set('horarios', items)}
-            vacio={{ dias: '', horas: '' }}
-            render={(item, actualizar) => (
-              <>
-                <Input label="Días" value={item.dias} onChange={(e) => actualizar({ ...item, dias: e.target.value })} />
-                <Input label="Horario" value={item.horas} onChange={(e) => actualizar({ ...item, horas: e.target.value })} />
-              </>
-            )}
-          />
+          {esClub && (
+            <Lista
+              titulo="Horarios de atención (texto que se publica)"
+              items={formulario.horarios}
+              onChange={(items) => set('horarios', items)}
+              vacio={{ dias: '', horas: '' }}
+              render={(item, actualizar) => (
+                <>
+                  <Input label="Días" value={item.dias} onChange={(e) => actualizar({ ...item, dias: e.target.value })} />
+                  <Input label="Horario" value={item.horas} onChange={(e) => actualizar({ ...item, horas: e.target.value })} />
+                </>
+              )}
+            />
+          )}
 
           <Lista
             titulo="Formas de pago"
@@ -383,7 +397,7 @@ export default function ConfiguracionSedePage() {
             )}
           />
 
-          <Seccion titulo="Galería">
+          {esClub && <Seccion titulo="Galería">
             <p className="text-xs text-rp-muted">Imágenes que se muestran en la página "La sede". JPG o PNG, hasta 2 MB.</p>
             <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
               {formulario.galeria.map((foto, i) => (
@@ -400,7 +414,7 @@ export default function ConfiguracionSedePage() {
             </div>
             <input ref={inputArchivo} type="file" accept="image/jpeg,image/png" className="hidden" onChange={(e) => { const archivo = e.target.files?.[0]; if (archivo) void subirImagen(archivo) }} />
             <Button variant="ghost" size="sm" onClick={() => inputArchivo.current?.click()} disabled={subiendo} className="mt-4"><Upload size={15} />{subiendo ? 'Subiendo...' : 'Subir imagen'}</Button>
-          </Seccion>
+          </Seccion>}
 
           <SponsorsSection />
           <Guardar onClick={guardar} guardando={guardando} />
@@ -411,7 +425,7 @@ export default function ConfiguracionSedePage() {
         <>
           <Seccion titulo="Pagos (Mercado Pago)">
             <p className="text-xs text-rp-muted">
-              Access Token de Mercado Pago para cobrar señas de turnos e inscripciones.
+              {esClub ? 'Access Token de Mercado Pago para cobrar señas de turnos e inscripciones.' : 'Access Token de Mercado Pago para cobrar las inscripciones.'}
               {formulario.mercadoPagoConfigurado
                 ? ' Ya hay un token configurado. Dejá el campo vacío para mantenerlo, o pegá uno nuevo para reemplazarlo.'
                 : ' Todavía no hay token configurado: los pagos online no funcionan hasta cargarlo.'}
@@ -431,19 +445,28 @@ export default function ConfiguracionSedePage() {
           </Seccion>
 
           <Seccion titulo="Avisos por mail">
-            <p className="text-sm text-rp-muted">
-              El sistema te manda un mail al <b className="text-rp-text">Email</b> que cargaste en
-              "El club", en estas cuatro situaciones y en ninguna otra:
-            </p>
-            <ul className="mt-2 flex flex-col gap-1 text-sm text-rp-muted">
-              <li>· Alguien pidió un turno desde la web.</li>
-              <li>· Alguien se inscribió a un torneo.</li>
-              <li>· Un turno fijo no se pudo agendar porque el horario ya estaba ocupado.</li>
-              <li>· Se cobró una seña por un turno que ya no estaba disponible (hay que devolverla).</li>
-            </ul>
-            <p className="mt-2 text-xs text-rp-muted">
-              Al cliente no se le manda ningún mail: la confirmación del turno la hacés vos por WhatsApp.
-            </p>
+            {esClub ? (
+              <>
+                <p className="text-sm text-rp-muted">
+                  El sistema te manda un mail al <b className="text-rp-text">Email</b> que cargaste en
+                  "El club", en estas cuatro situaciones y en ninguna otra:
+                </p>
+                <ul className="mt-2 flex flex-col gap-1 text-sm text-rp-muted">
+                  <li>· Alguien pidió un turno desde la web.</li>
+                  <li>· Alguien se inscribió a un torneo.</li>
+                  <li>· Un turno fijo no se pudo agendar porque el horario ya estaba ocupado.</li>
+                  <li>· Se cobró una seña por un turno que ya no estaba disponible (hay que devolverla).</li>
+                </ul>
+                <p className="mt-2 text-xs text-rp-muted">
+                  Al cliente no se le manda ningún mail: la confirmación del turno la hacés vos por WhatsApp.
+                </p>
+              </>
+            ) : (
+              <p className="text-sm text-rp-muted">
+                El sistema te manda un mail al <b className="text-rp-text">Email</b> que cargaste en
+                "La organización" cada vez que alguien se inscribe a un torneo.
+              </p>
+            )}
 
             <div className="mt-4 flex flex-wrap items-center gap-3">
               {notificaciones == null ? (
@@ -454,7 +477,7 @@ export default function ConfiguracionSedePage() {
                 </span>
               ) : notificaciones.servidorConfigurado ? (
                 <span className="rounded-full bg-rp-danger/15 px-3 py-1 text-xs font-bold text-rp-danger">
-                  Falta cargar el email del club, en "El club"
+                  {esClub ? 'Falta cargar el email del club, en "El club"' : 'Falta cargar el email, en "La organización"'}
                 </span>
               ) : (
                 <span className="rounded-full bg-rp-danger/15 px-3 py-1 text-xs font-bold text-rp-danger">

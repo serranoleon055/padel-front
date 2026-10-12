@@ -1,10 +1,11 @@
 import { lazy, Suspense } from 'react'
-import { Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes } from 'react-router-dom'
 
 import { AdminLayout } from '@/app/layouts/AdminLayout'
 import { PublicLayout } from '@/app/layouts/PublicLayout'
 import { ProtectedRoute } from '@/app/router/ProtectedRoute'
 import { ScrollToTop } from '@/app/router/ScrollToTop'
+import { esClub } from '@/config/modo'
 
 const AdminDashboardPage = lazy(() => import('@/pages/admin/AdminDashboardPage'))
 const EstadisticasPage = lazy(() => import('@/pages/admin/EstadisticasPage'))
@@ -75,12 +76,18 @@ export function AppRouter() {
           <Route path="campeones" element={<CampeonesPage />} />
           <Route path="reglas" element={<ReglasPage />} />
           <Route path="resultados" element={<ResultadosPage />} />
-          <Route path="reservar" element={<ReservarPage />} />
-          <Route path="reservar/pago/resultado" element={<PagoResultadoPage />} />
-          {/* El turno del jugador. El token del enlace es lo que autoriza: no hay login. */}
-          <Route path="mi-turno/:token" element={<MiTurnoPage />} />
-          <Route path="precios" element={<PreciosPage />} />
-          <Route path="la-sede" element={<SedePage />} />
+          {/* Lo de la sede (turnos, precios, galería) solo existe en un club: un
+              organizador juega en canchas de otros. */}
+          {esClub && (
+            <>
+              <Route path="reservar" element={<ReservarPage />} />
+              <Route path="reservar/pago/resultado" element={<PagoResultadoPage />} />
+              {/* El turno del jugador. El token del enlace es lo que autoriza: no hay login. */}
+              <Route path="mi-turno/:token" element={<MiTurnoPage />} />
+              <Route path="precios" element={<PreciosPage />} />
+              <Route path="la-sede" element={<SedePage />} />
+            </>
+          )}
           <Route path="jugadores/:jugadorId" element={<PlayerProfilePage />} />
           <Route path="jugadores/:jugadorId/partidos" element={<PlayerMatchesPage />} />
           <Route path="jugadores/:jugadorId/torneos" element={<PlayerTournamentsPage />} />
@@ -92,16 +99,22 @@ export function AppRouter() {
         </Route>
 
         <Route path="admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
-          <Route index element={<AdminDashboardPage />} />
-          <Route path="estadisticas" element={<EstadisticasPage />} />
+          {esClub ? (
+            <>
+              <Route index element={<AdminDashboardPage />} />
+              <Route path="estadisticas" element={<EstadisticasPage />} />
+              <Route path="turnos" element={<TurnosPage />} />
+              <Route path="clientes" element={<ClientesPage />} />
+              <Route path="caja" element={<CajaPage />} />
+              <Route path="caja/historial" element={<HistorialCajaPage />} />
+              <Route path="productos" element={<ProductosPage />} />
+            </>
+          ) : (
+            <Route index element={<Navigate to="/admin/torneos" replace />} />
+          )}
           <Route path="jugadores" element={<PlayersPage />} />
           <Route path="categorias" element={<CategoriesPage />} />
           <Route path="lugares" element={<PlacesPage />} />
-          <Route path="turnos" element={<TurnosPage />} />
-          <Route path="clientes" element={<ClientesPage />} />
-          <Route path="caja" element={<CajaPage />} />
-          <Route path="caja/historial" element={<HistorialCajaPage />} />
-          <Route path="productos" element={<ProductosPage />} />
           <Route path="temporadas" element={<SeasonsPage />} />
           <Route path="torneos" element={<TournamentsAdminPage />} />
           <Route path="torneos/nuevo" element={<TournamentFormPage />} />

@@ -5,6 +5,7 @@ import { NavLink } from 'react-router-dom'
 
 import { brand } from '@/config/brand'
 import { imagenes } from '@/config/imagenes'
+import { esClub } from '@/config/modo'
 import { seasonsApi } from '@/features/catalog/catalogApi'
 import { homeApi } from '@/features/home/homeApi'
 import { resolveApiAssetUrl } from '@/shared/api/apiClient'
@@ -108,7 +109,9 @@ export default function HomePage() {
           <div className="hp-tag">RANKING PROVINCIAL</div>
           <h2 className="hp-headline">Resultados, torneos y rankings en tiempo real</h2>
           <p className="hp-desc">
-            Seguí los torneos, resultados y el ranking del club, siempre al día.
+            {esClub
+              ? 'Seguí los torneos, resultados y el ranking del club, siempre al día.'
+              : 'Seguí los torneos, resultados y el ranking del circuito, siempre al día.'}
           </p>
 
           <div className="hero-stats">
@@ -119,13 +122,22 @@ export default function HomePage() {
           </div>
 
           <div className="hero-cta-row">
-            <NavLink to="/reservar" className="btn-primary">
-              <CalendarClock size={17} />
-              Reservar cancha
-            </NavLink>
-            <NavLink to="/torneos" className="btn-secondary">
-              Ver torneos
-            </NavLink>
+            {esClub ? (
+              <>
+                <NavLink to="/reservar" className="btn-primary">
+                  <CalendarClock size={17} />
+                  Reservar cancha
+                </NavLink>
+                <NavLink to="/torneos" className="btn-secondary">
+                  Ver torneos
+                </NavLink>
+              </>
+            ) : (
+              <NavLink to="/torneos" className="btn-primary">
+                <Trophy size={17} />
+                Ver torneos e inscribirme
+              </NavLink>
+            )}
             <NavLink to="/ranking" className="btn-secondary">
               Ver ranking
             </NavLink>

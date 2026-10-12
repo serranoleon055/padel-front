@@ -1,6 +1,7 @@
 import { Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
+import { esClub } from '@/config/modo'
 import { canchasApi } from '@/features/catalog/catalogApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
 import { porNombreDeCancha } from '@/shared/lib/canchas'
@@ -134,7 +135,7 @@ export function CanchasLugarModal({ lugar, onClose }: { lugar: LugarResponse | n
           {cargando ? (
             <p className="text-sm text-rp-muted">Cargando canchas...</p>
           ) : canchas.length === 0 ? (
-            <p className="text-sm text-rp-muted">Esta sucursal todavía no tiene canchas.</p>
+            <p className="text-sm text-rp-muted">{esClub ? 'Esta sucursal todavía no tiene canchas.' : 'Este club todavía no tiene canchas cargadas.'}</p>
           ) : (
             canchas.map((cancha) => (
               <div key={cancha.id} className="flex items-center justify-between rounded-md border border-rp-border bg-rp-surface-2/40 px-3 py-2">
@@ -144,7 +145,7 @@ export function CanchasLugarModal({ lugar, onClose }: { lugar: LugarResponse | n
                     {!cancha.activo && <span className="rounded border border-rp-border px-1.5 py-0.5 text-[11px] font-bold uppercase text-rp-muted">De baja</span>}
                   </p>
                   {cancha.descripcion && <p className="text-xs text-rp-muted">{cancha.descripcion}</p>}
-                  {cancha.precioPorHora != null && <p className="text-xs text-rp-muted">{formatearMoneda(cancha.precioPorHora)}/hora</p>}
+                  {esClub && cancha.precioPorHora != null && <p className="text-xs text-rp-muted">{formatearMoneda(cancha.precioPorHora)}/hora</p>}
                 </div>
                 <div className="flex gap-1">
                   <button type="button" onClick={() => empezarEdicion(cancha)} className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-accent" aria-label="Editar"><Pencil size={15} /></button>
@@ -162,6 +163,9 @@ export function CanchasLugarModal({ lugar, onClose }: { lugar: LugarResponse | n
           <div className="mt-2 flex flex-col gap-2">
             <Input label="Nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Cancha 1" />
             <Input label="Descripción" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Cristal / muro / techada" />
+            {/* Precio y seña son de la venta de turnos: el organizador no vende turnos, le
+                paga al club un monto por el torneo. */}
+            {esClub && <>
             <div className="grid items-end gap-2 sm:grid-cols-2">
               <Input label="Precio por hora" soloNumeros value={precioPorHora} onChange={(e) => setPrecioPorHora(e.target.value)} placeholder="8000" />
               <Input label="Seña (%, por defecto 50)" soloNumeros value={seniaPorcentaje} onChange={(e) => setSeniaPorcentaje(e.target.value)} placeholder="50" />
@@ -170,6 +174,7 @@ export function CanchasLugarModal({ lugar, onClose }: { lugar: LugarResponse | n
               <input type="checkbox" checked={seniaObligatoria} onChange={(e) => setSeniaObligatoria(e.target.checked)} className="mt-0.5 size-4 accent-rp-accent" />
               <span>Exige seña online<span className="block text-xs font-normal text-rp-muted">Si está activo, el turno se libera apenas falla o se cancela el pago. Si no, queda pendiente para confirmar en el club.</span></span>
             </label>
+            </>}
             <div className="flex justify-end gap-2">
               {editando && <Button variant="ghost" size="sm" onClick={limpiarFormulario} disabled={guardando}>Cancelar</Button>}
               <Button type="submit" size="sm" disabled={guardando}>
@@ -185,7 +190,7 @@ export function CanchasLugarModal({ lugar, onClose }: { lugar: LugarResponse | n
         onClose={() => setAArchivar(null)}
         onConfirm={archivar}
         title="Archivar cancha"
-        description={`¿Archivás la cancha "${aArchivar?.nombre}"? Dejará de estar disponible para turnos.`}
+        description={`¿Archivás la cancha "${aArchivar?.nombre}"? ${esClub ? 'Dejará de estar disponible para turnos.' : 'No se podrá usar en torneos nuevos.'}`}
       />
     </Modal>
   )
