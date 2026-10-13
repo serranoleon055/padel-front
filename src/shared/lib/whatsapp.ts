@@ -88,3 +88,55 @@ export function mensajeDeudaInscripcion(datos: {
   partes.push('Cuando lo abones, mandanos el comprobante por acá. ¡Gracias!')
   return partes.join('\n')
 }
+
+export type PartidoDelAviso = {
+  hora: string
+  categoria: string | null
+  etapa: string
+  rival: string
+  lugar: string | null
+  direccion: string | null
+  cancha: string | null
+}
+
+/**
+ * Los horarios de un jugador en un día del torneo, todos en un mensaje: si juega tres
+ * partidos (o en dos categorías) recibe uno solo y no tres. Dice el club con la
+ * dirección, porque en un torneo de varios clubes es lo primero que se pregunta.
+ */
+export function mensajeHorariosDelDia(datos: {
+  organizacion: string
+  torneoNombre: string
+  jugadorNombre: string
+  diaEtiqueta: string
+  partidos: PartidoDelAviso[]
+  enlace: string
+}): string {
+  const nombre = datos.jugadorNombre.trim().split(' ')[0]
+  const lineas = datos.partidos.map((p) => {
+    const donde = [p.lugar, p.cancha].filter(Boolean).join(', ')
+    return `• ${p.hora} hs — ${p.categoria ? `${p.categoria}, ` : ''}${p.etapa} vs ${p.rival}${donde ? `\n   ${donde}${p.direccion ? ` (${p.direccion})` : ''}` : ''}`
+  })
+  return [
+    `Hola ${nombre}! Te escribimos de ${datos.organizacion} por el ${datos.torneoNombre}.`,
+    `${datos.partidos.length === 1 ? 'Tu partido' : 'Tus partidos'} del ${datos.diaEtiqueta}:`,
+    ...lineas,
+    'Te pedimos llegar 15 minutos antes. Si hay algún problema con el horario, avisanos por acá.',
+    `Todos los horarios: ${datos.enlace}`,
+  ].join('\n')
+}
+
+/**
+ * Huella corta de un texto, para saber si el aviso que se mandó sigue siendo el que
+ * corresponde. No es criptográfica: solo distingue mensajes.
+ */
+export function huella(texto: string): string {
+  let h1 = 0x811c9dc5
+  let h2 = 5381
+  for (let i = 0; i < texto.length; i++) {
+    const c = texto.charCodeAt(i)
+    h1 = Math.imul(h1 ^ c, 0x01000193)
+    h2 = (Math.imul(h2, 33) + c) | 0
+  }
+  return `${(h1 >>> 0).toString(16).padStart(8, '0')}${(h2 >>> 0).toString(16).padStart(8, '0')}`
+}

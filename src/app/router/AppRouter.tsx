@@ -21,6 +21,7 @@ const CampeonesPage = lazy(() => import('@/pages/public/CampeonesPage'))
 const ReglasPage = lazy(() => import('@/pages/public/ReglasPage'))
 const ResultadosPage = lazy(() => import('@/pages/public/ResultadosPage'))
 const ResultadosTorneoPage = lazy(() => import('@/pages/public/ResultadosTorneoPage'))
+const HorariosTorneoPage = lazy(() => import('@/pages/public/HorariosTorneoPage'))
 const ContactoPage = lazy(() => import('@/pages/public/legal/ContactoPage'))
 const PreciosPage = lazy(() => import('@/pages/public/PreciosPage'))
 const SedePage = lazy(() => import('@/pages/public/SedePage'))
@@ -70,6 +71,7 @@ export function AppRouter() {
           <Route path="torneos" element={<TournamentsPage />} />
           <Route path="torneos/:torneoId" element={<TournamentDetailPage />} />
           <Route path="torneos/:torneoId/resultados" element={<ResultadosTorneoPage />} />
+          <Route path="torneos/:torneoId/horarios" element={<HorariosTorneoPage />} />
           <Route path="torneos/:torneoId/inscribirme" element={<InscribirmePage />} />
           <Route path="torneos/:torneoId/pago/resultado" element={<PagoResultadoPage />} />
           <Route path="ranking" element={<RankingPage />} />

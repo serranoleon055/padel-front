@@ -266,7 +266,10 @@ export default function TournamentDetailPage() {
           const tramo = tramosProximos[indiceSeguro]
           return (
             <section className="td-content rp-surface">
-              <h2 className="td-title-with-icon"><CalendarDays size={22} />Próximos partidos</h2>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="td-title-with-icon"><CalendarDays size={22} />Próximos partidos</h2>
+                <NavLink to={`/torneos/${torneoIdNumerico}/horarios`} className="text-sm font-black text-rp-accent hover:underline">¿Cuándo juego? Ver todos los horarios →</NavLink>
+              </div>
               <div className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-rp-border bg-rp-surface/82 px-3 py-2">
                 <button type="button" aria-label="Anterior" disabled={total <= 1} onClick={() => setIndiceProximos((indiceSeguro - 1 + total) % total)} className="flex size-8 shrink-0 items-center justify-center rounded-md text-rp-muted transition hover:text-rp-accent disabled:opacity-30">
                   <ChevronLeft size={18} />
@@ -296,7 +299,7 @@ export default function TournamentDetailPage() {
                           {new Date(p.fechaHoraProgramada).toLocaleString('es-AR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                         </div>
                       )}
-                      {p.canchaNombre && <div className="td-partido-cancha">{p.canchaNombre}</div>}
+                      {p.canchaNombre && <div className="td-partido-cancha">{(detalle.torneo.sedes?.length ?? 0) > 1 && p.lugarNombre ? `${p.lugarNombre} · ${p.canchaNombre}` : p.canchaNombre}</div>}
                     </div>
                   </div>
                 ))}

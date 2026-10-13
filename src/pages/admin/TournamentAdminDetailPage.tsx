@@ -509,7 +509,7 @@ export default function TournamentAdminDetailPage() {
 
             {pestana === 'horarios' && (
                 <div className="mt-4">
-                    <HorariosTab torneoId={torneo.id} />
+                    <HorariosTab torneoId={torneo.id} torneoNombre={torneo.nombre} />
                 </div>
             )}
 

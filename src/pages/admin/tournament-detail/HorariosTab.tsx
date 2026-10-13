@@ -1,7 +1,8 @@
-import { AlertTriangle, CalendarClock, Settings2, Trash2, Wand2 } from 'lucide-react'
+import { AlertTriangle, CalendarClock, MessageCircle, Settings2, Trash2, Wand2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { esOrganizador } from '@/config/modo'
+import { avisosApi, type AvisoEnviado } from '@/features/tournaments/avisosApi'
 import { fixtureApi } from '@/features/tournaments/fixtureApi'
 import { sedesApi } from '@/features/tournaments/sedesApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
@@ -14,6 +15,8 @@ import { Select } from '@/shared/ui/Select'
 import { StatusMessage } from '@/shared/ui/StatusMessage'
 import { useToast } from '@/shared/ui/Toast'
 
+import { AvisosDia } from './AvisosDia'
+
 type Cancha = { id: number; nombre: string; lugarId: number; lugarNombre: string }
 
 /**
@@ -21,11 +24,7 @@ type Cancha = { id: number; nombre: string; lugarId: number; lugarNombre: string
  * las canchas que cede cada club, cuándo no puede cada pareja y el descanso; el
  * organizador revisa, aplica y después mueve a mano lo que quiera, con los choques a la vista.
  */
-export function HorariosTab({ torneoId, accionesPartido }: {
-  torneoId: number
-  /** Botones extra por partido (los avisos por WhatsApp). */
-  accionesPartido?: (partido: PartidoFixture) => React.ReactNode
-}) {
+export function HorariosTab({ torneoId, torneoNombre }: { torneoId: number; torneoNombre: string }) {
   const { success: avisoExito } = useToast()
   const [fixture, setFixture] = useState<FixtureResponse | null>(null)
   const [sedes, setSedes] = useState<TorneoSedeResponse[]>([])
@@ -39,10 +38,13 @@ export function HorariosTab({ torneoId, accionesPartido }: {
   const [moviendo, setMoviendo] = useState<{ partido: PartidoFixture; canchaId: string; inicio: string } | null>(null)
   const [trabajando, setTrabajando] = useState(false)
   const [errorModal, setErrorModal] = useState<string | null>(null)
+  const [avisos, setAvisos] = useState<AvisoEnviado[]>([])
+  const [avisando, setAvisando] = useState<{ dia: string; jugadores?: number[] } | null>(null)
 
   const cargar = useCallback(() => {
     fixtureApi.agenda(torneoId).then(setFixture).catch((e: unknown) => setError(obtenerMensajeErrorApi(e)))
     sedesApi.listar(torneoId).then(setSedes).catch(() => setSedes([]))
+    avisosApi.listar(torneoId).then(setAvisos).catch(() => setAvisos([]))
   }, [torneoId])
 
   useEffect(() => { cargar() }, [cargar])
@@ -168,7 +170,7 @@ export function HorariosTab({ torneoId, accionesPartido }: {
   if (!fixture) return <StatusMessage type="loading" title="Cargando horarios..." />
 
   const graves = fixture.conflictos.filter((c) => c.grave)
-  const avisos = fixture.conflictos.filter((c) => !c.grave)
+  const advertencias = fixture.conflictos.filter((c) => !c.grave)
   const diasPropuesta = propuesta ? [...new Set(propuesta.asignaciones.map((a) => diaDe(a.inicio)))].sort() : []
 
   return (
@@ -195,8 +197,8 @@ export function HorariosTab({ torneoId, accionesPartido }: {
           <p className="flex items-center gap-2 text-sm font-black text-rp-text">
             <AlertTriangle size={16} className={graves.length > 0 ? 'text-rp-danger' : 'text-rp-amber'} />
             {graves.length > 0 ? `${graves.length} ${graves.length === 1 ? 'choque' : 'choques'} para resolver` : ''}
-            {graves.length > 0 && avisos.length > 0 ? ' · ' : ''}
-            {avisos.length > 0 ? `${avisos.length} ${avisos.length === 1 ? 'aviso' : 'avisos'}` : ''}
+            {graves.length > 0 && advertencias.length > 0 ? ' · ' : ''}
+            {advertencias.length > 0 ? `${advertencias.length} ${advertencias.length === 1 ? 'aviso' : 'avisos'}` : ''}
           </p>
           <ul className="mt-2 flex max-h-56 flex-col gap-1 overflow-y-auto text-xs">
             {fixture.conflictos.map((c, i) => (
@@ -215,6 +217,11 @@ export function HorariosTab({ torneoId, accionesPartido }: {
               </button>
             ))}
           </div>
+          {diaActivo && (
+            <Button size="sm" variant="subtle" onClick={() => setAvisando({ dia: diaActivo })}>
+              <MessageCircle size={15} />Avisar a los jugadores del día
+            </Button>
+          )}
           {esOrganizador && sedes.length > 1 && (
             <div className="w-56">
               <Select label="Club" value={club} onChange={(e) => setClub(e.target.value)}>
@@ -239,7 +246,8 @@ export function HorariosTab({ torneoId, accionesPartido }: {
                   {partidos.length === 0 && <p className="rounded-md border border-dashed border-rp-border px-2 py-3 text-center text-xs text-rp-muted">Libre</p>}
                   {partidos.map((p) => (
                     <TarjetaHorario key={p.id} partido={p} conflicto={conflictoPorPartido.get(p.id)}
-                      onMover={() => abrirMover(p)} onSacar={() => desprogramar(p)} extra={accionesPartido?.(p)} />
+                      onMover={() => abrirMover(p)} onSacar={() => desprogramar(p)}
+                      onAvisar={() => setAvisando({ dia: diaDe(p.inicio!), jugadores: p.jugadores.map((j) => j.id) })} />
                   ))}
                 </div>
               </div>
@@ -268,6 +276,10 @@ export function HorariosTab({ torneoId, accionesPartido }: {
       {fixture.partidos.length === 0 && (
         <StatusMessage type="empty" title="Todavía no hay partidos" description="Los partidos aparecen al hacer el sorteo. Antes, cargá en Clubes los días y horarios de cada club." />
       )}
+
+      <AvisosDia torneoId={torneoId} torneoNombre={torneoNombre} dia={avisando?.dia ?? null} soloJugadores={avisando?.jugadores}
+        partidos={fixture.partidos} avisos={avisos} onClose={() => setAvisando(null)}
+        onRegistrado={(aviso) => setAvisos((actual) => [...actual.filter((a) => !(a.jugadorId === aviso.jugadorId && a.tema === aviso.tema)), aviso])} />
 
       <Modal isOpen={Boolean(armando)} onClose={() => { setArmando(null); setPropuesta(null) }} onSubmit={propuesta ? aplicar : proponer}
         title={propuesta ? 'Propuesta de horarios' : 'Armar horarios'} size="lg">
@@ -395,12 +407,12 @@ export function HorariosTab({ torneoId, accionesPartido }: {
   )
 }
 
-function TarjetaHorario({ partido, conflicto, onMover, onSacar, extra }: {
+function TarjetaHorario({ partido, conflicto, onMover, onSacar, onAvisar }: {
   partido: PartidoFixture
   conflicto: boolean | undefined
   onMover: () => void
   onSacar: () => void
-  extra?: React.ReactNode
+  onAvisar: () => void
 }) {
   const jugado = !partido.programable
   const borde = conflicto === true ? 'border-rp-danger' : conflicto === false ? 'border-rp-amber' : 'border-rp-border'
@@ -419,7 +431,7 @@ function TarjetaHorario({ partido, conflicto, onMover, onSacar, extra }: {
         <div className="mt-2 flex flex-wrap items-center gap-1">
           <button type="button" onClick={onMover} className="rounded-md bg-rp-surface-2 px-2 py-1 text-rp-muted hover:text-rp-accent"><span className="text-[11px] font-bold">Mover</span></button>
           {partido.estado === 'PENDIENTE' && <button type="button" onClick={onSacar} className="flex size-7 items-center justify-center rounded-md text-rp-muted hover:text-rp-danger" aria-label="Sacar horario" title="Sacar horario"><Trash2 size={13} /></button>}
-          {extra}
+          <button type="button" onClick={onAvisar} className="flex size-7 items-center justify-center rounded-md text-rp-muted hover:text-[#25d366]" aria-label="Avisar por WhatsApp" title="Avisar por WhatsApp"><MessageCircle size={13} /></button>
         </div>
       )}
     </article>
