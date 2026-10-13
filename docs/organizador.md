@@ -33,3 +33,33 @@ cada uno (cupos, horarios, cobros, deuda con clubes) y cuánto dejaron los que t
 - **Dueño**: todo.
 - **Mostrador** (colaborador): torneos, horarios, avisos y cobro de inscripciones. No ve
   montos acordados con clubes, finanzas ni ganancias, y no puede anular cobros.
+
+## Levantarlo en local
+
+Hace falta Java 21, Node 20+ y un MySQL 8 (instalado o con Docker:
+`docker run -d --name rankpadel-mysql -e MYSQL_ROOT_PASSWORD=root -p 3306:3306 mysql:8.0`).
+
+Backend (repo `padel`), en Windows PowerShell:
+
+```powershell
+$env:DB_PASSWORD = "root"          # la contraseña del root de tu MySQL
+$env:APP_MODO = "ORGANIZADOR"      # o CLUB
+.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=dev"
+```
+
+(En Mac/Linux: `DB_PASSWORD=root APP_MODO=ORGANIZADOR ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev`.)
+La base `rankpadel_db` se crea sola. Queda en http://localhost:8080.
+
+Frontend (repo `padel-front`): crear `.env.local` con
+
+```
+VITE_API_BASE_URL=http://localhost:8080
+VITE_MODO=ORGANIZADOR
+```
+
+y correr `npm install` y `npm run dev`. Queda en http://localhost:5173 (panel: `/admin`,
+usuario `admin`, contraseña `admin123` en desarrollo).
+
+Datos de prueba: cargar un club con canchas desde el panel y después
+`node scripts/sembrar-torneos.mjs --api http://localhost:8080 --usuario admin --clave admin123`
+(en el repo `padel`).
