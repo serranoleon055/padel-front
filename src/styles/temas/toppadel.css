@@ -1,0 +1,90 @@
+/*
+  Top Pádel — negro, blanco y dorado, sacados del logo y de lo que publica la organización.
+
+  El logo es un monograma TP negro sobre blanco, sin color. El dorado no está en el logo:
+  es el de los flyers de los torneos y los trofeos (un ocre metálico sobre gris carbón), y
+  es lo que hace que se reconozca la marca en Instagram. Por eso las superficies oscuras
+  van en negros apenas cálidos —los del fondo de los flyers— y el dorado queda como
+  acento encima.
+
+  El dorado vivo `#d4af37` no sostiene texto: sobre blanco da 2.1:1. Lo que tiene que
+  leerse (botones, enlaces, el acento de Tailwind) va en un dorado quemado `#8a6914`, que
+  da 5.1:1 con el blanco. El vivo se reserva para lo decorativo.
+
+  El `:root:root` es a propósito: el tema se importa después de `index.css` y con la misma
+  especificidad dependería del orden en que el bundler concatene las hojas. Duplicando el
+  selector gana siempre, sin importar cómo quede el CSS del build.
+*/
+:root:root {
+  /* Superficies oscuras: navbar, footer, menú del panel. También el texto de los títulos. */
+  --rp-green-900: #0b0b0a;
+  --rp-green-850: #121211;
+  --rp-green-800: #1a1a18;
+  --rp-green-700: #2a2926;
+
+  /* Acento: botones, enlaces, estados activos. También es texto sobre blanco: 5.1:1. */
+  --rp-green-600: #8a6914;
+  --rp-green-500: #d4af37;
+
+  /* Detalle: bordes finos y eyebrows, casi siempre translúcidos sobre lo oscuro. */
+  --rp-gold: #d4af37;
+  --rp-gold-deep: #7a5c0f;
+  --rp-pale: #e4dcc6;
+
+  /* Fondos claros y texto: neutros con un tinte cálido, para que el dorado no se ensucie. */
+  --rp-cream: #f5f4f0;
+  --rp-paper: #ffffff;
+  --rp-border-light: #dcd9d1;
+  --rp-border-soft: #c8c4ba;
+  --rp-surface-soft: #f1efea;
+  --rp-line: #e6e3dc;
+  --rp-ink: #161614;
+  --rp-muted-light: #5f5d57;
+  --rp-faint: #a09d95;
+
+  --rp-tint-1: #f9f8f5;
+  --rp-tint-2: #f2f0eb;
+  --rp-tint-3: #ece9e2;
+  --rp-tint-4: #e3e0d8;
+  --rp-tint-5: #dbd7ce;
+  --rp-sand: #faf3e0;
+
+  /* Degradé de las tarjetas destacadas: el negro del flyer que se entibia hacia el oro. */
+  --rp-hero-from: #141413;
+  --rp-hero-to: #2e2510;
+
+  /*
+    El rojo se corre hacia el carmín: el rojo anaranjado del tema base, al lado del
+    dorado, se leía como un estado más y no como una advertencia.
+  */
+  --rp-danger: #c62f36;
+  --rp-danger-bright: #e8444b;
+  --rp-danger-deep: #9c232a;
+  --rp-danger-soft: #ff9aa0;
+
+  /*
+    Logo del navbar y del pie: el monograma TP recortado como silueta y pintado en negro
+    sobre una caja blanca, que es como la organización lo usa de foto de perfil. La ruta
+    es la de la raíz porque `public/marcas/toppadel/` se superpone a `public/`.
+  */
+  --rp-logo: #0b0b0a;
+  --rp-logo-mask: url("/monograma.svg");
+  --rp-logo-tamanio: 30px;
+  --rp-logo-caja: #ffffff;
+
+  /* Botón principal en el dorado quemado: sostiene el texto blanco (5.1:1). */
+  --rp-cta: #8a6914;
+  --rp-cta-hover: #6f540f;
+
+  /* Utilidades de Tailwind (bg-rp-accent, text-rp-muted, …). */
+  --color-rp-bg: #ecebe7;
+  --color-rp-surface: #ffffff;
+  --color-rp-surface-2: #e2e0da;
+  --color-rp-border: #d0cdc5;
+  --color-rp-text: #161614;
+  --color-rp-muted: #5f5d57;
+  --color-rp-accent: #8a6914;
+  --color-rp-cyan: #8a6914;
+  --color-rp-amber: #a8790f;
+  --color-rp-danger: #c62f36;
+}
