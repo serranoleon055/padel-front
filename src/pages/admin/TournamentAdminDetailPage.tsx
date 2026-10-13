@@ -9,6 +9,7 @@ import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
 import { useVolverA } from '@/shared/lib/volverA'
 import { useToast } from '@/shared/ui/Toast'
 import { formatearFecha, formatearEnum, formatearEtapaPartido, formatearPareja, formatearMoneda } from '@/shared/lib/formatters'
+import { resumenFormatos } from '@/shared/lib/formatoPartido'
 import type {
     CategoriaResponse,
     CrucePreviewResponse,
@@ -389,7 +390,7 @@ export default function TournamentAdminDetailPage() {
                                     <div key={config.categoriaId} className="rounded-md border border-rp-border bg-rp-bg/55 px-3 py-2">
                                         <p className="text-sm font-bold text-rp-text">{config.categoriaNombre ?? `Categoría ${config.categoriaId}`}</p>
                                         <p className="mt-1 text-xs text-rp-muted">
-                                            {formatearEnum(config.formato)} · {formatearEnum(config.tipoSorteo)} · al mejor de {config.mejorDeSets ?? 3}
+                                            {formatearEnum(config.formato)} · {formatearEnum(config.tipoSorteo)} · {resumenFormatos(config)}
                                             {config.cupo ? ` · cupo ${config.cupo}` : ''}
                                         </p>
                                         <p className="text-xs text-rp-muted">

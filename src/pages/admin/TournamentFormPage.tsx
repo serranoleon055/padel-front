@@ -9,7 +9,9 @@ import { formatTemplatesApi, pointTemplatesApi } from '@/features/templates/temp
 import { tournamentsApi } from '@/features/tournaments/tournamentsApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
 import { formatearEnum, formatearMoneda } from '@/shared/lib/formatters'
+import { FORMATOS_PARTIDO, formatoDesdeMejorDeSets, OPCIONES_FORMATO_PARTIDO } from '@/shared/lib/formatoPartido'
 import type {
+  FormatoPartido,
   CategoriaResponse,
   ConfiguracionCategoriaTorneoRequest,
   FormatoTorneo,
@@ -177,6 +179,9 @@ export default function TournamentFormPage() {
             incluyeEliminacion: config.incluyeEliminacion,
             tipoSorteo: config.tipoSorteo,
             mejorDeSets: config.mejorDeSets ?? 3,
+            formatoPartidoGrupos: config.formatoPartidoGrupos ?? null,
+            formatoPartidoEliminacion: config.formatoPartidoEliminacion ?? null,
+            formatoPartidoFinales: config.formatoPartidoFinales ?? null,
             cupo: config.cupo ?? null,
             configuracionPuntos: (config.configuracionPuntos ?? []).map((cp) => ({
               nombreRonda: cp.nombreRonda,
@@ -585,11 +590,8 @@ function PanelCategoria({ config, categoria, plantillasFormato, plantillasPuntos
           )}
           {plantillasPuntosFiltradas.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
         </Select>
-        <Select label="Formato de sets" value={String(config.mejorDeSets ?? 3)} onChange={(e) => onCambio({ mejorDeSets: Number(e.target.value) })}>
-          <option value="3">Mejor de 3 sets</option>
-          <option value="1">A 1 set</option>
-        </Select>
       </div>
+      <FormatosDePartido config={config} onCambio={onCambio} />
       <div className="mt-3 grid gap-2 text-xs text-rp-muted sm:grid-cols-2">
         <ResumenPlantilla title="Formato" lineas={plantillaFormatoSeleccionada ? [
           formatearEnum(plantillaFormatoSeleccionada.formatoTorneo),
@@ -603,6 +605,47 @@ function PanelCategoria({ config, categoria, plantillasFormato, plantillasPuntos
       {advertenciaPuntos && (
         <p className="mt-3 rounded-md border border-rp-danger/40 bg-rp-danger/10 px-3 py-2 text-xs font-bold text-rp-danger">⚠ {advertenciaPuntos}</p>
       )}
+    </div>
+  )
+}
+
+type FasePartidoConfig = 'formatoPartidoGrupos' | 'formatoPartidoEliminacion' | 'formatoPartidoFinales'
+
+/**
+ * Cómo se juega cada fase. Es común la zona a un set y las semis y la final a 9 games,
+ * o la llave con super tie-break para que entre en la grilla. Lo que no se toca hereda:
+ * la llave y la zona del "al mejor de" de siempre, las finales de la llave.
+ */
+function FormatosDePartido({ config, onCambio }: {
+  config: ConfiguracionCategoriaTorneoRequest
+  onCambio: (cambios: Partial<ConfiguracionCategoriaTorneoRequest>) => void
+}) {
+  const general = formatoDesdeMejorDeSets(config.mejorDeSets)
+  const llave = config.formatoPartidoEliminacion ?? general
+  const fases: { campo: FasePartidoConfig; label: string; valor: FormatoPartido }[] = []
+  if (config.incluyeFaseGrupos || !config.incluyeEliminacion) {
+    fases.push({ campo: 'formatoPartidoGrupos', label: config.formato === 'LIGA' ? 'Partidos' : 'Partidos de zona', valor: config.formatoPartidoGrupos ?? general })
+  }
+  if (config.incluyeEliminacion) {
+    fases.push({ campo: 'formatoPartidoEliminacion', label: 'Partidos de llave', valor: llave })
+    fases.push({ campo: 'formatoPartidoFinales', label: 'Semifinales y final', valor: config.formatoPartidoFinales ?? llave })
+  }
+
+  function cambiar(campo: FasePartidoConfig, valor: FormatoPartido) {
+    const cambios: Partial<ConfiguracionCategoriaTorneoRequest> = { [campo]: valor }
+    // "Al mejor de" queda como el formato de la primera fase: es lo que siguen leyendo
+    // las pantallas que todavía no distinguen fases.
+    if (campo === fases[0].campo) cambios.mejorDeSets = FORMATOS_PARTIDO[valor].maximoSets
+    onCambio(cambios)
+  }
+
+  return (
+    <div className={`mt-3 grid gap-3 ${fases.length === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
+      {fases.map((fase) => (
+        <Select key={fase.campo} label={fase.label} value={fase.valor} onChange={(e) => cambiar(fase.campo, e.target.value as FormatoPartido)}>
+          {OPCIONES_FORMATO_PARTIDO.map((opcion) => <option key={opcion.valor} value={opcion.valor}>{opcion.label}</option>)}
+        </Select>
+      ))}
     </div>
   )
 }

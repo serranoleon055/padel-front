@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 
 import { construirRondasCuadro } from '@/shared/lib/bracket'
+import { formatoDesdeMejorDeSets } from '@/shared/lib/formatoPartido'
 import type { PartidoResponse, TorneoDetalleResponse } from '@/shared/types/api'
 import { BracketCuadro } from '@/shared/ui/BracketCuadro'
 import { NavegadorFase } from '@/shared/ui/NavegadorFase'
@@ -54,7 +55,9 @@ export function PartidosTab({ partidos, parejas, torneo, mostrarSorteo, showResu
     onDeclareWo: (partido: PartidoResponse) => void
 }) {
     const esLiga = torneo.formato === 'LIGA'
-    const mejorDeSets = torneo.mejorDeSets ?? 3
+    // Cada partido trae su formato (depende de la categoría y la fase); este es el
+    // respaldo para un backend que todavía no lo manda.
+    const formatoPorDefecto = formatoDesdeMejorDeSets(torneo.mejorDeSets)
     const fasesGrupos = useMemo(() => construirFasesGrupos(partidos, esLiga), [partidos, esLiga])
     const eliminacion = useMemo(() => partidos.filter((partido) => partido.fase === 'ELIMINACION'), [partidos])
     const rondas = useMemo(() => (eliminacion.length > 0 ? construirRondasCuadro(eliminacion, parejas, torneo) : []), [eliminacion, parejas, torneo])
@@ -66,7 +69,7 @@ export function PartidosTab({ partidos, parejas, torneo, mostrarSorteo, showResu
         return <StatusMessage type="empty" title="No hay partidos" description={mostrarSorteo ? 'Generá el sorteo desde el encabezado.' : 'Los partidos se generan al sortear (estado INSCRIPCION).'} />
     }
 
-    const propsTarjeta = { mejorDeSets, showResults, canSchedule, canEditResult, onStartMatch, onSubmitResult, onCorrectResult, onSchedule, onDeclareWo }
+    const propsTarjeta = { formatoPorDefecto, showResults, canSchedule, canEditResult, onStartMatch, onSubmitResult, onCorrectResult, onSchedule, onDeclareWo }
 
     const total = fasesGrupos.length
     const indiceSeguro = Math.min(indice, Math.max(0, total - 1))

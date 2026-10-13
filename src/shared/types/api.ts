@@ -5,6 +5,7 @@ export type PosicionJuego = 'DRIVE' | 'REVES'
 export type EstadoTorneo = 'BORRADOR' | 'INSCRIPCION' | 'SORTEADO' | 'EN_CURSO' | 'FINALIZADO' | 'CANCELADO'
 
 export type FormatoTorneo = 'MINITORNEO' | 'TORNEO_LARGO' | 'LIGA' | 'ELIMINACION_DIRECTA'
+export type FormatoPartido = 'TRES_SETS' | 'DOS_SETS_SUPER_TIEBREAK' | 'UN_SET' | 'PRO_SET_9'
 
 export type TipoSorteo = 'ALEATORIO' | 'CABEZAS_SERIE'
 
@@ -174,6 +175,9 @@ export type ConfiguracionCategoriaTorneoRequest = {
   incluyeEliminacion: boolean
   tipoSorteo: TipoSorteo
   mejorDeSets?: number | null
+  formatoPartidoGrupos?: FormatoPartido | null
+  formatoPartidoEliminacion?: FormatoPartido | null
+  formatoPartidoFinales?: FormatoPartido | null
   cupo?: number | null
   configuracionPuntos: ConfiguracionPuntosRequest[]
 }
@@ -194,6 +198,9 @@ export type ConfiguracionCategoriaTorneoResponse = {
   incluyeEliminacion: boolean
   tipoSorteo: TipoSorteo
   mejorDeSets: number | null
+  formatoPartidoGrupos?: FormatoPartido | null
+  formatoPartidoEliminacion?: FormatoPartido | null
+  formatoPartidoFinales?: FormatoPartido | null
   cupo: number | null
   configuracionPuntos: ConfiguracionPuntosResponse[]
 }
@@ -381,6 +388,8 @@ export type PartidoResponse = {
   parejaLocalId: number | null
   parejaVisitanteId: number | null
   marcador: string | null
+  /** Cómo se juega este partido según su categoría y fase. Null en un backend viejo. */
+  formatoPartido?: FormatoPartido | null
   jugadorLocal1Id: number | null
   jugadorLocal1Nombre: string | null
   jugadorLocal2Id: number | null

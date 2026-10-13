@@ -3,8 +3,9 @@ import { memo, useState } from 'react'
 
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
 import { formatearEstadoPartido, formatearFechaPartido, nombresPareja } from '@/shared/lib/formatters'
+import { formatoDelPartido } from '@/shared/lib/formatoPartido'
 import { validarFormatoSets, validarMarcador } from '@/shared/lib/score'
-import type { PartidoResponse } from '@/shared/types/api'
+import type { FormatoPartido, PartidoResponse } from '@/shared/types/api'
 import { Button } from '@/shared/ui/Button'
 import { NombreParejaApilado } from '@/shared/ui/NombreParejaApilado'
 import { StatusBadge } from '@/shared/ui/StatusBadge'
@@ -17,9 +18,9 @@ function tonoBadge(estado: string): 'live' | 'success' | 'neutral' {
     return 'neutral'
 }
 
-export const TarjetaPartidoAdmin = memo(function TarjetaPartidoAdmin({ partido, mejorDeSets, showResults, canSchedule, canEditResult, compacto = false, onStartMatch, onSubmitResult, onCorrectResult, onSchedule, onDeclareWo }: {
+export const TarjetaPartidoAdmin = memo(function TarjetaPartidoAdmin({ partido, formatoPorDefecto, showResults, canSchedule, canEditResult, compacto = false, onStartMatch, onSubmitResult, onCorrectResult, onSchedule, onDeclareWo }: {
     partido: PartidoResponse
-    mejorDeSets: number
+    formatoPorDefecto: FormatoPartido
     showResults: boolean
     canSchedule: boolean
     canEditResult: boolean
@@ -47,7 +48,8 @@ export const TarjetaPartidoAdmin = memo(function TarjetaPartidoAdmin({ partido, 
     const [guardandoFecha, setGuardandoFecha] = useState(false)
     const [errorFecha, setErrorFecha] = useState<string | null>(null)
 
-    const errorFormato = marcador.trim() ? validarFormatoSets(marcador, mejorDeSets) : null
+    const formato = formatoDelPartido(partido, formatoPorDefecto)
+    const errorFormato = marcador.trim() ? validarFormatoSets(marcador, formato) : null
     const ganadorLocal = partido.ganadorId != null && partido.ganadorId === partido.parejaLocalId
     const ganadorVisitante = partido.ganadorId != null && partido.ganadorId === partido.parejaVisitanteId
     const mostrarPlanilla = cargable || (esFinalizado && editando)
@@ -55,7 +57,7 @@ export const TarjetaPartidoAdmin = memo(function TarjetaPartidoAdmin({ partido, 
     const visitante = nombresPareja(partido, 'visitante')
 
     async function guardarResultado() {
-        const error = validarMarcador(marcador, mejorDeSets)
+        const error = validarMarcador(marcador, formato)
         if (error) { setErrorGuardar(error); return }
         setGuardando(true); setErrorGuardar(null)
         try {
@@ -105,7 +107,7 @@ export const TarjetaPartidoAdmin = memo(function TarjetaPartidoAdmin({ partido, 
                 <div className="flex flex-col gap-2">
                     <EntradaSets
                         key={`${partido.id}-${editando}-${resetKey}`}
-                        mejorDeSets={mejorDeSets}
+                        formato={formato}
                         valorInicial={marcador}
                         onChange={setMarcador}
                         localJugadores={local}
