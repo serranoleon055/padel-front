@@ -5,6 +5,7 @@ import { NavLink, useParams, useSearchParams } from 'react-router-dom'
 import { categoriesApi } from '@/features/catalog/catalogApi'
 import { playersApi } from '@/features/players/playersApi'
 import { esOrganizador } from '@/config/modo'
+import { authApi } from '@/features/auth/authApi'
 import { tournamentsApi } from '@/features/tournaments/tournamentsApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
 import { useVolverA } from '@/shared/lib/volverA'
@@ -32,6 +33,7 @@ import { StatusMessage } from '@/shared/ui/StatusMessage'
 
 import { BuscadorJugador } from './tournament-detail/BuscadorJugador'
 import { CobrosTab } from './tournament-detail/CobrosTab'
+import { FinanzasTab } from './tournament-detail/FinanzasTab'
 import { GruposTab } from './tournament-detail/GruposTab'
 import { HorariosTab } from './tournament-detail/HorariosTab'
 import { ParejasTab } from './tournament-detail/ParejasTab'
@@ -42,8 +44,10 @@ import { TarjetaDato } from './tournament-detail/TarjetaDato'
 const PAREJA_VACIA: ParejaRequest = { jugador1Id: 0, jugador2Id: 0, categoriaId: 0, esCabezaDeSerie: false }
 
 
-const PESTANAS = ['resumen', 'parejas', 'partidos', 'horarios', 'grupos', 'cobros', 'sedes'] as const
-type Pestana = typeof PESTANAS[number]
+const TODAS_LAS_PESTANAS = ['resumen', 'parejas', 'partidos', 'horarios', 'grupos', 'cobros', 'finanzas', 'sedes'] as const
+type Pestana = typeof TODAS_LAS_PESTANAS[number]
+// Las finanzas del torneo (premios, gastos, balance) son del dueño: el mostrador no las ve.
+const PESTANAS: readonly Pestana[] = TODAS_LAS_PESTANAS.filter((p) => p !== 'finanzas' || authApi.esDuenio())
 const ETIQUETA_PESTANA: Record<Pestana, string> = {
     resumen: 'Resumen',
     parejas: 'Parejas',
@@ -51,6 +55,7 @@ const ETIQUETA_PESTANA: Record<Pestana, string> = {
     horarios: 'Horarios',
     grupos: 'Grupos',
     cobros: 'Cobros',
+    finanzas: 'Finanzas',
     sedes: esOrganizador ? 'Clubes' : 'Canchas',
 }
 
@@ -516,6 +521,12 @@ export default function TournamentAdminDetailPage() {
             {pestana === 'cobros' && (
                 <div className="mt-4">
                     <CobrosTab torneoId={torneo.id} torneoNombre={torneo.nombre} />
+                </div>
+            )}
+
+            {pestana === 'finanzas' && authApi.esDuenio() && (
+                <div className="mt-4">
+                    <FinanzasTab torneoId={torneo.id} categorias={torneo.categorias ?? []} />
                 </div>
             )}
 

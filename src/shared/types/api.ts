@@ -477,6 +477,104 @@ export type PropuestaFixture = {
   respetados: number
 }
 
+export type MedioDePago = PagoSedeResponse['medio']
+
+export type BalanceTorneo = {
+  inscripcionesEsperado: number
+  inscripcionesCobrado: number
+  sponsorsComprometido: number
+  sponsorsCobrado: number
+  clubesAcordado: number
+  clubesPagado: number
+  premiosTotal: number
+  premiosEntregado: number
+  gastos: number
+  resultadoProyectado: number
+  resultadoReal: number
+  porCobrar: number
+  porPagar: number
+}
+
+export type PremioTorneo = {
+  id: number
+  categoriaId: number | null
+  categoriaNombre: string | null
+  puesto: string
+  descripcion: string | null
+  monto: number | null
+  entregado: boolean
+  entregadoEn: string | null
+  entregadoA: string | null
+  ganador: string | null
+}
+
+export type CategoriaGastoTorneo = 'PELOTAS' | 'TROFEOS' | 'ARBITRAJE' | 'FOTOGRAFIA' | 'PUBLICIDAD' | 'INDUMENTARIA' | 'LOGISTICA' | 'OTRO'
+
+export type GastoTorneo = {
+  id: number
+  fecha: string
+  categoria: CategoriaGastoTorneo
+  descripcion: string | null
+  monto: number
+  medio: MedioDePago
+  registradoPor: string | null
+  anulado: boolean
+  anuladoPor: string | null
+  motivoAnulacion: string | null
+}
+
+export type AporteSponsor = {
+  id: number
+  sponsorId: number | null
+  nombre: string
+  monto: number | null
+  descripcion: string | null
+  cobrado: boolean
+  cobradoEn: string | null
+  medio: MedioDePago | null
+}
+
+export type FinanzasTorneo = {
+  balance: BalanceTorneo
+  premios: PremioTorneo[]
+  gastos: GastoTorneo[]
+  aportes: AporteSponsor[]
+}
+
+export type PanelOrganizador = {
+  hoy: { fecha: string; partidos: number; enJuego: number; jugados: number }
+  alertas: { nivel: 'ALTA' | 'MEDIA'; mensaje: string; torneoId: number; vista: string }[]
+  torneos: {
+    id: number
+    nombre: string
+    estado: string
+    fechaInicio: string | null
+    fechaFin: string | null
+    clubes: number
+    categorias: { categoria: string; inscriptas: number; cupo: number | null }[]
+    parejas: number
+    solicitudesPendientes: number
+    partidosSinHorario: number
+    choques: number
+    jugadoresQueDeben: number
+    inscripcionesCobrado: number | null
+    inscripcionesPendiente: number | null
+    deudaClubes: number | null
+    resultadoProyectado: number | null
+  }[]
+  terminados: {
+    id: number
+    nombre: string
+    fechaFin: string | null
+    parejas: number
+    resultadoProyectado: number | null
+    resultadoReal: number | null
+    porCobrar: number | null
+    porPagar: number | null
+  }[]
+  categorias: { categoria: string; parejas: number; torneos: number; ocupacionPorcentaje: number | null }[]
+}
+
 export type TorneoResponse = {
   id: number
   nombre: string

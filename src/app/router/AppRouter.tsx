@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Route, Routes } from 'react-router-dom'
 
 import { AdminLayout } from '@/app/layouts/AdminLayout'
 import { PublicLayout } from '@/app/layouts/PublicLayout'
@@ -8,6 +8,7 @@ import { ScrollToTop } from '@/app/router/ScrollToTop'
 import { esClub } from '@/config/modo'
 
 const AdminDashboardPage = lazy(() => import('@/pages/admin/AdminDashboardPage'))
+const PanelOrganizadorPage = lazy(() => import('@/pages/admin/PanelOrganizadorPage'))
 const EstadisticasPage = lazy(() => import('@/pages/admin/EstadisticasPage'))
 const HomePage = lazy(() => import('@/pages/public/HomePage'))
 const LoginPage = lazy(() => import('@/pages/public/LoginPage'))
@@ -112,7 +113,7 @@ export function AppRouter() {
               <Route path="productos" element={<ProductosPage />} />
             </>
           ) : (
-            <Route index element={<Navigate to="/admin/torneos" replace />} />
+            <Route index element={<PanelOrganizadorPage />} />
           )}
           <Route path="jugadores" element={<PlayersPage />} />
           <Route path="categorias" element={<CategoriesPage />} />

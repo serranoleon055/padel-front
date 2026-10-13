@@ -82,6 +82,7 @@ const NAV_ORGANIZADOR: { grupo: string; items: ItemMenu[] }[] = [
   {
     grupo: 'Torneos',
     items: [
+      { to: '/admin', label: 'Panel', icon: LayoutDashboard, end: true },
       { to: '/admin/torneos', label: 'Torneos', icon: Trophy, end: false },
       { to: '/admin/jugadores', label: 'Jugadores', icon: Users, end: false },
       { to: '/admin/categorias', label: 'Categorías', icon: Tag, end: false },
