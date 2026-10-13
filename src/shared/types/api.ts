@@ -291,6 +291,62 @@ export type ResultadoRequest = {
   marcador: string
 }
 
+export type SedePublica = {
+  lugarId: number
+  nombre: string
+  direccion: string | null
+}
+
+export type FranjaSede = {
+  fecha: string
+  horaDesde: string
+  horaHasta: string
+}
+
+export type PagoSedeResponse = {
+  id: number
+  fecha: string
+  monto: number
+  medio: 'EFECTIVO' | 'TRANSFERENCIA' | 'TARJETA' | 'MERCADO_PAGO' | 'OTRO'
+  notas: string | null
+  registradoPor: string | null
+  creadoEn: string
+  anulado: boolean
+  anuladoPor: string | null
+  motivoAnulacion: string | null
+}
+
+/** Un club del torneo. Montos y pagos llegan en null si quien mira no es el dueño. */
+export type TorneoSedeResponse = {
+  id: number
+  lugarId: number
+  lugarNombre: string
+  lugarDireccion: string | null
+  principal: boolean
+  canchas: { id: number; nombre: string }[]
+  franjas: FranjaSede[]
+  notas: string | null
+  montoAcordado: number | null
+  totalPagado: number | null
+  saldo: number | null
+  pagos: PagoSedeResponse[] | null
+}
+
+export type TorneoSedeRequest = {
+  lugarId: number
+  canchaIds: number[]
+  franjas: FranjaSede[]
+  montoAcordado: number | null
+  notas: string | null
+}
+
+export type PagoSedeRequest = {
+  fecha: string
+  monto: number
+  medio: PagoSedeResponse['medio']
+  notas: string | null
+}
+
 export type TorneoResponse = {
   id: number
   nombre: string
@@ -323,6 +379,7 @@ export type TorneoResponse = {
   temporadaNombre: string | null
   lugarId: number | null
   lugarNombre: string | null
+  sedes?: SedePublica[]
   categorias: CategoriaResponse[]
   cantidadCategorias: number
   cantidadParejas: number

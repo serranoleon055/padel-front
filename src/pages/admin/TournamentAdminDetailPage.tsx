@@ -4,6 +4,7 @@ import { NavLink, useParams, useSearchParams } from 'react-router-dom'
 
 import { categoriesApi } from '@/features/catalog/catalogApi'
 import { playersApi } from '@/features/players/playersApi'
+import { esOrganizador } from '@/config/modo'
 import { tournamentsApi } from '@/features/tournaments/tournamentsApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
 import { useVolverA } from '@/shared/lib/volverA'
@@ -33,9 +34,21 @@ import { BuscadorJugador } from './tournament-detail/BuscadorJugador'
 import { GruposTab } from './tournament-detail/GruposTab'
 import { ParejasTab } from './tournament-detail/ParejasTab'
 import { PartidosTab } from './tournament-detail/PartidosTab'
+import { SedesTab } from './tournament-detail/SedesTab'
 import { TarjetaDato } from './tournament-detail/TarjetaDato'
 
 const PAREJA_VACIA: ParejaRequest = { jugador1Id: 0, jugador2Id: 0, categoriaId: 0, esCabezaDeSerie: false }
+
+
+const PESTANAS = ['resumen', 'parejas', 'partidos', 'grupos', 'sedes'] as const
+type Pestana = typeof PESTANAS[number]
+const ETIQUETA_PESTANA: Record<Pestana, string> = {
+    resumen: 'Resumen',
+    parejas: 'Parejas',
+    partidos: 'Partidos',
+    grupos: 'Grupos',
+    sedes: esOrganizador ? 'Clubes' : 'Canchas',
+}
 
 export default function TournamentAdminDetailPage() {
     const { torneoId } = useParams()
@@ -51,11 +64,11 @@ export default function TournamentAdminDetailPage() {
     const [errorAccion, setErrorAccion] = useState<string | null>(null)
 
     const [searchParams] = useSearchParams()
-    const [pestana, setPestana] = useState<'resumen' | 'parejas' | 'partidos' | 'grupos'>(() => {
+    const [pestana, setPestana] = useState<Pestana>(() => {
         const forzada = searchParams.get('vista')
-        if (forzada === 'resumen' || forzada === 'parejas' || forzada === 'partidos' || forzada === 'grupos') return forzada
+        if (PESTANAS.includes(forzada as Pestana)) return forzada as Pestana
         const guardada = localStorage.getItem(`rp-admin-torneo-${id}-pestana`)
-        return guardada === 'parejas' || guardada === 'partidos' || guardada === 'grupos' ? guardada : 'resumen'
+        return PESTANAS.includes(guardada as Pestana) ? guardada as Pestana : 'resumen'
     })
     const [nombreCategoriaSeleccionada, setNombreCategoriaSeleccionada] = useState(() => localStorage.getItem(`rp-admin-torneo-${id}-categoria`) ?? '')
     const [cambiandoEstado, setCambiandoEstado] = useState(false)
@@ -351,10 +364,10 @@ export default function TournamentAdminDetailPage() {
                 </div>
             )}
 
-            <div className="mt-6 flex gap-1 rounded-lg border border-rp-border bg-rp-surface/82 p-1">
-                {(['resumen', 'parejas', 'partidos', 'grupos'] as const).map((p) => (
-                <button key={p} onClick={() => setPestana(p)} className={`flex-1 rounded-md py-2 text-sm font-bold transition ${pestana === p ? 'bg-rp-surface-2 text-rp-accent' : 'text-rp-muted hover:text-rp-text'}`}>
-                    {p === 'resumen' ? 'Resumen' : p === 'parejas' ? 'Parejas' : p === 'partidos' ? 'Partidos' : 'Grupos'}
+            <div className="mt-6 grid grid-cols-3 gap-1 rounded-lg border border-rp-border bg-rp-surface/82 p-1 sm:flex">
+                {PESTANAS.map((p) => (
+                <button key={p} onClick={() => setPestana(p)} className={`whitespace-nowrap rounded-md px-2 py-2 text-sm font-bold transition sm:flex-1 ${pestana === p ? 'bg-rp-surface-2 text-rp-accent' : 'text-rp-muted hover:text-rp-text'}`}>
+                    {ETIQUETA_PESTANA[p]}
                 </button>
                 ))}
             </div>
@@ -484,6 +497,12 @@ export default function TournamentAdminDetailPage() {
             {pestana === 'grupos' && (
                 <div className="mt-4">
                     <GruposTab grupos={gruposSeleccionados} />
+                </div>
+            )}
+
+            {pestana === 'sedes' && (
+                <div className="mt-4">
+                    <SedesTab torneoId={torneo.id} fechaInicio={torneo.fechaInicio ?? null} />
                 </div>
             )}
 

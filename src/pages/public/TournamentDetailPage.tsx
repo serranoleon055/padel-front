@@ -18,6 +18,13 @@ import { NombreParejaApilado } from '@/shared/ui/NombreParejaApilado'
 import { StatusBadge } from '@/shared/ui/StatusBadge'
 import { StatusMessage } from '@/shared/ui/StatusMessage'
 
+
+/** Todos los clubes donde se juega; si el backend no manda sedes, el lugar del torneo. */
+function nombresDeSedes(torneo: { lugarNombre?: string | null; sedes?: { nombre: string }[] }): string | null {
+  if (torneo.sedes && torneo.sedes.length > 0) return torneo.sedes.map((sede) => sede.nombre).join(' · ')
+  return torneo.lugarNombre ?? null
+}
+
 export default function TournamentDetailPage() {
   const { torneoId } = useParams()
   const torneoIdNumerico = Number(torneoId)
@@ -212,7 +219,7 @@ export default function TournamentDetailPage() {
           <dl className="td-info-grid">
             <ItemInfo icon={CalendarDays} label="Inicio" value={formatearFecha(torneo.fechaInicio)} />
             {torneo.fechaFin ? <ItemInfo icon={CalendarDays} label="Fin" value={formatearFecha(torneo.fechaFin)} /> : null}
-            <ItemInfo icon={MapPin} label="Lugar" value={torneo.lugarNombre ?? 'Sin lugar'} />
+            <ItemInfo icon={MapPin} label={(torneo.sedes?.length ?? 0) > 1 ? 'Clubes' : 'Lugar'} value={nombresDeSedes(torneo) ?? 'Sin lugar'} />
             {torneo.premioAcumulado ? (
               <ItemInfo icon={Trophy} label="Premios" value={formatearMoneda(torneo.premioAcumulado)} />
             ) : null}

@@ -2,8 +2,8 @@ import { ArrowLeft } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { NavLink, useNavigate, useParams } from 'react-router-dom'
 
+import { esOrganizador } from '@/config/modo'
 import { useVolverA } from '@/shared/lib/volverA'
-
 import { categoriesApi, placesApi, seasonsApi } from '@/features/catalog/catalogApi'
 import { formatTemplatesApi, pointTemplatesApi } from '@/features/templates/templatesApi'
 import { tournamentsApi } from '@/features/tournaments/tournamentsApi'
@@ -484,10 +484,12 @@ export default function TournamentFormPage() {
           </fieldset>
 
           <fieldset className="rounded-lg border border-rp-border bg-rp-surface/82 p-5">
-            <legend className="px-1 text-xs font-black uppercase tracking-[0.14em] text-rp-accent">Lugar y temporada</legend>
-            <p className="mt-2 text-xs text-rp-muted">Ambos son obligatorios: el lugar ordena el panel de la sede y la temporada define en qué ranking suma.</p>
+            <legend className="px-1 text-xs font-black uppercase tracking-[0.14em] text-rp-accent">{esOrganizador ? 'Club y temporada' : 'Lugar y temporada'}</legend>
+            <p className="mt-2 text-xs text-rp-muted">{esOrganizador
+              ? 'Ambos son obligatorios. Si se juega en más de un club, los demás se suman después, desde la pestaña Clubes del torneo.'
+              : 'Ambos son obligatorios: el lugar ordena el panel de la sede y la temporada define en qué ranking suma.'}</p>
             <div className="mt-4 grid gap-4">
-              <Select label="Lugar (obligatorio)" value={formulario.lugarId?.toString() ?? ''} onChange={(e) => setFormulario((f) => ({ ...f, lugarId: e.target.value ? Number(e.target.value) : null }))} placeholder="Seleccionar lugar">
+              <Select label={esOrganizador ? 'Club principal (obligatorio)' : 'Lugar (obligatorio)'} value={formulario.lugarId?.toString() ?? ''} onChange={(e) => setFormulario((f) => ({ ...f, lugarId: e.target.value ? Number(e.target.value) : null }))} placeholder={esOrganizador ? 'Seleccionar club' : 'Seleccionar lugar'}>
                 {lugares.map((lugar) => <option key={lugar.id} value={lugar.id}>{lugar.nombre}</option>)}
               </Select>
               <Select label="Temporada (obligatoria)" value={formulario.temporadaId?.toString() ?? ''} onChange={(e) => setFormulario((f) => ({ ...f, temporadaId: e.target.value ? Number(e.target.value) : null }))} placeholder="Seleccionar temporada">
