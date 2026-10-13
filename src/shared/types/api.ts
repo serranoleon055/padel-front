@@ -415,6 +415,68 @@ export type DisponibilidadPareja = {
   notas: string | null
 }
 
+export type JugadorFixture = { id: number; nombre: string; telefono: string | null; parejaId: number }
+
+export type PartidoFixture = {
+  id: number
+  categoriaId: number | null
+  categoriaNombre: string | null
+  fase: 'GRUPOS' | 'ELIMINACION'
+  etapa: string
+  estado: string
+  parejaLocalId: number | null
+  parejaVisitanteId: number | null
+  local: string
+  visitante: string
+  jugadores: JugadorFixture[]
+  canchaId: number | null
+  canchaNombre: string | null
+  lugarId: number | null
+  lugarNombre: string | null
+  lugarDireccion: string | null
+  inicio: string | null
+  fin: string | null
+  duracionMinutos: number
+  marcador: string | null
+  programable: boolean
+}
+
+export type ConflictoFixture = { tipo: string; grave: boolean; partidoIds: number[]; mensaje: string }
+
+export type FixtureResponse = {
+  descansoMinimoMinutos: number
+  partidos: PartidoFixture[]
+  conflictos: ConflictoFixture[]
+  sinProgramar: number
+}
+
+export type ReglaCategoriaFixture = {
+  categoriaId: number
+  categoriaNombre?: string
+  duracionPartidoMinutos: number | null
+  duracionSugerida?: string
+  lugarFijoId: number | null
+  lugarFijoNombre?: string | null
+}
+
+export type ReglasFixture = { descansoMinimoMinutos: number; categorias: ReglaCategoriaFixture[] }
+
+export type PropuestaFixture = {
+  asignaciones: {
+    partidoId: number
+    descripcion: string
+    categoriaNombre: string | null
+    canchaId: number
+    canchaNombre: string
+    lugarId: number
+    lugarNombre: string
+    inicio: string
+    fin: string
+  }[]
+  sinLugar: { partidoId: number; descripcion: string; motivo: string }[]
+  respetados: number
+}
+
 export type TorneoResponse = {
   id: number
   nombre: string

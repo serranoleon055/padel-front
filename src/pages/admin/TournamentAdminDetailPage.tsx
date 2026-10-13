@@ -33,6 +33,7 @@ import { StatusMessage } from '@/shared/ui/StatusMessage'
 import { BuscadorJugador } from './tournament-detail/BuscadorJugador'
 import { CobrosTab } from './tournament-detail/CobrosTab'
 import { GruposTab } from './tournament-detail/GruposTab'
+import { HorariosTab } from './tournament-detail/HorariosTab'
 import { ParejasTab } from './tournament-detail/ParejasTab'
 import { PartidosTab } from './tournament-detail/PartidosTab'
 import { SedesTab } from './tournament-detail/SedesTab'
@@ -41,12 +42,13 @@ import { TarjetaDato } from './tournament-detail/TarjetaDato'
 const PAREJA_VACIA: ParejaRequest = { jugador1Id: 0, jugador2Id: 0, categoriaId: 0, esCabezaDeSerie: false }
 
 
-const PESTANAS = ['resumen', 'parejas', 'partidos', 'grupos', 'cobros', 'sedes'] as const
+const PESTANAS = ['resumen', 'parejas', 'partidos', 'horarios', 'grupos', 'cobros', 'sedes'] as const
 type Pestana = typeof PESTANAS[number]
 const ETIQUETA_PESTANA: Record<Pestana, string> = {
     resumen: 'Resumen',
     parejas: 'Parejas',
     partidos: 'Partidos',
+    horarios: 'Horarios',
     grupos: 'Grupos',
     cobros: 'Cobros',
     sedes: esOrganizador ? 'Clubes' : 'Canchas',
@@ -366,9 +368,9 @@ export default function TournamentAdminDetailPage() {
                 </div>
             )}
 
-            <div className="mt-6 grid grid-cols-3 gap-1 rounded-lg border border-rp-border bg-rp-surface/82 p-1 sm:flex">
+            <div className="mt-6 grid grid-cols-4 gap-1 rounded-lg border border-rp-border bg-rp-surface/82 p-1 sm:flex">
                 {PESTANAS.map((p) => (
-                <button key={p} onClick={() => setPestana(p)} className={`whitespace-nowrap rounded-md px-2 py-2 text-sm font-bold transition sm:flex-1 ${pestana === p ? 'bg-rp-surface-2 text-rp-accent' : 'text-rp-muted hover:text-rp-text'}`}>
+                <button key={p} onClick={() => setPestana(p)} className={`whitespace-nowrap rounded-md px-1 py-2 text-[13px] font-bold transition sm:flex-1 sm:px-2 sm:text-sm ${pestana === p ? 'bg-rp-surface-2 text-rp-accent' : 'text-rp-muted hover:text-rp-text'}`}>
                     {ETIQUETA_PESTANA[p]}
                 </button>
                 ))}
@@ -502,6 +504,12 @@ export default function TournamentAdminDetailPage() {
             {pestana === 'grupos' && (
                 <div className="mt-4">
                     <GruposTab grupos={gruposSeleccionados} />
+                </div>
+            )}
+
+            {pestana === 'horarios' && (
+                <div className="mt-4">
+                    <HorariosTab torneoId={torneo.id} />
                 </div>
             )}
 
