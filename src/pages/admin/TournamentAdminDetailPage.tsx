@@ -31,6 +31,7 @@ import { StatusBadge } from '@/shared/ui/StatusBadge'
 import { StatusMessage } from '@/shared/ui/StatusMessage'
 
 import { BuscadorJugador } from './tournament-detail/BuscadorJugador'
+import { CobrosTab } from './tournament-detail/CobrosTab'
 import { GruposTab } from './tournament-detail/GruposTab'
 import { ParejasTab } from './tournament-detail/ParejasTab'
 import { PartidosTab } from './tournament-detail/PartidosTab'
@@ -40,13 +41,14 @@ import { TarjetaDato } from './tournament-detail/TarjetaDato'
 const PAREJA_VACIA: ParejaRequest = { jugador1Id: 0, jugador2Id: 0, categoriaId: 0, esCabezaDeSerie: false }
 
 
-const PESTANAS = ['resumen', 'parejas', 'partidos', 'grupos', 'sedes'] as const
+const PESTANAS = ['resumen', 'parejas', 'partidos', 'grupos', 'cobros', 'sedes'] as const
 type Pestana = typeof PESTANAS[number]
 const ETIQUETA_PESTANA: Record<Pestana, string> = {
     resumen: 'Resumen',
     parejas: 'Parejas',
     partidos: 'Partidos',
     grupos: 'Grupos',
+    cobros: 'Cobros',
     sedes: esOrganizador ? 'Clubes' : 'Canchas',
 }
 
@@ -497,6 +499,12 @@ export default function TournamentAdminDetailPage() {
             {pestana === 'grupos' && (
                 <div className="mt-4">
                     <GruposTab grupos={gruposSeleccionados} />
+                </div>
+            )}
+
+            {pestana === 'cobros' && (
+                <div className="mt-4">
+                    <CobrosTab torneoId={torneo.id} torneoNombre={torneo.nombre} />
                 </div>
             )}
 

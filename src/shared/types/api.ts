@@ -347,6 +347,57 @@ export type PagoSedeRequest = {
   notas: string | null
 }
 
+export type PagoJugadorResponse = {
+  id: number
+  fecha: string
+  monto: number
+  medio: PagoSedeResponse['medio']
+  notas: string | null
+  online: boolean
+  registradoPor: string | null
+  creadoEn: string
+  anulado: boolean
+  anuladoPor: string | null
+  motivoAnulacion: string | null
+}
+
+export type CuentaJugador = {
+  jugadorId: number
+  nombre: string
+  telefono: string | null
+  costo: number
+  pagado: number
+  saldo: number
+  pagos: PagoJugadorResponse[]
+}
+
+export type CuentaPareja = {
+  parejaId: number
+  categoriaId: number | null
+  categoriaNombre: string | null
+  estado: string
+  saldo: number
+  jugadores: CuentaJugador[]
+}
+
+export type CuentaInscripcionesResponse = {
+  torneoId: number
+  totalEsperado: number
+  totalCobrado: number
+  totalPendiente: number
+  jugadoresConDeuda: number
+  jugadoresAlDia: number
+  parejas: CuentaPareja[]
+}
+
+export type PagoJugadorRequest = {
+  jugadorId: number
+  fecha: string
+  monto: number
+  medio: PagoSedeResponse['medio']
+  notas: string | null
+}
+
 export type TorneoResponse = {
   id: number
   nombre: string

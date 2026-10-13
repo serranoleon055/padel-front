@@ -66,3 +66,25 @@ export function mensajeRecordatorioTurno(datos: {
   partes.push('Si no podés venir, avisanos así liberamos la cancha. ¡Gracias!')
   return partes.join('\n')
 }
+
+/**
+ * Recordatorio de la inscripción que falta pagar. Va a cada jugador por separado: el que
+ * ya pagó su parte no tiene por qué recibirlo.
+ */
+export function mensajeDeudaInscripcion(datos: {
+  organizacion: string
+  jugadorNombre: string
+  torneoNombre: string
+  saldo: number
+  /** Si ya pagó algo, se lo reconoce: evita el "pero si yo ya pagué". */
+  pagado: number
+}): string {
+  const nombre = datos.jugadorNombre.trim().split(' ')[0]
+  const pesos = (monto: number) => `$${monto.toLocaleString('es-AR')}`
+  const partes = [`Hola ${nombre}! Te escribimos de ${datos.organizacion} por la inscripción al ${datos.torneoNombre}.`]
+  partes.push(datos.pagado > 0
+    ? `Tenemos registrado un pago de ${pesos(datos.pagado)}; te queda un saldo de ${pesos(datos.saldo)}.`
+    : `Te queda pendiente el pago de ${pesos(datos.saldo)}.`)
+  partes.push('Cuando lo abones, mandanos el comprobante por acá. ¡Gracias!')
+  return partes.join('\n')
+}
