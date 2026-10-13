@@ -12,8 +12,12 @@ import { defineConfig, loadEnv, type ESBuildOptions, type Plugin, type ProxyOpti
  * existe: Google seguía un sitio caído y el sitemap del club no se indexaba nunca. Como
  * cada club tiene su dominio, no puede ser un archivo fijo.
  */
-function seoDelSitio(siteUrl: string): Plugin {
+function seoDelSitio(siteUrl: string, esOrganizador: boolean): Plugin {
   const base = siteUrl.replace(/\/+$/, '')
+  // Turnos, precios y la sede solo existen en un club: el organizador juega en canchas
+  // de otros y esas rutas le dan 404. Listarlas sería mandar a Google a páginas que no hay.
+  const soloClub = new Set(['/reservar', '/precios', '/la-sede'])
+  let salida = path.resolve(__dirname, 'dist')
   const paginas = [
     { ruta: '/', prioridad: '1.0', frecuencia: 'daily' },
     { ruta: '/reservar', prioridad: '0.9', frecuencia: 'daily' },
@@ -23,13 +27,15 @@ function seoDelSitio(siteUrl: string): Plugin {
     { ruta: '/campeones', prioridad: '0.6', frecuencia: 'weekly' },
     { ruta: '/la-sede', prioridad: '0.6', frecuencia: 'monthly' },
     { ruta: '/contacto', prioridad: '0.5', frecuencia: 'monthly' },
-  ]
+  ].filter(({ ruta }) => !esOrganizador || !soloClub.has(ruta))
 
   return {
     name: 'rankpadel-seo',
     apply: 'build',
+    configResolved(config) {
+      salida = path.resolve(config.root, config.build.outDir)
+    },
     closeBundle() {
-      const salida = path.resolve(__dirname, 'dist')
       const urls = paginas
         .map(({ ruta, prioridad, frecuencia }) => `  <url>\n    <loc>${base}${ruta}</loc>\n`
           + `    <changefreq>${frecuencia}</changefreq>\n    <priority>${prioridad}</priority>\n  </url>`)
@@ -76,9 +82,15 @@ function temaDelClub(nombre: string) {
 function marcaDelClub(tema: string): Plugin {
   const carpeta = path.resolve(__dirname, 'public/marcas', tema)
   const hay = fs.existsSync(carpeta)
+  // Sale de la config y no de un 'dist' fijo: con otro --outDir, el build escribía los
+  // archivos de marca encima del dist anterior.
+  let salida = path.resolve(__dirname, 'dist')
 
   return {
     name: 'rankpadel-marca',
+    configResolved(config) {
+      salida = path.resolve(config.root, config.build.outDir)
+    },
     configureServer(server) {
       if (!hay) return
       server.middlewares.use((req, res, next) => {
@@ -90,7 +102,6 @@ function marcaDelClub(tema: string): Plugin {
       })
     },
     closeBundle() {
-      const salida = path.resolve(__dirname, 'dist')
       if (hay) fs.cpSync(carpeta, salida, { recursive: true })
       // `public/` se copia entero, así que sin esto el sitio de un club publicaría también
       // el logo y los íconos de todos los demás.
@@ -110,11 +121,16 @@ function marcaDelClub(tema: string): Plugin {
 function textosDelSitio(env: Record<string, string>): Plugin {
   const nombre = env.VITE_BRAND_NAME || 'RankPadel'
   const ciudad = env.VITE_BRAND_LOCATION || 'Santiago del Estero'
+  // Un organizador no tiene canchas propias: ofrecerle "turnos" en la pestaña sería mentir.
+  const esOrganizador = env.VITE_MODO?.trim().toUpperCase() === 'ORGANIZADOR'
   const valores: Record<string, string> = {
     BRAND_NAME: nombre,
-    BRAND_TITLE: env.VITE_BRAND_TITLE || `${nombre} — Turnos, torneos y ranking de pádel en ${ciudad}`,
-    BRAND_DESCRIPTION: env.VITE_BRAND_DESCRIPTION
-      || `Reservá tu cancha, seguí el ranking y mirá los torneos de ${nombre}, en ${ciudad}.`,
+    BRAND_TITLE: env.VITE_BRAND_TITLE || (esOrganizador
+      ? `${nombre} — Torneos y ranking de pádel en ${ciudad}`
+      : `${nombre} — Turnos, torneos y ranking de pádel en ${ciudad}`),
+    BRAND_DESCRIPTION: env.VITE_BRAND_DESCRIPTION || (esOrganizador
+      ? `Inscribite a los torneos, seguí los resultados y el ranking de ${nombre}, en ${ciudad}.`
+      : `Reservá tu cancha, seguí el ranking y mirá los torneos de ${nombre}, en ${ciudad}.`),
     BRAND_THEME_COLOR: env.VITE_BRAND_THEME_COLOR || '#06100a',
     BRAND_OG_IMAGE: env.VITE_BRAND_OG_IMAGE || '/images/fondo%20cancha.jpg',
   }
@@ -177,7 +193,7 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       tailwindcss(),
-      seoDelSitio(siteUrl),
+      seoDelSitio(siteUrl, env.VITE_MODO?.trim().toUpperCase() === 'ORGANIZADOR'),
       textosDelSitio(env),
       marcaDelClub(env.VITE_BRAND_THEME || 'rankpadel'),
     ],
