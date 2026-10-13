@@ -1,5 +1,5 @@
 import { apiClient } from '@/shared/api/apiClient'
-import type { IntegranteInscripcion } from '@/features/inscripciones/inscripcionesApi'
+import type { SolicitudInscripcionRequest } from '@/features/inscripciones/inscripcionesApi'
 
 export interface PagoCreadoResponse {
   pagoId: number
@@ -27,12 +27,7 @@ export interface PagoReservaRequest {
 
 export interface PagoInscripcionRequest {
   torneoId: number
-  inscripcion: {
-    categoriaId: number
-    telefonoContacto?: string
-    jugador1: IntegranteInscripcion
-    jugador2: IntegranteInscripcion
-  }
+  inscripcion: SolicitudInscripcionRequest
 }
 
 export const pagosApi = {

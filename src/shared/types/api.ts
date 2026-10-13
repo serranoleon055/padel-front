@@ -398,6 +398,23 @@ export type PagoJugadorRequest = {
   notas: string | null
 }
 
+/** Un horario en que la pareja NO puede jugar: un día del torneo o un día de la semana (1 = lunes). */
+export type RestriccionHoraria = {
+  fecha?: string | null
+  diaSemana?: number | null
+  horaDesde: string
+  horaHasta: string
+}
+
+export type DisponibilidadPareja = {
+  parejaId: number
+  categoriaNombre: string | null
+  jugador1Nombre: string | null
+  jugador2Nombre: string | null
+  restricciones: RestriccionHoraria[]
+  notas: string | null
+}
+
 export type TorneoResponse = {
   id: number
   nombre: string

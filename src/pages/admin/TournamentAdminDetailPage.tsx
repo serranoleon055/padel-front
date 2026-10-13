@@ -456,6 +456,9 @@ export default function TournamentAdminDetailPage() {
 
             {pestana === 'parejas' && (
                 <ParejasTab
+                    torneoId={torneo.id}
+                    fechaInicio={torneo.fechaInicio ?? null}
+                    fechaFin={torneo.fechaFin ?? null}
                     parejas={parejasSeleccionadas}
                     puedeInscribir={puedeInscribir}
                     estadoTorneo={torneo?.estado}

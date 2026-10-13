@@ -7,8 +7,9 @@ import { pagosApi } from '@/features/pagos/pagosApi'
 import { obtenerMensajeErrorApi } from '@/shared/lib/apiError'
 import { ordenarCategorias } from '@/shared/lib/categorias'
 import { formatearMoneda } from '@/shared/lib/formatters'
-import type { CategoriaResponse } from '@/shared/types/api'
+import type { CategoriaResponse, RestriccionHoraria } from '@/shared/types/api'
 import { Button } from '@/shared/ui/Button'
+import { EditorRestricciones } from '@/shared/ui/EditorRestricciones'
 import { Input } from '@/shared/ui/Input'
 import { Select } from '@/shared/ui/Select'
 
@@ -125,6 +126,9 @@ export default function InscribirmePage() {
   const [jugador1, setJugador1] = useState<IntegranteInscripcion>({})
   const [jugador2, setJugador2] = useState<IntegranteInscripcion>({})
   const [telefono, setTelefono] = useState('')
+  const [fechasTorneo, setFechasTorneo] = useState<{ inicio: string | null; fin: string | null }>({ inicio: null, fin: null })
+  const [restricciones, setRestricciones] = useState<RestriccionHoraria[]>([])
+  const [restriccionesNotas, setRestriccionesNotas] = useState('')
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [exito, setExito] = useState(false)
@@ -134,6 +138,7 @@ export default function InscribirmePage() {
     tournamentsApi.getById(idTorneo)
       .then((torneo) => {
         setNombreTorneo(torneo.nombre)
+        setFechasTorneo({ inicio: torneo.fechaInicio ?? null, fin: torneo.fechaFin ?? null })
         setCategorias(torneo.categorias)
         setCostoInscripcion(torneo.costoInscripcionJugador ?? null)
         setPorcentajeSenia(torneo.seniaPorcentaje && torneo.seniaPorcentaje > 0 ? torneo.seniaPorcentaje : 50)
@@ -187,6 +192,8 @@ export default function InscribirmePage() {
         telefonoContacto: telefono.trim() || undefined,
         jugador1,
         jugador2,
+        restricciones,
+        restriccionesNotas: restriccionesNotas.trim() || undefined,
       })
       setExito(true)
     } catch (e: unknown) {
@@ -208,6 +215,8 @@ export default function InscribirmePage() {
           telefonoContacto: telefono.trim() || undefined,
           jugador1,
           jugador2,
+          restricciones,
+          restriccionesNotas: restriccionesNotas.trim() || undefined,
         },
       })
       window.location.href = initPoint
@@ -256,6 +265,17 @@ export default function InscribirmePage() {
         )}
 
         <Input label="Teléfono de contacto" type="tel" value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="385..." />
+
+        {/* Lo pide el organizador para armar los horarios. El que no carga nada queda
+            disponible siempre, así que es opcional. */}
+        <fieldset className="rounded-lg border border-rp-border p-3">
+          <legend className="px-1 text-xs font-black uppercase tracking-[0.14em] text-rp-muted">¿Hay horarios en que no pueden jugar?</legend>
+          <p className="mb-3 text-xs text-rp-muted">Opcional. Cargá solo lo que no pueden: el resto del tiempo los consideramos disponibles.</p>
+          <EditorRestricciones valor={restricciones} onChange={setRestricciones} fechaInicio={fechasTorneo.inicio} fechaFin={fechasTorneo.fin} />
+          <div className="mt-3">
+            <Input label="Otra aclaración" value={restriccionesNotas} onChange={(e) => setRestriccionesNotas(e.target.value)} maxLength={500} placeholder="Ej: si se puede, que no sea el primer turno" />
+          </div>
+        </fieldset>
 
         {montoSenia != null && (
           <div className="rounded-md border border-rp-accent/40 bg-rp-accent/10 px-3 py-2 text-sm">

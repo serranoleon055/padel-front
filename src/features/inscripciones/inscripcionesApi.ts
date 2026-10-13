@@ -1,4 +1,5 @@
 import { apiClient } from '@/shared/api/apiClient'
+import type { RestriccionHoraria } from '@/shared/types/api'
 
 export interface JugadorBusqueda {
   id: number
@@ -23,6 +24,9 @@ export interface SolicitudInscripcionRequest {
   telefonoContacto?: string
   jugador1: IntegranteInscripcion
   jugador2: IntegranteInscripcion
+  /** Cuándo no pueden jugar. Opcional. */
+  restricciones?: RestriccionHoraria[]
+  restriccionesNotas?: string
 }
 
 export interface JugadorCandidato {
@@ -48,6 +52,9 @@ export interface SolicitudInscripcionResponse {
   pagada: boolean
   estadoPago: string | null
   montoSenia: number | null
+  /** Cuándo no pueden jugar, ya en palabras. */
+  horariosNoDisponibles?: string[]
+  restriccionesNotas?: string | null
 }
 
 export interface AprobarInscripcionRequest {

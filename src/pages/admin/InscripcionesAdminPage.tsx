@@ -195,6 +195,20 @@ export default function InscripcionesAdminPage() {
       ),
     },
     {
+      key: 'horarios',
+      label: 'No pueden',
+      render: (s: SolicitudInscripcionResponse) => (
+        (s.horariosNoDisponibles?.length ?? 0) === 0 && !s.restriccionesNotas
+          ? <span className="text-xs text-rp-muted">—</span>
+          : (
+            <span className="flex flex-col text-xs text-rp-text">
+              {s.horariosNoDisponibles?.map((h) => <span key={h}>{h}</span>)}
+              {s.restriccionesNotas && <span className="italic text-rp-muted">{s.restriccionesNotas}</span>}
+            </span>
+          )
+      ),
+    },
+    {
       key: 'estado',
       label: 'Estado',
       render: (s: SolicitudInscripcionResponse) => (

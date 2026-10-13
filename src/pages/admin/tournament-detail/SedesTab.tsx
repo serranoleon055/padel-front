@@ -322,10 +322,12 @@ export function SedesTab({ torneoId, fechaInicio }: { torneoId: number; fechaIni
               {formulario.franjas.length === 0 && <p className="mt-1 text-xs text-rp-muted">Ej: sábado 7 de 14 a 23 y domingo 8 de 9 a 20.</p>}
               <div className="mt-2 flex flex-col gap-2">
                 {formulario.franjas.map((franja, i) => (
-                  <div key={i} className="grid grid-cols-[1fr_auto] items-end gap-2 sm:grid-cols-[1.4fr_1fr_1fr_auto]">
-                    <Input label="Día" type="date" value={franja.fecha} onChange={(e) => actualizarFranja(i, { fecha: e.target.value })} className="col-span-2 sm:col-span-1" />
-                    <Input label="Desde" type="time" value={franja.horaDesde} onChange={(e) => actualizarFranja(i, { horaDesde: e.target.value })} />
-                    <Input label="Hasta" type="time" value={franja.horaHasta} onChange={(e) => actualizarFranja(i, { horaHasta: e.target.value })} />
+                  <div key={i} className="grid grid-cols-[1fr_1fr_auto] items-end gap-2 sm:grid-cols-[1.4fr_1fr_1fr_auto]">
+                    <div className="col-span-3 sm:col-span-1">
+                      <Input id={`franja-dia-${i}`} label="Día" type="date" value={franja.fecha} onChange={(e) => actualizarFranja(i, { fecha: e.target.value })} />
+                    </div>
+                    <Input id={`franja-desde-${i}`} label="Desde" type="time" value={franja.horaDesde} onChange={(e) => actualizarFranja(i, { horaDesde: e.target.value })} />
+                    <Input id={`franja-hasta-${i}`} label="Hasta" type="time" value={franja.horaHasta} onChange={(e) => actualizarFranja(i, { horaHasta: e.target.value })} />
                     <button type="button" onClick={() => setFormulario({ ...formulario, franjas: formulario.franjas.filter((_, j) => j !== i) })} className="mb-0.5 flex size-11 items-center justify-center rounded-md text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger" aria-label="Quitar día"><X size={16} /></button>
                   </div>
                 ))}
