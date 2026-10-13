@@ -282,29 +282,32 @@ body {
   font-size: 14px;
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
-}
+/* Reset en la capa base: así las clases de Tailwind (letra, borde, color) ganan sobre él. */
+@layer base {
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
 
-button,
-input,
-select,
-textarea {
-  font: inherit;
-}
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
 
-button {
-  border: 0;
-}
+  button {
+    border: 0;
+  }
 
-img,
-svg {
-  display: block;
-}
+  img,
+  svg {
+    display: block;
+  }
 
-img {
-  max-width: 100%;
+  img {
+    max-width: 100%;
+  }
 }
 
 ::selection {

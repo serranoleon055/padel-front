@@ -62,7 +62,9 @@ const MOVIMIENTO_VACIO = {
 
 function nombreConcepto(concepto: string) {
   return CONCEPTOS_MOVIMIENTO.find((c) => c.valor === concepto)?.nombre
-    ?? (concepto === 'APERTURA' ? 'Apertura de caja' : concepto)
+    ?? (concepto === 'APERTURA' ? 'Apertura de caja'
+      : concepto === 'INSCRIPCION_TORNEO' ? 'Inscripción a torneo'
+      : concepto)
 }
 
 export default function CajaPage() {
@@ -527,6 +529,7 @@ export default function CajaPage() {
                 </>
               )}
             </div>
+
           </div>
 
           {/* Quién cobró qué. El dato estaba en la base desde siempre y no se mostraba,
@@ -589,13 +592,16 @@ export default function CajaPage() {
                       {mov.registradoPor ? ` por ${mov.registradoPor}` : ''}
                     </p>
                     {mov.notas && <p className="text-xs italic text-rp-muted">{mov.notas}</p>}
+                    {mov.concepto === 'INSCRIPCION_TORNEO' && (
+                      <p className="text-xs text-rp-muted">Se anula desde la pestaña Cobros del torneo.</p>
+                    )}
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     <span className={`text-sm font-bold ${mov.tipo === 'EGRESO' ? 'text-rp-danger' : 'text-rp-accent'}`}>
                       {mov.tipo === 'EGRESO' ? '−' : '+'}{formatearMoneda(mov.monto)}
                     </span>
                     {/* Anular es solo del dueño, por lo mismo que reabrir un cierre. */}
-                    {authApi.esDuenio() && (
+                    {authApi.esDuenio() && mov.concepto !== 'INSCRIPCION_TORNEO' && (
                       <button onClick={() => setAAnularMovimiento(mov)} className="flex size-11 items-center justify-center rounded-md lg:size-8 text-rp-muted hover:bg-rp-surface-2 hover:text-rp-danger" aria-label="Anular movimiento" title="Anular movimiento"><Trash2 size={14} /></button>
                     )}
                   </div>

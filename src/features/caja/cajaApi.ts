@@ -111,6 +111,8 @@ export interface GastoResponse {
  */
 export type ConceptoMovimiento =
   | 'APERTURA' | 'DEPOSITO_BANCO' | 'RETIRO_DUENIO' | 'PRESTAMO' | 'COBRO_VARIO' | 'AJUSTE' | 'OTRO'
+  /** Lo genera el cobro de una inscripción en el club; no se carga a mano. */
+  | 'INSCRIPCION_TORNEO'
 
 export type TipoMovimiento = 'INGRESO' | 'EGRESO'
 
